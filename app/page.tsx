@@ -11,7 +11,7 @@ export default function Home() {
           height={38}
           priority
         />
-        <div>This website sill under construction by pinustech...</div>        
+        <div>This website still under construction by pinustech...</div>        
       </main>      
     </div>
   );
