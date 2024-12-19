@@ -26,7 +26,10 @@ export const GuideCardDecoration = ({
   };
 
   return (
-    <div className={cn("h-24", colors[color], "min-w-" + size, className)} />
+    <div
+      className={cn("h-24", colors[color], className)}
+      style={{ width: `${size}px` }}
+    />
   );
 };
 
