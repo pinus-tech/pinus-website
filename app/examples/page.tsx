@@ -88,7 +88,7 @@ export default function Examples() {
           </AccordionItem>
           <AccordionItem value="item-3">
             <AccordionTrigger iconSize={25}>
-              What events organized by PINUS?
+              Events organized by PINUS?
             </AccordionTrigger>
             <AccordionContent>
               Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer
@@ -265,7 +265,7 @@ export default function Examples() {
       </div>
 
       <div className="flex items-center justify-center mx-auto py-10">
-        <CommCardGroup className="w-[50vw]" columns={3} gap={20}>
+        <CommCardGroup className="w-[60vw]" columns={3} gap={12}>
           {[
             { name: "Cullen Sean", role: "President" },
             { name: "Hastuti Hera H", role: "Vice President" },
@@ -328,7 +328,7 @@ export default function Examples() {
 
       <div className="flex justify-center mx-auto py-10">
         <GuideCard className="w-[50vw]">
-          <GuideCardDecoration color="blue" size={1} />
+          <GuideCardDecoration color="blue" size={20} />
           <GuideCardBody>
             <GuideCardTitle>Financial Matters 💰</GuideCardTitle>
             <GuideCardText>
@@ -365,7 +365,7 @@ export default function Examples() {
 
       <div className="flex justify-center mx-auto py-10">
         <GuideCard className="w-96">
-          <GuideCardDecoration color="red" size={1} />
+          <GuideCardDecoration color="red" size={40} />
           <GuideCardBody>
             <GuideCardTitle>Apply for NUS Housing 🏠</GuideCardTitle>
             <GuideCardText>

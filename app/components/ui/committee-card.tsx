@@ -22,6 +22,7 @@ export const CommCardGroup = ({
   const gridCol = columns === 2 ? "grid-col-2" : "grid-cols-3";
   const gridGap = gap ? `gap-${gap}` : "gap-4";
   const spacing = "space-y-" + String(gap);
+  const padBot = "mb-" + String(gap);
 
   return columns === 2 ? (
     <div className={cn("grid", gridGap, gridCol, className)}>
@@ -40,13 +41,16 @@ export const CommCardGroup = ({
     <div className={cn(spacing, className)}>
       {columns === 3 && remaining > 0 && (
         <div className={`grid ${gridGap}`}>
-          <div className="col-span-3 flex justify-center">
+          <div className={cn(padBot, "col-span-3 flex justify-center")}>
             <div
               className={cn(
                 "grid",
                 gridGap,
-                remaining === 1 ? "max-w-[33%]" : "max-w-[66%]",
-                remaining === 2 ? "grid-cols-2" : "grid-cols-1"
+                // remaining === 1 ? "max-w-[33%]" : "max-w-[66%]",
+                // remaining === 2 ? "grid-cols-2" : "grid-cols-1"
+                remaining === 1
+                  ? "grid-cols-1 " + gridGap
+                  : "grid-cols-2 " + gridGap
               )}
             >
               {remainingItems}
