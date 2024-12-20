@@ -6,7 +6,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: keyof typeof buttonVariant;
   size?: keyof typeof buttonSize;
   outline?: boolean;
-  rounding?: "full" | "xl" | "lg" | "md" | "sm" | "none";
+  rounding?: "full" | "3xl" | "2xl" | "xl" | "lg" | "md" | "sm" | "none";
 }
 
 const buttonVariant = {
@@ -31,7 +31,7 @@ const buttonVariant = {
 
 const buttonSize = {
   sm: "py-1 px-2 text-sm",
-  md: "py-2 px-4 text-base",
+  md: "py-1.5 px-3.5 text-base",
   lg: "py-3 px-6 text-lg",
 };
 

@@ -22,7 +22,7 @@ export const TitleHeader = ({
   useEffect(() => {
     if (textRef.current) {
       const width = textRef.current.getBoundingClientRect().width;
-      setUnderlineWidth(width + 20);
+      setUnderlineWidth(width + 10);
     }
   }, [text]);
 
@@ -48,13 +48,13 @@ export const TitleHeader = ({
     >
       <div
         ref={textRef}
-        className={cn("font-bold text-2xl pb-3 inline-block", textClassName)}
+        className={cn("font-bold text-2xl pb-1 inline-block", textClassName)}
       >
         {text}
       </div>
       <div
         style={{ width: `${underlineWidth}px` }}
-        className={cn("h-1", getUnderlineColor(), underlineClassName)}
+        className={cn("h-[3px]", getUnderlineColor(), underlineClassName)}
       />
     </div>
   );

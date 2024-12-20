@@ -18,7 +18,7 @@ interface SelectTriggerProps
   variant?: "blue" | "yellow" | "red" | "black";
   size?: keyof typeof buttonSize;
   outline?: boolean;
-  rounding?: "full" | "xl" | "lg" | "md" | "sm" | "none";
+  rounding?: "full" | "3xl" | "2xl" | "xl" | "lg" | "md" | "sm" | "none";
 }
 
 const buttonVariant = {
@@ -152,7 +152,7 @@ interface SelectContentProps
   extends React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content> {
   variant?: keyof typeof buttonVariant;
   outline?: boolean;
-  rounding?: "full" | "xl" | "lg" | "md" | "sm" | "none";
+  rounding?: "full" | "3xl" | "2xl" | "xl" | "lg" | "md" | "sm" | "none";
 }
 
 interface SelectItemProps

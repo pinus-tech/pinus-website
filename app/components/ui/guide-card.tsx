@@ -7,16 +7,20 @@ export const GuideCard = ({
 }: {
   children: React.ReactNode;
   className?: string;
-}) => <div className={cn("font-figtree flex", className)}>{children}</div>;
+}) => (
+  <div className={cn("font-figtree flex w-full", className)}>{children}</div>
+);
 
 export const GuideCardDecoration = ({
   className,
   color,
-  size,
+  width,
+  height,
 }: {
   className?: string;
   color: "blue" | "yellow" | "red" | "black";
-  size: number;
+  width: number;
+  height: number;
 }) => {
   const colors = {
     blue: "bg-blue-main",
@@ -27,8 +31,12 @@ export const GuideCardDecoration = ({
 
   return (
     <div
-      className={cn("h-24", colors[color], className)}
-      style={{ width: `${size}px` }}
+      className={cn(colors[color], "flex-shrink-0", className)}
+      style={{
+        width: `${width}px`,
+        height: `${height}px`,
+        minWidth: `${width}px`, // Prevent shrinking
+      }}
     />
   );
 };
@@ -39,7 +47,7 @@ export const GuideCardBody = ({
 }: {
   children: React.ReactNode;
   className?: string;
-}) => <div className={cn("ml-8", className)}>{children}</div>;
+}) => <div className={cn("md:ml-8 ml-6 flex-grow", className)}>{children}</div>;
 
 export const GuideCardTitle = ({
   children,
@@ -48,7 +56,7 @@ export const GuideCardTitle = ({
   children: React.ReactNode;
   className?: string;
 }) => (
-  <div className={cn("font-semibold text-lg mb-4", className)}>{children}</div>
+  <div className={cn("font-semibold text-lg mb-2", className)}>{children}</div>
 );
 
 export const GuideCardText = ({
@@ -58,5 +66,7 @@ export const GuideCardText = ({
   children: React.ReactNode;
   className?: string;
 }) => (
-  <div className={cn("text-md flex flex-col gap-4", className)}>{children}</div>
+  <div className={cn("text-md flex flex-col gap-4 w-full", className)}>
+    {children}
+  </div>
 );

@@ -328,7 +328,7 @@ export default function Examples() {
 
       <div className="flex justify-center mx-auto py-10">
         <GuideCard className="w-[50vw]">
-          <GuideCardDecoration color="blue" size={20} />
+          <GuideCardDecoration color="blue" width={20} height={60} />
           <GuideCardBody>
             <GuideCardTitle>Financial Matters 💰</GuideCardTitle>
             <GuideCardText>
@@ -365,7 +365,7 @@ export default function Examples() {
 
       <div className="flex justify-center mx-auto py-10">
         <GuideCard className="w-96">
-          <GuideCardDecoration color="red" size={40} />
+          <GuideCardDecoration color="red" width={20} height={60} />
           <GuideCardBody>
             <GuideCardTitle>Apply for NUS Housing 🏠</GuideCardTitle>
             <GuideCardText>

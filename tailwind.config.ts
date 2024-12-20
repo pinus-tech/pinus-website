@@ -49,6 +49,8 @@ export default {
     "rounded-md",
     "rounded-lg",
     "rounded-xl",
+    "rounded-2xl",
+    "rounded-3xl",
     "rounded-full",
   ],
   plugins: [tailwindcssAnimate],
