@@ -14,58 +14,42 @@ export const CommCardGroup = ({
   gap: number;
 }) => {
   const childrenArray = React.Children.toArray(children);
-  const isOdd = childrenArray.length % 2 === 1;
-  const remaining = childrenArray.length % columns;
-  const mainItems = childrenArray.slice(0, childrenArray.length - remaining);
-  const remainingItems = childrenArray.slice(-remaining);
+  const totalItems = childrenArray.length;
+  const rows = Math.floor(totalItems / columns);
+  const remainder = totalItems % columns;
+  const mainItems = childrenArray.slice(0, rows * columns);
+  const remainingItems = childrenArray.slice(rows * columns);
 
-  const gridCol = columns === 2 ? "grid-col-2" : "grid-cols-3";
+  const gridCol = columns === 2 ? "grid-cols-2" : "grid-cols-3";
   const gridGap = gap ? `gap-${gap}` : "gap-4";
-  const spacing = "space-y-" + String(gap);
-  const padBot = "mb-" + String(gap);
 
-  return columns === 2 ? (
-    <div className={cn("grid", gridGap, gridCol, className)}>
-      {childrenArray.map((child, index) => {
-        const isLast = index === childrenArray.length - 1;
-        return isOdd && isLast ? (
-          <div key={index} className="col-span-2 flex justify-center">
-            <div className="max-w-[50%]">{child}</div>
-          </div>
-        ) : (
-          child
-        );
-      })}
-    </div>
-  ) : (
-    <div className={cn(spacing, className)}>
-      {columns === 3 && remaining > 0 && (
-        <div className={`grid ${gridGap}`}>
-          <div className={cn(padBot, "col-span-3 flex justify-center")}>
-            <div
-              className={cn(
-                "grid",
-                gridGap,
-                // remaining === 1 ? "max-w-[33%]" : "max-w-[66%]",
-                // remaining === 2 ? "grid-cols-2" : "grid-cols-1"
-                remaining === 1
-                  ? "grid-cols-1 " + gridGap
-                  : "grid-cols-2 " + gridGap
-              )}
-            >
-              {remainingItems}
-            </div>
-          </div>
+  return (
+    <div className={cn("flex flex-col items-center", gridGap, className)}>
+      {/* Main */}
+      {mainItems.length > 0 && (
+        <div className={cn("grid", gridCol, gridGap)}>
+          {mainItems.map((child, index) => (
+            <div key={index}>{child}</div>
+          ))}
         </div>
       )}
 
-      {mainItems.length > 0 && (
-        <div className={cn("grid", gridCol, gridGap)}>{mainItems}</div>
-      )}
-
-      {remaining === 1 && (
-        <div className="flex justify-center">
-          <div className="max-w-[50%]">{remainingItems}</div>
+      {/* Remainder */}
+      {remainder > 0 && (
+        <div
+          className={cn("grid", gridGap, {
+            "grid-cols-1 justify-center": remainder === 1,
+            "grid-cols-2 justify-between": remainder === 2,
+          })}
+          style={{
+            gridTemplateColumns: `repeat(${remainder}, minmax(0, 1fr))`,
+          }}
+        >
+          {remainingItems.map((child, index) => (
+            <div key={index} className="flex justify-center">
+              {child}
+            </div>
+          ))}
         </div>
       )}
     </div>

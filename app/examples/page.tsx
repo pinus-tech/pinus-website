@@ -265,7 +265,7 @@ export default function Examples() {
       </div>
 
       <div className="flex items-center justify-center mx-auto py-10">
-        <CommCardGroup className="w-[60vw]" columns={3} gap={12}>
+        <CommCardGroup className="w-[80vw]" columns={3} gap={8}>
           {[
             { name: "Cullen Sean", role: "President" },
             { name: "Hastuti Hera H", role: "Vice President" },
@@ -299,7 +299,7 @@ export default function Examples() {
       </div>
 
       <div className="flex items-center justify-center mx-auto py-10">
-        <CommCardGroup className="w-96 gap-6" columns={2} gap={4}>
+        <CommCardGroup className="w-96" columns={2} gap={4}>
           {[
             { name: "Cullen Sean", role: "President" },
             { name: "Hastuti Hera H", role: "Vice President" },
@@ -314,8 +314,9 @@ export default function Examples() {
               <CommCardImage
                 src="/test_img.jpg"
                 alt="random"
-                width={300}
+                width={100}
                 height={200}
+                className="w-[184px] h-56"
               />
               <CommCardHeader>
                 <CommCardTitle>{ppl.name}</CommCardTitle>
