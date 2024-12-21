@@ -12,20 +12,20 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 const buttonVariant = {
   blue: {
     solid: "text-white bg-blue-main hover:bg-blue-main/90",
-    outline: "text-blue-main border border-blue-main hover:bg-blue-main-20",
+    outline: "text-blue-main border border-blue-main hover:bg-blue-main-10",
   },
   yellow: {
     solid: "text-white bg-yellow-main hover:bg-yellow-main/90",
     outline:
-      "text-yellow-main border border-yellow-main hover:bg-yellow-main-20",
+      "text-yellow-main border border-yellow-main hover:bg-yellow-main-10",
   },
   red: {
     solid: "text-white bg-red-main hover:bg-red-main/90",
-    outline: "text-red-main border border-red-main hover:bg-red-main-20",
+    outline: "text-red-main border border-red-main hover:bg-red-main-10",
   },
   black: {
     solid: "text-white bg-black-main hover:bg-black-main/90",
-    outline: "text-black-main border border-black-main hover:bg-black-main-20",
+    outline: "text-black-main border border-black-main hover:bg-black-main-10",
   },
 };
 

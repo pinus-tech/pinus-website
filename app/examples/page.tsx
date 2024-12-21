@@ -44,13 +44,22 @@ import {
   GuideCardTitle,
   GuideCardText,
 } from "../components/ui/guide-card";
+import { Skeleton } from "../components/ui/skeleton";
 
 export default function Examples() {
   const [selected, setSelected] = useState<string>("");
   const [buttonPressed, setButtonPressed] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const makeLoading = () => {
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
+  };
 
   return (
-    <div>
+    <div className="mb-20 mt-5">
       <TitleHeader text="Frequently Asked Questions" color="blue" />
       <TitleHeader text="Our Committee" color="red" />
       <TitleHeader
@@ -60,6 +69,19 @@ export default function Examples() {
         textClassName="text-3xl"
         underlineClassName="h-2"
       />
+
+      <div className="flex justify-center mx-auto py-10">
+        <div className="flex flex-col space-y-3">
+          <Skeleton
+            className="h-[125px] w-[250px] rounded-xl"
+            skeletonColor="blue"
+          />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-[250px]" skeletonColor="muted" />
+            <Skeleton className="h-4 w-[200px]" skeletonColor="red" />
+          </div>
+        </div>
+      </div>
 
       <div className="flex gap-4 p-4">
         <Accordion type="multiple" className="w-96">
@@ -329,7 +351,7 @@ export default function Examples() {
 
       <div className="flex justify-center mx-auto py-10">
         <GuideCard className="w-[50vw]">
-          <GuideCardDecoration color="blue" width={20} height={60} />
+          <GuideCardDecoration color="blue" width={3} height={60} />
           <GuideCardBody>
             <GuideCardTitle>Financial Matters 💰</GuideCardTitle>
             <GuideCardText>
@@ -366,7 +388,7 @@ export default function Examples() {
 
       <div className="flex justify-center mx-auto py-10">
         <GuideCard className="w-96">
-          <GuideCardDecoration color="red" width={20} height={60} />
+          <GuideCardDecoration color="red" width={3} height={60} />
           <GuideCardBody>
             <GuideCardTitle>Apply for NUS Housing 🏠</GuideCardTitle>
             <GuideCardText>
@@ -399,6 +421,38 @@ export default function Examples() {
             </GuideCardText>
           </GuideCardBody>
         </GuideCard>
+      </div>
+
+      <div className="mx-auto py-10 w-[80vw] h-[27vw] space-y-4">
+        <Button variant="blue" rounding="full" outline onClick={makeLoading}>
+          Make Loading
+        </Button>
+        <div className="grid grid-cols-3 grid-rows-2 gap-4 w-full h-full">
+          {isLoading
+            ? [...Array(6)].map((_, index) => (
+                <Skeleton
+                  key={index}
+                  className="h-full w-full"
+                  skeletonColor="muted"
+                />
+              ))
+            : [...Array(6)].map((_, index) => (
+                <div key={index}>
+                  <Card className="h-full border border-gray-100 rounded-xl">
+                    <CardHeader>
+                      <CardTitle>Title {index + 1}</CardTitle>
+                      <CardDescription>Description</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p>{index + 1}</p>
+                    </CardContent>
+                    <CardFooter>
+                      <CardTags teamName="WELFARE" eventType="ORIENTATION" />
+                    </CardFooter>
+                  </Card>
+                </div>
+              ))}
+        </div>
       </div>
     </div>
   );
