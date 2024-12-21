@@ -8,15 +8,16 @@
   --background: #ffffff;
   --foreground: #171717;
   --blue-main: #222e89;
-  --blue-main-20: rgba(34, 46, 137, 0.1);
   --yellow-main: #f5d050;
-  --yellow-main-20: rgba(245, 208, 80, 0.1);
   --red-main: #f0352f;
-  --red-main-20: rgba(240, 53, 47, 0.1);
   --white-main: #faf7ed;
-  --white-main-20: rgba(250, 247, 237, 0.1);
   --black-main: #504f4f;
-  --black-main-20: rgba(80, 79, 79, 0.1);
+  --blue-main-10: rgba(34, 46, 137, 0.1);
+  --yellow-main-10: rgba(245, 208, 80, 0.1);
+  --red-main-10: rgba(240, 53, 47, 0.1);
+  --white-main-10: rgba(250, 247, 237, 0.1);
+  --black-main-10: rgba(80, 79, 79, 0.1);
+  --muted: #f4f4f5;
 }
 
 body {
