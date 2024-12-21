@@ -1,9 +1,6 @@
-// This is guides page and should be done by Team Brians
-// Done By: Brians
-
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { TitleHeader } from "../components/ui/title";
 import { Button } from "../components/ui/button";
@@ -25,7 +22,7 @@ const COLORS: Array<"yellow" | "red" | "blue" | "black"> = [
   "blue",
 ];
 
-export default function Guides() {
+function GuidesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryType = searchParams.get("type");
@@ -45,12 +42,7 @@ export default function Guides() {
   };
 
   return (
-    <div className="px-8 md:px-72 py-10">
-      {/* Header */}
-      <BlurFade key="header" delay={BLUR_FADE_DELAY} inView>
-        <TitleHeader text="Guide" color="blue" />
-      </BlurFade>
-
+    <>
       {/* Toggle Buttons */}
       <BlurFade delay={BLUR_FADE_DELAY * 1.5} className="my-8" inView>
         <div className="flex gap-2 items-center justify-center">
@@ -130,6 +122,21 @@ export default function Guides() {
           )}
         </div>
       </BlurFade>
+    </>
+  );
+}
+
+export default function Guides() {
+  return (
+    <div className="px-8 md:px-72 py-10">
+      {/* Header */}
+      <BlurFade key="header" delay={BLUR_FADE_DELAY} inView>
+        <TitleHeader text="Guide" color="blue" />
+      </BlurFade>
+
+      <Suspense fallback={<div>Loading...</div>}>
+        <GuidesContent />
+      </Suspense>
     </div>
   );
 }
