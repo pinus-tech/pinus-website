@@ -134,7 +134,7 @@ export default function Guides() {
         <TitleHeader text="Guide" color="blue" />
       </BlurFade>
 
-      <Suspense fallback={<div>Loading...</div>}>
+      <Suspense fallback={<div></div>}>
         <GuidesContent />
       </Suspense>
     </div>
