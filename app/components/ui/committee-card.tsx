@@ -13,6 +13,9 @@ export const CommCardGroup = ({
   columns: 2 | 3;
   gap: number;
 }) => {
+  // There is still bugs in the implementation of this component
+  // The main issue is that the grid if the remainder is 2 would result in the image being stretched
+  // Who ever is reading this, please fix this issue!
   const childrenArray = React.Children.toArray(children);
   const totalItems = childrenArray.length;
   const rows = Math.floor(totalItems / columns);

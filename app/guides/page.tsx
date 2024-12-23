@@ -80,7 +80,7 @@ function GuidesContent() {
 
       {/* Guide Cards */}
       <BlurFade key={`cards-${selected}`} delay={BLUR_FADE_DELAY * 4} inView>
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col md:gap-12 gap-16">
           {(selected === "before" ? before_acceptance : after_acceptance).map(
             (guide, index) => (
               <GuideCard key={index}>

@@ -60,17 +60,19 @@ export default function Examples() {
 
   return (
     <div className="mb-20 mt-5">
-      <TitleHeader text="Frequently Asked Questions" color="blue" />
-      <TitleHeader text="Our Committee" color="red" />
-      <TitleHeader
-        text="Hello World"
-        color="blue"
-        className="mt-8"
-        textClassName="text-3xl"
-        underlineClassName="h-2"
-      />
+      <div id="header">
+        <TitleHeader text="Frequently Asked Questions" color="blue" />
+        <TitleHeader text="Our Committee" color="red" />
+        <TitleHeader
+          text="Hello World"
+          color="blue"
+          className="mt-8"
+          textClassName="text-3xl"
+          underlineClassName="h-2"
+        />
+      </div>
 
-      <div className="flex justify-center mx-auto py-10">
+      <div className="flex justify-center mx-auto py-10" id="skeleton">
         <div className="flex flex-col space-y-3">
           <Skeleton
             className="h-[125px] w-[250px] rounded-xl"
@@ -83,65 +85,70 @@ export default function Examples() {
         </div>
       </div>
 
-      <div className="flex gap-4 p-4">
-        <Accordion type="multiple" className="w-96">
-          <AccordionItem value="item-1">
-            <AccordionTrigger iconSize={12}>What is PINUS?</AccordionTrigger>
-            <AccordionContent>
-              PINUS is a student-run organization established to support
-              Indonesian students during their academic journey at the National
-              University of Singapore (NUS). This organization fosters a sense
-              of community, providing a home away from tes home for Indonesian
-              students, helping them adapt to life in a foreign country, and
-              facilitating academic and social connections.
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="item-2">
-            <AccordionTrigger isColor={true} iconSize={20}>
-              How to join PINUS?
-            </AccordionTrigger>
-            <AccordionContent>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer
-              nec odio. Praesent libero. Sed cursus ante dapibus diam. Sed nisi.
-              Nulla quis sem at nibh elementum imperdiet. Duis sagittis ipsum.
-              Praesent mauris. Fusce nec tellus sed augue semper porta. Mauris
-              massa.
-            </AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="item-3">
-            <AccordionTrigger iconSize={25}>
-              Events organized by PINUS?
-            </AccordionTrigger>
-            <AccordionContent>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer
-              nec odio. Praesent libero. Sed cursus ante dapibus diam. Sed nisi.
-              Nulla quis sem at nibh elementum imperdiet. Duis sagittis ipsum.
-              Praesent mauris. Fusce nec tellus sed augue semper porta. Mauris
-              massa.
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
+      <div className="flex flex-col md:flex-row md:gap-4 gap-10 p-4">
+        <div id="accordion">
+          <Accordion type="multiple" className="w-96">
+            <AccordionItem value="item-1">
+              <AccordionTrigger iconSize={12}>What is PINUS?</AccordionTrigger>
+              <AccordionContent>
+                PINUS is a student-run organization established to support
+                Indonesian students during their academic journey at the
+                National University of Singapore (NUS). This organization
+                fosters a sense of community, providing a home away from tes
+                home for Indonesian students, helping them adapt to life in a
+                foreign country, and facilitating academic and social
+                connections.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="item-2">
+              <AccordionTrigger isColor={true} iconSize={20}>
+                How to join PINUS?
+              </AccordionTrigger>
+              <AccordionContent>
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer
+                nec odio. Praesent libero. Sed cursus ante dapibus diam. Sed
+                nisi. Nulla quis sem at nibh elementum imperdiet. Duis sagittis
+                ipsum. Praesent mauris. Fusce nec tellus sed augue semper porta.
+                Mauris massa.
+              </AccordionContent>
+            </AccordionItem>
+            <AccordionItem value="item-3">
+              <AccordionTrigger iconSize={25}>
+                Events organized by PINUS?
+              </AccordionTrigger>
+              <AccordionContent>
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer
+                nec odio. Praesent libero. Sed cursus ante dapibus diam. Sed
+                nisi. Nulla quis sem at nibh elementum imperdiet. Duis sagittis
+                ipsum. Praesent mauris. Fusce nec tellus sed augue semper porta.
+                Mauris massa.
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
 
-        <Card className="h-fit">
-          <CardImage
-            src="/test_img.jpg"
-            alt="random"
-            className="rounded-xl h-64"
-            width={300}
-            height={100}
-          />
-          <CardHeader>
-            <CardTitle>PINUS Open Day</CardTitle>
-            <CardDescription>
-              Annual event for prospective students to know more about studies
-              and life in NUS.{" "}
-            </CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <CardBadge>Ambassadors</CardBadge>
-            <CardBadge>Welfare</CardBadge>
-          </CardFooter>
-        </Card>
+        <div id="cards">
+          <Card className="h-fit">
+            <CardImage
+              src="/test_img.jpg"
+              alt="random"
+              className="rounded-xl h-64"
+              width={300}
+              height={100}
+            />
+            <CardHeader>
+              <CardTitle>PINUS Open Day</CardTitle>
+              <CardDescription>
+                Annual event for prospective students to know more about studies
+                and life in NUS.{" "}
+              </CardDescription>
+            </CardHeader>
+            <CardFooter>
+              <CardBadge>Ambassadors</CardBadge>
+              <CardBadge>Welfare</CardBadge>
+            </CardFooter>
+          </Card>
+        </div>
 
         <Card>
           <CardImage
@@ -162,7 +169,7 @@ export default function Examples() {
           </CardFooter>
         </Card>
 
-        <div className="flex flex-col gap-4 w-fit">
+        <div className="flex flex-col gap-4 w-fit" id="buttons">
           <Button
             variant="blue"
             rounding="xl"
@@ -201,7 +208,7 @@ export default function Examples() {
           <div>PRESSED: {buttonPressed}</div>
         </div>
 
-        <div className="flex flex-col gap-4 w-fit">
+        <div className="flex flex-col gap-4 w-fit" id="selects">
           <Select value={selected} onValueChange={setSelected}>
             <SelectTrigger
               variant="blue"
@@ -286,7 +293,10 @@ export default function Examples() {
         </div>
       </div>
 
-      <div className="flex items-center justify-center mx-auto py-10">
+      <div
+        className="flex items-center justify-center mx-auto py-10"
+        id="committee"
+      >
         <CommCardGroup className="w-[80vw]" columns={3} gap={8}>
           {[
             { name: "Cullen Sean", role: "President" },
@@ -349,7 +359,7 @@ export default function Examples() {
         </CommCardGroup>
       </div>
 
-      <div className="flex justify-center mx-auto py-10">
+      <div className="flex justify-center mx-auto py-10" id="guide">
         <GuideCard className="w-[50vw]">
           <GuideCardDecoration color="blue" width={3} height={60} />
           <GuideCardBody>
@@ -423,11 +433,14 @@ export default function Examples() {
         </GuideCard>
       </div>
 
-      <div className="mx-auto py-10 w-[80vw] h-[27vw] space-y-4">
+      <div
+        className="mx-auto py-10 w-[80vw] md:h-[37vw] h-[140vw] space-y-4 mb-32"
+        id="loading"
+      >
         <Button variant="blue" rounding="full" outline onClick={makeLoading}>
           Make Loading
         </Button>
-        <div className="grid grid-cols-3 grid-rows-2 gap-4 w-full h-full">
+        <div className="grid md:grid-cols-3 grid-cols-2 gap-4 w-full h-full">
           {isLoading
             ? [...Array(6)].map((_, index) => (
                 <Skeleton
