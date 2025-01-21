@@ -1,6 +1,9 @@
 // This is committee page and should be done by Team Melissa
 // Todo: Slicing the design and need to create functionallity to fetch the data from the notion database and render the data on this page
 
+'use client';
+
+import { useEffect, useState } from 'react';
 import {
     CommCard,
     CommCardDescription,
@@ -14,6 +17,23 @@ import TitleHeader from '../components/ui/title';
 import { committeeData } from '../data/committee';
 
 export default function Committee() {
+    const [width, setWidth] = useState(window.innerWidth);
+    const [columns, setColumns] = useState<2 | 3>(3);
+
+    useEffect(() => {
+        const handleResize = () => setWidth(window.innerWidth);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    useEffect(() => {
+        if (width >= 768) {
+            setColumns(3);
+        } else {
+            setColumns(2);
+        }
+    }, [width]);
+
     return (
         <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start min-h-screen">
             <div className="w-full h-[25vh] md:h-[35vh] lg:h-[50vh]">
@@ -26,6 +46,7 @@ export default function Committee() {
             <div className="w-full">
                 <TitleHeader text="Our Committee" color="blue" />
             </div>
+
             <div className="w-full flex flex-col gap-y-16 p-4">
                 {committeeData.map((group) => (
                     <div
@@ -33,7 +54,7 @@ export default function Committee() {
                         key={group.key}
                         id={group.key}>
                         <CommCardGroupTitle>{group.name}</CommCardGroupTitle>
-                        <CommCardGroup columns={3} gap={5}>
+                        <CommCardGroup columns={columns} gap={5}>
                             {group.members.map((member) => (
                                 <CommCard key={member.name}>
                                     <CommCardImage
