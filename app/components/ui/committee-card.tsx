@@ -23,6 +23,7 @@ export const CommCardGroup = ({
     const remainder = totalItems % columns;
     const mainItems = childrenArray.slice(0, rows * columns);
     const remainingItems = childrenArray.slice(rows * columns);
+    const dynamicGridWidth = remainder === 2 ? 'w-[66%]' : 'w-1/2';
 
     const gridCol = columns === 2 ? 'grid-cols-2' : 'grid-cols-3';
     const gridGap = gap ? `gap-${gap}` : 'gap-4';
@@ -41,9 +42,9 @@ export const CommCardGroup = ({
             {/* Remainder */}
             {remainder > 0 && (
                 <div
-                    className={cn('grid', gridGap, {
+                    className={cn('grid', gridGap, dynamicGridWidth, {
                         'grid-cols-1 justify-center': remainder === 1,
-                        'grid-cols-2 justify-between w-[66%] md:w-auto':
+                        'grid-cols-2 justify-between md:w-auto':
                             remainder === 2,
                     })}
                     style={{
