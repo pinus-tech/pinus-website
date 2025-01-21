@@ -98,6 +98,20 @@ export const CommCardImage = ({
     />
 );
 
+export const CommCardGroupTitle = ({
+    children,
+    className,
+}: {
+    children: React.ReactNode;
+    className?: string;
+}) => {
+    return (
+        <div className={cn('font-semibold text-xl text-center', className)}>
+            {children}
+        </div>
+    );
+};
+
 export const CommCardHeader = ({
     children,
     className,
