@@ -1,6 +1,6 @@
-export const runtime = 'edge';
-
 'use server'
+
+export const runtime = 'edge';
 
 import { Client } from "@notionhq/client";
 import { NextResponse } from "next/server";
