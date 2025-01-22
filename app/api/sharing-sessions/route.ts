@@ -1,5 +1,3 @@
-'use server'
-
 export const runtime = 'edge';
 
 import { Client } from "@notionhq/client";
