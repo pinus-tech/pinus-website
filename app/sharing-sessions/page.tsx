@@ -1,3 +1,4 @@
+export const runtime = 'edge';
 // This is sharing session list page to show how to fetch data from Notion database and render the data on the page
 
 // Define the type for a single Sharing Session
