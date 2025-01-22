@@ -15,6 +15,7 @@ interface SharingSession {
 
 // Fetch data from the Notion API
 async function getSharingSessions(): Promise<SharingSession[]> {
+    console.log(process.env.URL);
     const res = await fetch(process.env.URL + "/api/sharing-sessions", {
       cache: "no-store",
     });
@@ -26,7 +27,7 @@ async function getSharingSessions(): Promise<SharingSession[]> {
     // Parse and return the JSON response
     const sharingSessions: SharingSession[] = await res.json();
     return sharingSessions;
-  }
+}
 
 // Render the list of Sharing Sessions
 export default async function SharingSessionList() {
