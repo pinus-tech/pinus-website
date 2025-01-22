@@ -55,9 +55,9 @@ const Header = () => {
           </nav>
 
           {/* Sign In Button */}
-          <button className="hidden md:inline-block bg-blue-main text-white py-2 px-4 rounded hover:bg-blue-main">
+          {/* <button className="hidden md:inline-block bg-blue-main text-white py-2 px-4 rounded hover:bg-blue-main">
             Sign In
-          </button>
+          </button> */}
 
           {/* Hamburger Menu Button */}
           <button
@@ -126,12 +126,12 @@ const Header = () => {
               Contact Us
             </Link>
           </nav>
-          <button
+          {/* <button
             className="mt-6 bg-blue-main text-white py-2 px-6 rounded hover:bg-blue-700"
             onClick={toggleMenu}
           >
             Sign In
-          </button>
+          </button> */}
         </div>
       </header>
       {/* Offset for sticky header */}
