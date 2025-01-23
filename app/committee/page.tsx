@@ -17,13 +17,15 @@ import TitleHeader from '../components/ui/title';
 import { committeeData } from '../data/committee';
 
 export default function Committee() {
-    const [width, setWidth] = useState(window.innerWidth);
+    const [width, setWidth] = useState<number>(0);
     const [columns, setColumns] = useState<2 | 3>(3);
 
     useEffect(() => {
-        const handleResize = () => setWidth(window.innerWidth);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        if (typeof window !== undefined) {
+            const handleResize = () => setWidth(window.innerWidth);
+            window.addEventListener('resize', handleResize);
+            return () => window.removeEventListener('resize', handleResize);
+        }
     }, []);
 
     useEffect(() => {
