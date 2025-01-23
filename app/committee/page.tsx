@@ -17,11 +17,12 @@ import TitleHeader from '../components/ui/title';
 import { committeeData } from '../data/committee';
 
 export default function Committee() {
-    const [width, setWidth] = useState<number>(0);
+    const [width, setWidth] = useState<number>();
     const [columns, setColumns] = useState<2 | 3>(3);
 
     useEffect(() => {
         if (typeof window !== undefined) {
+            setWidth(window.innerWidth);
             const handleResize = () => setWidth(window.innerWidth);
             window.addEventListener('resize', handleResize);
             return () => window.removeEventListener('resize', handleResize);
