@@ -93,8 +93,6 @@ interface CommitteeMember {
 }
 
 async function getCommittee(): Promise<CommitteeMember[]> {
-  console.log(process.env.NEXT_PUBLIC_URL);
-  console.log(process.env.NEXT_PUBLIC_URL + "/api/committee");
   const res = await fetch(process.env.NEXT_PUBLIC_URL + "/api/committee", {
     cache: "no-store",
   });

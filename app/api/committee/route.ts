@@ -8,6 +8,7 @@ const databaseId = process.env.NOTION_DATABASE_COMMITTEE_ID!;
 
 export async function GET() {
   try {
+    console.log(databaseId);
     // Query the Notion database for results
     const { results } = await notion.databases.query({
       database_id: databaseId,
