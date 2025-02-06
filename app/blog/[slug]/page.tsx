@@ -11,17 +11,14 @@ import Image from "next/image";
 const BlogContent = () => {
   return (
     <article className="max-w-3xl w-full bg-white p-6 sm:p-10 rounded-2xl shadow-lg text-gray-800">
-      {/* Metadata Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 text-gray-500 text-sm">
         <span>📅 February 6, 2025</span>
         <span>⏳ 5 min read</span>
         <span className="text-blue-600 font-semibold">#Community</span>
       </div>
 
-      {/* Title */}
       <h2 className="text-3xl font-bold text-gray-900 mb-4">Pinus Bonding 2024</h2>
 
-      {/* Blog Content */}
       <p className="text-lg leading-relaxed mb-4">
         Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam vel 
         lectus vitae odio gravida fermentum a at sapien. Morbi tristique sapien 
@@ -42,7 +39,6 @@ const BlogContent = () => {
         tortor metus dignissim justo, nec tristique nisi ligula nec arcu.
       </p>
 
-      {/* Author Section */}
       <div className="flex items-center gap-4 mt-8 border-t pt-4">
         <img
           src="/author.jpg" 
@@ -62,10 +58,8 @@ export default function BlogDetail() {
   return (    
     <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start min-h-screen">
       <div className="relative w-full h-auto">
-        {/* Gradient overlay div */}
         <div className={styles.titleImageGradient}></div>
         
-        {/* Image div with background */}
         <div className="relative z-0">
           <picture>
             <source media="(max-width: 768px)" srcSet="/hero_mobile.png" />
@@ -73,7 +67,6 @@ export default function BlogDetail() {
           </picture>
         </div>
 
-        {/* Title text on top of image */}
         <div className="absolute top-3/4 left-1/2 transform -translate-x-1/2 -translate-y-1/2 
           text-white text-3xl sm:text-5xl font-bold z-10 text-center drop-shadow-[0_4px_6px_rgba(0,0,0,0.7)]">
           Pinus Bonding 2024
