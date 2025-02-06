@@ -39,6 +39,20 @@
   );
 }
 
+.titleImageGradient {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  background-image: linear-gradient(
+    to top,
+    rgba(220, 120, 50, 0.85) 20%,  /* Darker, richer orange */
+    rgba(255, 255, 255, 0) 100%   /* Smooth transition to transparent */
+  );
+}
+
 .coverImage {
   width: 100%;
   height: auto;
