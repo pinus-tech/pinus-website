@@ -67,8 +67,13 @@ function BlogListContent() {
       .catch((error) => console.error("Error fetching blogs:", error));
   }, []);
 
-  const totalPages = Math.ceil(blogs.length / blogsPerPage);
-  const currentBlogs = blogs.slice((currentPage - 1) * blogsPerPage, currentPage * blogsPerPage);
+  // Filter blogs based on selected category
+  const filteredBlogs = selected === "all" || !selected
+    ? blogs
+    : blogs.filter((blog) => blog.categories.includes(selected));
+
+  const totalPages = Math.ceil(filteredBlogs.length / blogsPerPage);
+  const currentBlogs = filteredBlogs.slice((currentPage - 1) * blogsPerPage, currentPage * blogsPerPage);
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
