@@ -98,6 +98,8 @@ async function getCommittee(): Promise<CommitteeMember[]> {
     cache: "no-store",
   });
 
+  console.log(res);
+
   if (!res.ok) {
     throw new Error("Failed to fetch committee data");
   }
