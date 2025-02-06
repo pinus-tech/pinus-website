@@ -172,7 +172,8 @@ export default function Committee() {
 
             <div className="w-full flex flex-col gap-y-16 p-4">
                 {committeeData
-                    ? Object.entries(committeeData).map(
+                    ? // Object.entries makes it into an array of arrays so that it is easier to map.
+                      Object.entries(committeeData).map(
                           ([groupName, members]) => (
                               <div
                                   className="flex flex-col justify-center gap-4"
