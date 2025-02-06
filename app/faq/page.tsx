@@ -1,21 +1,43 @@
 // This is guides page and should be done by Team Rafa
-// Todo: Mostly this page is static can just follow the design from the figma, the content will be updated later so can use placeholder first
-
-import Image from "next/image";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "../components/ui/accordion";
+import { TitleHeader } from "../components/ui/title";
 
 export default function Faq() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          src="/logo-pinustech.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <div>This is the faq page</div>        
-      </main>      
-    </div>
+    <main className="min-h-screen mx-auto px-8 md:px-72 py-10">
+      <TitleHeader text="FAQ" color="blue" />
+      <div className="max-w-3xl mx-auto">
+        <Accordion type="single" collapsible>
+          <AccordionItem value="item1">
+            <AccordionTrigger>What is PINUS?</AccordionTrigger>
+            <AccordionContent>
+              PINUS is a student-run organization established to support Indonesian students during their academic
+              journey at the National University of Singapore (NUS). This organization fosters a sense of community,
+              providing a home away from home for Indonesian students, helping them adapt to life in a foreign
+              country, and facilitating academic and social connections.
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="item2">
+            <AccordionTrigger>How to join PINUS?</AccordionTrigger>
+            <AccordionContent>
+              Lorem ipsum dolor sit amet consectetur, adipisicing elit. Quo, alias dolor. Explicabo corrupti laborum quidem voluptates fugit assumenda sequi nobis dolores dolorem, corporis est dolore. Impedit ex dolor est ut.
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="item3">
+            <AccordionTrigger>What events organized by PINUS?</AccordionTrigger>
+            <AccordionContent>
+              Lorem ipsum dolor sit amet, consectetur adipisicing elit. Quibusdam est ex fuga aliquam quaerat, nulla perspiciatis. Excepturi voluptatem, debitis expedita itaque, maxime corrupti nihil porro rerum atque enim rem fuga?
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </div>
+    </main>  
   );
 }

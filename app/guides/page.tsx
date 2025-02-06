@@ -128,15 +128,26 @@ function GuidesContent() {
 
 export default function Guides() {
   return (
-    <div className="px-8 md:px-72 py-10">
+    <div className="flex flex-col gap-8 row-start-2 items-center sm:items-start min-h-screen">
       {/* Header */}
-      <BlurFade key="header" delay={BLUR_FADE_DELAY} inView>
-        <TitleHeader text="Guide" color="blue" />
-      </BlurFade>
 
-      <Suspense fallback={<div></div>}>
-        <GuidesContent />
-      </Suspense>
+      <div className="w-full h-[25vh] md:h-[35vh] lg:h-[50vh]">
+        <img
+          src="/test_img2.png"
+          alt="PINUS Committee Image"
+          className="w-full h-full object-cover object-center"
+        />
+      </div>
+
+      <div className="px-8 md:px-72 py-2 md:py-5 pb-20 md:pb-20">
+        <BlurFade key="header" delay={BLUR_FADE_DELAY} inView>
+          <TitleHeader text="Guide" color="blue" />
+        </BlurFade>
+
+        <Suspense fallback={<div></div>}>
+          <GuidesContent />
+        </Suspense>
+      </div>
     </div>
   );
 }
