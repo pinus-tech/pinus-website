@@ -10,7 +10,7 @@ import Image from "next/image";
 
 const BlogContent = () => {
   return (
-    <article className="max-w-3xl w-full bg-white p-6 sm:p-10 rounded-2xl shadow-lg text-gray-800">
+    <article className="max-w-4xl w-full bg-white p-6 sm:p-10 rounded-2xl shadow-lg text-gray-800">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 text-gray-500 text-sm">
         <span>📅 February 6, 2025</span>
         <span>⏳ 5 min read</span>
@@ -54,6 +54,27 @@ const BlogContent = () => {
   );
 };
 
+const BlogFooter = () => {
+  return (
+    <div className="w-full max-w-3xl flex justify-between items-center py-6 border-t border-gray-200 mx-auto">
+      {/* Previous Post Link */}
+      <div className="flex items-center space-x-4">
+        <a href="/previous-post" className="text-lg text-blue-600 hover:underline flex items-center">
+          <span className="mr-2">←</span> Pinus Takram Cup
+        </a>
+      </div>
+
+      {/* Next Post Link */}
+      <div className="flex items-center space-x-4 justify-end">
+        <a href="/next-post" className="text-lg text-blue-600 hover:underline flex items-center">
+          PINUS CNY Dinner <span className="ml-2">→</span>
+        </a>
+      </div>
+    </div>
+  );
+};
+
+
 export default function BlogDetail() {
   return (    
     <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start min-h-screen">
@@ -78,6 +99,8 @@ export default function BlogDetail() {
       <div className="w-full flex justify-center mb-4">
         <BlogContent />
       </div>
+
+      <BlogFooter />
     </main>   
   );
 }
