@@ -109,6 +109,7 @@ export default function Committee() {
   const [columns, setColumns] = useState<2 | 3>(3);
   const [committeeData, setCommitteeData] =
     useState<Record<string, CommitteeMember[]>>();
+  // const [nextCursor, setNextCursor] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== undefined) {
@@ -132,6 +133,7 @@ export default function Committee() {
       try {
         const data = await getCommittee();
 
+        console.log(data);
         // Notion's data is fetched in reverse, for some reason. This is to reverse it back to how it is shown in the original database.
         const reversedData = [...data].reverse();
 
@@ -182,7 +184,7 @@ export default function Committee() {
               >
                 <CommCardGroupTitle>{groupName}</CommCardGroupTitle>
                 <CommCardGroup columns={columns} gap={5}>
-                  {members.map((member) => (
+                  {members?.map((member) => (
                     <CommCard key={member.id}>
                       <CommCardImage
                         src="/test_img.jpg"
