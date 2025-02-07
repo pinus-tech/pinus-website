@@ -19,80 +19,12 @@ export const runtime = "edge";
 
 interface CommitteeMember {
   id: string;
-  properties: {
-    "committee-group": {
-      id: string;
-      select: {
-        color: string;
-        id: string;
-        name: string;
-      };
-      type: string;
-    };
-    image: {
-      id: string;
-      rich_text: Array<{
-        type: string;
-        text: {
-          content: string;
-          link: string | null;
-        };
-        annotations: {
-          bold: boolean;
-          italic: boolean;
-          strikethrough: boolean;
-          underline: boolean;
-          code: boolean;
-          color: string;
-        };
-        href: string | null;
-      }>;
-      type: string;
-    };
-    name: {
-      id: string;
-      title: Array<{
-        type: string;
-        text: {
-          content: string;
-          link: string | null;
-        };
-        annotations: {
-          bold: boolean;
-          italic: boolean;
-          strikethrough: boolean;
-          underline: boolean;
-          code: boolean;
-          color: string;
-        };
-        href: string | null;
-      }>;
-      type: string;
-    };
-    role: {
-      id: string;
-      type: string;
-      rich_text: Array<{
-        type: string;
-        text: {
-          content: string;
-          link: string | null;
-        };
-        annotations: {
-          bold: boolean;
-          italic: boolean;
-          strikethrough: boolean;
-          underline: boolean;
-          code: boolean;
-          color: string;
-        };
-        href: string | null;
-      }>;
-    };
-  };
+  committeeGroup: string;
+  name: string;
+  role: string;
 }
 
-async function getCommittee(): Promise<CommitteeMember[]> {
+async function getCommittee(): Promise<{ results: CommitteeMember[] }> {
   const res = await fetch(process.env.NEXT_PUBLIC_URL + "/api/committee", {
     cache: "no-store",
   });
@@ -109,7 +41,6 @@ export default function Committee() {
   const [columns, setColumns] = useState<2 | 3>(3);
   const [committeeData, setCommitteeData] =
     useState<Record<string, CommitteeMember[]>>();
-  // const [nextCursor, setNextCursor] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== undefined) {
@@ -135,11 +66,11 @@ export default function Committee() {
 
         console.log(data);
         // Notion's data is fetched in reverse, for some reason. This is to reverse it back to how it is shown in the original database.
-        const reversedData = [...data].reverse();
+        const reversedData = [...data.results].reverse();
 
         // Group to an array of objects, with the EXCO Dept as the key, and the array of members as the value.
         const groupedData = reversedData.reduce((acc, member) => {
-          const groupName = member.properties["committee-group"]?.select?.name;
+          const groupName = member.committeeGroup; // Get the committee group name.
 
           if (!acc[groupName]) {
             acc[groupName] = [];
@@ -149,6 +80,7 @@ export default function Committee() {
           return acc;
         }, {} as Record<string, CommitteeMember[]>);
 
+        // Update the state with the grouped data.
         setCommitteeData(groupedData);
       } catch (error) {
         console.error("Error fetching committee data:", error);
@@ -184,20 +116,18 @@ export default function Committee() {
               >
                 <CommCardGroupTitle>{groupName}</CommCardGroupTitle>
                 <CommCardGroup columns={columns} gap={5}>
-                  {members?.map((member) => (
+                  {members.map((member) => (
                     <CommCard key={member.id}>
                       <CommCardImage
                         src="/test_img.jpg"
-                        alt={member.properties.name.title[0]?.text.content}
+                        alt={member.name}
                         width={24}
                         height={32}
                       />
                       <CommCardHeader>
-                        <CommCardTitle>
-                          {member.properties.name.title[0]?.text.content}
-                        </CommCardTitle>
+                        <CommCardTitle>{member.name}</CommCardTitle>
                         <CommCardDescription italic>
-                          {member.properties.role?.rich_text[0]?.text?.content}
+                          {member.role}
                         </CommCardDescription>
                       </CommCardHeader>
                     </CommCard>
