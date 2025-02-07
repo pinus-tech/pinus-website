@@ -31,12 +31,12 @@ export async function GET() {
         .map((item) => {
           const page = item as PageObjectResponse; 
           
-          
+          console.log(page)
           return {
             id: page.id,
-            committeeGroup: page.properties["committee-group"]?.select?.name || "",
-            name: page.properties.name?.title?.[0]?.text?.content || "",
-            role: page.properties.role?.rich_text?.[0]?.text?.content || "",
+            committeeGroup: page.properties["committee-group"]?.type === "select"? page.properties["committee-group"]?.select?.name || "" : "",
+            name: page.properties.name?.type === "title"? page.properties.name?.title?.[0]?.type === "text"? page.properties.name?.title?.[0]?.text?.content || "" : "" : "",
+            role: page.properties.role.type === "rich_text"? page.properties.role?.rich_text?.[0]?.type === "text"? page.properties.role?.rich_text?.[0]?.text?.content || "" : "" : "",
           };
         });
 
