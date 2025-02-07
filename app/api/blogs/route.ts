@@ -1,10 +1,29 @@
 import { Client } from "@notionhq/client";
 import { NextResponse } from "next/server";
+import { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
 export const runtime = "nodejs"; 
 
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
 const databaseId = process.env.NOTION_DATABASE_BLOGS_ID!;
+
+interface NotionProperties {
+  Title: { title: { text: { content: string } }[] };
+  Description: { rich_text: { text: { content: string } }[] };
+  "Published Date": { date?: { start: string } };
+  Tags: { multi_select: { name: string }[] };
+  Author: { people: { name: string }[] };
+  Thumbnail: { files?: { file?: { url: string } }[] };
+  "AI Description"?: { rich_text: { text: { content: string } }[] };
+  "Your Custom Field"?: { rich_text: { text: { content: string } }[] };
+  "Some Boolean Field"?: { checkbox: boolean };
+  "Some Select Field"?: { select?: { name: string } };
+}
+
+function hasProperties(result: PageObjectResponse): result is PageObjectResponse & { properties: NotionProperties } {
+  const properties = result.properties as unknown as NotionProperties;
+  return properties.Title !== undefined && properties.Description !== undefined;
+}
 
 export async function GET() {
   console.log("GET request initiated"); 
@@ -13,39 +32,39 @@ export async function GET() {
       database_id: databaseId,
     });
 
-    console.log("Results fetched:", results);  // Log the fetched results
+    console.log("Results fetched:", results);
 
-    const blogs = results.map((result: any) => {
-      console.log(result.properties);  // Log properties to inspect them
-      const thumbnailUrl = result.properties.Thumbnail?.files?.[0]?.file?.url;
-      console.log("Thumbnail URL:", thumbnailUrl);
+    const blogs = results.map((result) => {
+      if ('properties' in result && hasProperties(result as PageObjectResponse)) {
+        const properties = (result as PageObjectResponse).properties as unknown as NotionProperties;
+        console.log(properties);
 
-      return {
-        id: result.id,
-        title: result.properties.Title?.title?.[0]?.text?.content || "Untitled",
-        description: result.properties.Description?.rich_text?.[0]?.text?.content || "",
-        date: result.properties['Published Date']?.date?.start || "Unknown",  // Start date of the event
-        categories: result.properties.Tags?.multi_select.map((tag: any) => tag.name) || [],
-        author: result.properties.Author?.people?.[0]?.name || "Unknown",
-        thumbnail: result.properties.Thumbnail?.files?.[0]?.file?.url || "/blue.png",
-        
-        // Additional fields
-        aiDescription: result.properties['AI Description']?.rich_text?.[0]?.text?.content || "No AI Description",  // AI Description field
-        publishedDate: result.properties['Published Date']?.date?.start || "Unknown",  // Date field
-        otherField: result.properties['Your Custom Field']?.rich_text?.[0]?.text?.content || "N/A",  // Custom field, replace with the actual name
-        
-        // Handling other types like multi-select, checkbox, etc.
-        someBooleanField: result.properties['Some Boolean Field']?.checkbox || false,  // If the property is a checkbox
-        someSelectField: result.properties['Some Select Field']?.select?.name || "No Option",  // If the property is a select field
-      };
-    });
+        const thumbnailUrl = properties.Thumbnail?.files?.[0]?.file?.url;
+        console.log("Thumbnail URL:", thumbnailUrl);
+
+        return {
+          id: result.id,
+          title: properties.Title?.title?.[0]?.text?.content || "Untitled",
+          description: properties.Description?.rich_text?.[0]?.text?.content || "",
+          date: properties['Published Date']?.date?.start || "Unknown",
+          categories: properties.Tags?.multi_select.map((tag) => tag.name) || [],
+          author: properties.Author?.people?.[0]?.name || "Unknown",
+          thumbnail: properties.Thumbnail?.files?.[0]?.file?.url || "/blue.png",
+          aiDescription: properties['AI Description']?.rich_text?.[0]?.text?.content || "No AI Description",
+          publishedDate: properties['Published Date']?.date?.start || "Unknown",
+          otherField: properties['Your Custom Field']?.rich_text?.[0]?.text?.content || "N/A",
+          someBooleanField: properties['Some Boolean Field']?.checkbox || false,
+          someSelectField: properties['Some Select Field']?.select?.name || "No Option",
+        };
+      } else {
+        console.error("Result does not have properties field", result);
+        return null;
+      }
+    }).filter(blog => blog !== null);
 
     return NextResponse.json(blogs);
   } catch (error) {
     console.error("Error fetching data from Notion:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch blogs." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch data from Notion." }, { status: 500 });
   }
 }
