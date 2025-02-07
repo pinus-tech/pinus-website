@@ -29,9 +29,7 @@ interface Blog {
   date: string;
   categories: string[];
   author: string;
-  thumbnail: {
-    url: string;
-  } | null;
+  thumbnail: string;
 }
 
 async function getBlogs(): Promise<Blog[]> {
@@ -158,7 +156,7 @@ function BlogListContent() {
                 <CardDescription>{blog.description}</CardDescription>
               </CardContent>
               <CardFooter>
-                <CardTags eventType={blog.categories.join(', ')} />
+                <CardTags teamName="" eventType={blog.categories.join(', ')} />
               </CardFooter>
             </Card>
           ))}
