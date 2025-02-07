@@ -58,6 +58,10 @@ function BlogListContent() {
   }, [queryType]);
 
   useEffect(() => {
+    setCurrentPage(1);
+  }, [selected]);
+  
+  useEffect(() => {
     router.push(`?type=${selected}`);
   }, [selected, router]);
 
