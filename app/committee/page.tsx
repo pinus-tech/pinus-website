@@ -14,6 +14,8 @@ import {
   CommCardTitle,
 } from "../components/ui/committee-card";
 import TitleHeader from "../components/ui/title";
+import Link from "next/link";
+import Button from "../components/ui/button";
 
 export const runtime = "edge";
 
@@ -102,13 +104,24 @@ export default function Committee() {
       <div className="w-full">
         <TitleHeader text="Our Committee" color="blue" />
       </div>
-
+      <div className="flex w-full justify-center p-4 whitespace-nowrap">
+        <div className="flex flex-row overflow-x-auto gap-5 no-scrollbar">
+          {committeeData
+            ?
+              Object.entries(committeeData).map(([groupName]) => (
+                <Link key={groupName + "Button"} href={"#" + groupName}>
+                  <Button className="border-2 hover:bg-white hover:text-blue-main hover:border-blue-main">{groupName}</Button>
+                </Link>
+              ))
+          : null}
+        </div>
+      </div>
       <div className="w-full flex flex-col gap-y-16 p-4">
         {committeeData
           ? // Object.entries makes it into an array of arrays so that it is easier to map.
             Object.entries(committeeData).map(([groupName, members]) => (
               <div
-                className="flex flex-col justify-center gap-4"
+                className="flex flex-col justify-center scroll-m-20 gap-4"
                 key={groupName}
                 /* @Albert: when you want to scroll here, use <a href={`#${groupName}`}/> for the scroll navigation part. 
                                   The group names are the headers in the page, e.g. Executive Committee, etc. */
