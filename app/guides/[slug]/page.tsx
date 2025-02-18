@@ -6,12 +6,10 @@ import { RedirectToGuides } from "./goBack";
 
 export const runtime = "edge";
 
-export default async function GuidePage({
-  params,
-}: {
-  params: { slug: string };
-}) {
-  const { slug } = await params;
+type tParams = Promise<{ slug: string }>;
+
+export default async function GuidePage(props: { params: tParams }) {
+  const { slug } = await props.params;
 
   async function getGuideContent(slug: string) {
     try {

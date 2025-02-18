@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { NotionRenderer } from "react-notion-x";
 import { ExtendedRecordMap } from "notion-types";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -19,7 +19,7 @@ export default function Renderer({ recordMap }: RendererProps) {
       const hash = window.location.hash;
       if (hash && containerRef.current) {
         const id = hash.replace("#", "");
-        const element = document.getElementById(id);
+        const element = id ? document.getElementById(id) : null;
         if (element) {
           setTimeout(() => {
             element.scrollIntoView({
@@ -40,14 +40,20 @@ export default function Renderer({ recordMap }: RendererProps) {
     };
   }, [pathname, searchParams]);
 
-  const Link = ({ href, children, ...props }: any) => {
+  const Link = ({
+    href,
+    children,
+    ...props
+  }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => {
     const isHashLink = href?.startsWith("#");
 
-    const handleClick = (e: React.MouseEvent) => {
+    const handleClick = (
+      e: React.MouseEvent<HTMLAnchorElement, MouseEvent>
+    ) => {
       if (isHashLink) {
         e.preventDefault();
-        const id = href.replace("#", "");
-        const element = document.getElementById(id);
+        const id = href?.replace("#", "");
+        const element = id ? document.getElementById(id) : null;
         if (element) {
           window.history.pushState(null, "", href);
           element.scrollIntoView({
