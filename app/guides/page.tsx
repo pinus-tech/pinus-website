@@ -5,22 +5,93 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { TitleHeader } from "../components/ui/title";
 import { Button } from "../components/ui/button";
 import { BlurFade } from "../components/ui/blur-fade";
-import {
-  GuideCard,
-  GuideCardDecoration,
-  GuideCardBody,
-  GuideCardTitle,
-  GuideCardText,
-} from "../components/ui/guide-card";
-import { before_acceptance, after_acceptance } from "./data";
-import Image from "next/image";
+import { Skeleton } from "../components/ui/skeleton";
 
-const BLUR_FADE_DELAY = 0.04;
-const COLORS: Array<"yellow" | "red" | "blue" | "black"> = [
-  "yellow",
-  "red",
-  "blue",
-];
+const BLUR_FADE_DELAY = 0.02;
+
+interface NotionPage {
+  object: "page";
+  id: string;
+  created_time: string;
+  last_edited_time: string;
+  created_by: NotionUser;
+  last_edited_by: NotionUser;
+  cover: null;
+  icon: null;
+  parent: NotionParent;
+  archived: boolean;
+  in_trash: boolean;
+  properties: NotionProperties;
+  url: string;
+  public_url: string | null;
+  request_id: string;
+}
+
+interface NotionUser {
+  object: "user";
+  id: string;
+}
+
+interface NotionParent {
+  type: "database_id";
+  database_id: string;
+}
+
+interface NotionProperties {
+  Order: NotionNumberProperty;
+  Subchapter: NotionSelectProperty;
+  Chapter: NotionSelectProperty;
+  Name: NotionTitleProperty;
+  Description: NotionRichTextProperty;
+}
+
+interface NotionNumberProperty {
+  id: string;
+  type: "number";
+  number: number;
+}
+
+interface NotionSelectProperty {
+  id: string;
+  type: "select";
+  select: {
+    id: string;
+    name: string;
+    color: string;
+  };
+}
+
+interface NotionTitleProperty {
+  id: string;
+  type: "title";
+  title: NotionTextContent[];
+}
+
+interface NotionRichTextProperty {
+  id: string;
+  type: "rich_text";
+  rich_text: NotionTextContent[];
+}
+
+interface NotionTextContent {
+  type: "text";
+  text: {
+    content: string;
+    link: string | null;
+  };
+  annotations: NotionTextAnnotations;
+  plain_text: string;
+  href: string | null;
+}
+
+interface NotionTextAnnotations {
+  bold: boolean;
+  italic: boolean;
+  strikethrough: boolean;
+  underline: boolean;
+  code: boolean;
+  color: string;
+}
 
 function GuidesContent() {
   const router = useRouter();
@@ -30,6 +101,8 @@ function GuidesContent() {
   const [selected, setSelected] = useState<"before" | "after">(
     queryType === "after" ? "after" : "before"
   );
+  const [guidesContent, setGuidesContent] = useState<NotionPage[]>([]);
+  const [isFetching, setIsFetching] = useState<boolean>(true);
 
   useEffect(() => {
     router.push(`?type=${selected}`);
@@ -40,6 +113,42 @@ function GuidesContent() {
       setSelected(option);
     }
   };
+
+  useEffect(() => {
+    async function fetchData() {
+      setIsFetching(true);
+      try {
+        const data = await getSharingSessions();
+        setGuidesContent(data);
+      } catch (error) {
+        console.error("Error fetching data from Notion:", error);
+      } finally {
+        setIsFetching(false);
+      }
+    }
+    fetchData();
+  }, []);
+
+  async function getSharingSessions(): Promise<NotionPage[]> {
+    const res = await fetch("/api/guides", {
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      console.error("Failed to fetch sharing sessions");
+      return [];
+    }
+
+    const guidesContent: NotionPage[] = await res.json();
+    return guidesContent;
+  }
+
+  const filteredGuides = guidesContent.filter((guide) => {
+    const chapter = guide.properties.Chapter.select.name;
+    return selected === "before"
+      ? chapter === "Before Acceptance"
+      : chapter === "After Acceptance";
+  });
 
   return (
     <>
@@ -65,7 +174,7 @@ function GuidesContent() {
         </div>
       </BlurFade>
 
-      {/* Content Section */}
+      {/* Content Section Header */}
       <BlurFade
         key={`content-${selected}`}
         delay={BLUR_FADE_DELAY * 1.5}
@@ -79,49 +188,62 @@ function GuidesContent() {
       </BlurFade>
 
       {/* Guide Cards */}
-      <BlurFade key={`cards-${selected}`} delay={BLUR_FADE_DELAY * 4} inView>
-        <div className="flex flex-col md:gap-12 gap-16">
-          {(selected === "before" ? before_acceptance : after_acceptance).map(
-            (guide, index) => (
-              <GuideCard key={index}>
-                <GuideCardDecoration
-                  color={COLORS[index % COLORS.length]}
-                  width={3}
-                  height={80}
-                />
-                <GuideCardBody>
-                  <GuideCardTitle>{guide.title}</GuideCardTitle>
-                  {guide.image && (
-                    <Image
-                      src={guide.image}
-                      width={200}
-                      height={200}
-                      className="w-full md:h-96 object-cover"
-                      alt={`Image for ${guide.title}`}
-                    />
-                  )}
-                  {guide.details.map((detail, index) => (
-                    <GuideCardText key={index} className="mt-2">
-                      <div>
-                        <h3 className="font-semibold text-lg">
-                          {detail.subtitle}
-                        </h3>
-                        <p
-                          className={`${
-                            detail.subtitle ? "text-md" : "text-lg"
-                          }`}
+      <div className="text-center">
+        {isFetching ? (
+          <div className="flex flex-col gap-4 items-center justify-center">
+            <Skeleton skeletonColor="blue" className="h-6 w-56" />
+            <Skeleton skeletonColor="blue" className="h-4 w-64" />
+            <Skeleton skeletonColor="blue" className="h-4 w-64" />
+            <Skeleton skeletonColor="blue" className="h-4 w-64" />
+            <Skeleton skeletonColor="red" className="h-6 w-56" />
+            <Skeleton skeletonColor="red" className="h-4 w-64" />
+            <Skeleton skeletonColor="red" className="h-4 w-64" />
+            <Skeleton skeletonColor="red" className="h-4 w-64" />
+          </div>
+        ) : filteredGuides.length > 0 ? (
+          filteredGuides.map((guide, index) => (
+            <BlurFade
+              key={guide.id}
+              delay={BLUR_FADE_DELAY * (index + 1)}
+              inView
+            >
+              <div className="mb-4 cursor-pointer">
+                <h1
+                  className="text-xl font-bold"
+                  onClick={() => router.push(`/guides/${guide.id}`)}
+                >
+                  {guide.properties.Name.title[0].plain_text}
+                </h1>
+                <div className="pl-5 italic">
+                  {guide.properties.Description?.rich_text?.length > 0 ? (
+                    guide.properties.Description.rich_text[0].plain_text
+                      .split("\n")
+                      .map((line, i) => (
+                        <div
+                          key={i}
+                          onClick={() =>
+                            router.push(
+                              `/guides/${guide.id}#${line.split("—")[1]}`
+                            )
+                          }
+                          className="cursor-pointer"
                         >
-                          {detail.description}
-                        </p>
-                      </div>
-                    </GuideCardText>
-                  ))}
-                </GuideCardBody>
-              </GuideCard>
-            )
-          )}
-        </div>
-      </BlurFade>
+                          {line.split("—")[0]}
+                        </div>
+                      ))
+                  ) : (
+                    <div>No description available</div>
+                  )}
+                </div>
+              </div>
+            </BlurFade>
+          ))
+        ) : (
+          <div className="text-center">
+            No guides available for this category.
+          </div>
+        )}
+      </div>
     </>
   );
 }
@@ -129,8 +251,7 @@ function GuidesContent() {
 export default function Guides() {
   return (
     <div className="flex flex-col gap-8 row-start-2 items-center sm:items-start min-h-screen">
-      {/* Header */}
-
+      {/* Header Image */}
       <div className="w-full h-[25vh] md:h-[35vh] lg:h-[50vh]">
         <img
           src="/test_img2.png"
@@ -139,7 +260,7 @@ export default function Guides() {
         />
       </div>
 
-      <div className="px-8 md:px-72 py-2 md:py-5 pb-20 md:pb-20">
+      <div className="px-8 md:px-72 py-2 md:py-5 pb-20 md:pb-20 w-full">
         <BlurFade key="header" delay={BLUR_FADE_DELAY} inView>
           <TitleHeader text="Guide" color="blue" />
         </BlurFade>

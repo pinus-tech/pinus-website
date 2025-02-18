@@ -25,7 +25,7 @@ const Header = () => {
           <div className="flex items-center">
             <Link href="/">
               <img
-                src="logo-pinus.svg" // Replace with your logo path
+                src="/logo-pinus.svg" // Replace with your logo path
                 alt="Logo"
                 className="h-8 cursor-pointer"
               />
