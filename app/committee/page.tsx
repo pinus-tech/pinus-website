@@ -14,6 +14,8 @@ import {
   CommCardTitle,
 } from "../components/ui/committee-card";
 import TitleHeader from "../components/ui/title";
+import Link from "next/link";
+import Button from "../components/ui/button";
 import { Skeleton } from "../components/ui/skeleton";
 
 export const runtime = "edge";
@@ -105,6 +107,19 @@ export default function Committee() {
       </div>
       <div className="w-full">
         <TitleHeader text="Our Committee" color="blue" />
+      </div>
+      <div className="flex w-full justify-center p-4 whitespace-nowrap">
+        <div className="flex flex-row overflow-x-auto gap-5 no-scrollbar">
+          {committeeData
+            ? Object.entries(committeeData).map(([groupName]) => (
+                <Link key={groupName + "Button"} href={"#" + groupName}>
+                  <Button className="border-2 hover:bg-white hover:text-blue-main hover:border-blue-main">
+                    {groupName}
+                  </Button>
+                </Link>
+              ))
+            : null}
+        </div>
       </div>
 
       <div className="w-full flex flex-col gap-y-16 p-4">
