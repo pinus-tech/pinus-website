@@ -14,8 +14,7 @@ import {
   CommCardTitle,
 } from "../components/ui/committee-card";
 import TitleHeader from "../components/ui/title";
-import Link from "next/link";
-import Button from "../components/ui/button";
+import { Skeleton } from "../components/ui/skeleton";
 
 export const runtime = "edge";
 
@@ -43,6 +42,7 @@ export default function Committee() {
   const [columns, setColumns] = useState<2 | 3>(3);
   const [committeeData, setCommitteeData] =
     useState<Record<string, CommitteeMember[]>>();
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
     if (typeof window !== undefined) {
@@ -86,6 +86,8 @@ export default function Committee() {
         setCommitteeData(groupedData);
       } catch (error) {
         console.error("Error fetching committee data:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -104,51 +106,51 @@ export default function Committee() {
       <div className="w-full">
         <TitleHeader text="Our Committee" color="blue" />
       </div>
-      <div className="flex w-full justify-center p-4 whitespace-nowrap">
-        <div className="flex flex-row overflow-x-auto gap-5 no-scrollbar">
-          {committeeData
-            ?
-              Object.entries(committeeData).map(([groupName]) => (
-                <Link key={groupName + "Button"} href={"#" + groupName}>
-                  <Button className="border-2 hover:bg-white hover:text-blue-main hover:border-blue-main">{groupName}</Button>
-                </Link>
-              ))
-          : null}
-        </div>
-      </div>
+
       <div className="w-full flex flex-col gap-y-16 p-4">
-        {committeeData
-          ? // Object.entries makes it into an array of arrays so that it is easier to map.
-            Object.entries(committeeData).map(([groupName, members]) => (
-              <div
-                className="flex flex-col justify-center scroll-m-20 gap-4"
-                key={groupName}
-                /* @Albert: when you want to scroll here, use <a href={`#${groupName}`}/> for the scroll navigation part. 
+        {!isLoading && committeeData ? (
+          // Object.entries makes it into an array of arrays so that it is easier to map.
+          Object.entries(committeeData).map(([groupName, members]) => (
+            <div
+              className="flex flex-col justify-center gap-4"
+              key={groupName}
+              /* @Albert: when you want to scroll here, use <a href={`#${groupName}`}/> for the scroll navigation part. 
                                   The group names are the headers in the page, e.g. Executive Committee, etc. */
-                id={groupName}
-              >
-                <CommCardGroupTitle>{groupName}</CommCardGroupTitle>
-                <CommCardGroup columns={columns} gap={5}>
-                  {members.map((member) => (
-                    <CommCard key={member.id}>
-                      <CommCardImage
-                        src="/test_img.jpg"
-                        alt={member.name}
-                        width={24}
-                        height={32}
-                      />
-                      <CommCardHeader>
-                        <CommCardTitle>{member.name}</CommCardTitle>
-                        <CommCardDescription italic>
-                          {member.role}
-                        </CommCardDescription>
-                      </CommCardHeader>
-                    </CommCard>
-                  ))}
-                </CommCardGroup>
-              </div>
-            ))
-          : null}
+              id={groupName}
+            >
+              <CommCardGroupTitle>{groupName}</CommCardGroupTitle>
+              <CommCardGroup columns={columns} gap={5}>
+                {members.map((member) => (
+                  <CommCard key={member.id}>
+                    <CommCardImage
+                      src="/test_img.jpg"
+                      alt={member.name}
+                      width={24}
+                      height={32}
+                    />
+                    <CommCardHeader>
+                      <CommCardTitle>{member.name}</CommCardTitle>
+                      <CommCardDescription italic>
+                        {member.role}
+                      </CommCardDescription>
+                    </CommCardHeader>
+                  </CommCard>
+                ))}
+              </CommCardGroup>
+            </div>
+          ))
+        ) : (
+          <div className="flex flex-col justify-center items-center gap-4">
+            <Skeleton skeletonColor="blue" className="w-52 h-6" />
+            <CommCardGroup columns={columns} gap={5}>
+              <Skeleton skeletonColor="blue" className="w-56 md:w-64 h-56" />
+              <Skeleton skeletonColor="blue" className="w-56 md:w-64 h-56" />
+              <Skeleton skeletonColor="blue" className="w-56 md:w-64 h-56" />
+              <Skeleton skeletonColor="blue" className="w-56 md:w-64 h-56" />
+              <Skeleton skeletonColor="blue" className="w-56 md:w-64 h-56" />
+            </CommCardGroup>
+          </div>
+        )}
       </div>
     </main>
   );
