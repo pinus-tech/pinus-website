@@ -155,14 +155,29 @@ export default function Committee() {
             </div>
           ))
         ) : (
-          <div className="flex flex-col justify-center items-center gap-4">
+          <div className="flex flex-col justify-center w-full items-center gap-4">
             <Skeleton skeletonColor="blue" className="w-52 h-6" />
             <CommCardGroup columns={columns} gap={5}>
-              <Skeleton skeletonColor="blue" className="w-56 md:w-64 h-56" />
-              <Skeleton skeletonColor="blue" className="w-56 md:w-64 h-56" />
-              <Skeleton skeletonColor="blue" className="w-56 md:w-64 h-56" />
-              <Skeleton skeletonColor="blue" className="w-56 md:w-64 h-56" />
-              <Skeleton skeletonColor="blue" className="w-56 md:w-64 h-56" />
+              <Skeleton
+                skeletonColor="blue"
+                className="w-24 sm:w-56 md:w-64 h-56"
+              />
+              <Skeleton
+                skeletonColor="blue"
+                className="w-24 sm:w-56 md:w-64 h-56"
+              />
+              <Skeleton
+                skeletonColor="blue"
+                className="w-24 sm:w-56 md:w-64 h-56"
+              />
+              <Skeleton
+                skeletonColor="blue"
+                className="w-24 sm:w-56 md:w-64 h-56"
+              />
+              <Skeleton
+                skeletonColor="blue"
+                className="w-24 sm:w-56 md:w-64 h-56"
+              />
             </CommCardGroup>
           </div>
         )}
