@@ -127,7 +127,7 @@ export default function Committee() {
           // Object.entries makes it into an array of arrays so that it is easier to map.
           Object.entries(committeeData).map(([groupName, members]) => (
             <div
-              className="flex flex-col justify-center gap-4"
+              className="flex flex-col justify-center scroll-m-20 gap-4"
               key={groupName}
               /* @Albert: when you want to scroll here, use <a href={`#${groupName}`}/> for the scroll navigation part. 
                                   The group names are the headers in the page, e.g. Executive Committee, etc. */
