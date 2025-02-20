@@ -160,23 +160,23 @@ export default function Committee() {
             <CommCardGroup columns={columns} gap={5}>
               <Skeleton
                 skeletonColor="blue"
-                className="w-24 sm:w-56 md:w-64 h-56"
+                className="w-32 sm:w-56 md:w-64 h-56"
               />
               <Skeleton
                 skeletonColor="blue"
-                className="w-24 sm:w-56 md:w-64 h-56"
+                className="w-32 sm:w-56 md:w-64 h-56"
               />
               <Skeleton
                 skeletonColor="blue"
-                className="w-24 sm:w-56 md:w-64 h-56"
+                className="w-32 sm:w-56 md:w-64 h-56"
               />
               <Skeleton
                 skeletonColor="blue"
-                className="w-24 sm:w-56 md:w-64 h-56"
+                className="w-32 sm:w-56 md:w-64 h-56"
               />
               <Skeleton
                 skeletonColor="blue"
-                className="w-24 sm:w-56 md:w-64 h-56"
+                className="w-32 sm:w-56 md:w-64 h-56"
               />
             </CommCardGroup>
           </div>
