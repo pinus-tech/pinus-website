@@ -4,11 +4,18 @@ import { cn } from "../lib/utils";
 export const GuideCard = ({
   children,
   className,
+  onClick,
 }: {
   children: React.ReactNode;
   className?: string;
+  onClick?: React.MouseEventHandler<HTMLDivElement>;
 }) => (
-  <div className={cn("font-figtree flex w-full", className)}>{children}</div>
+  <div
+    className={cn("font-figtree flex w-full", className)}
+    onClick={onClick ? onClick : undefined}
+  >
+    {children}
+  </div>
 );
 
 export const GuideCardDecoration = ({
@@ -52,11 +59,18 @@ export const GuideCardBody = ({
 export const GuideCardTitle = ({
   children,
   className,
+  onClick,
 }: {
   children: React.ReactNode;
   className?: string;
+  onClick?: React.MouseEventHandler<HTMLDivElement>;
 }) => (
-  <div className={cn("font-semibold text-lg mb-2", className)}>{children}</div>
+  <div
+    className={cn("font-semibold text-lg mb-2", className)}
+    onClick={onClick ? onClick : undefined}
+  >
+    {children}
+  </div>
 );
 
 export const GuideCardText = ({
@@ -66,7 +80,7 @@ export const GuideCardText = ({
   children: React.ReactNode;
   className?: string;
 }) => (
-  <div className={cn("text-md flex flex-col gap-4 w-full", className)}>
+  <div className={cn("text-md flex flex-col gap-1 w-full", className)}>
     {children}
   </div>
 );

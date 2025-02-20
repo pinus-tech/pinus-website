@@ -6,6 +6,13 @@ import { TitleHeader } from "../components/ui/title";
 import { Button } from "../components/ui/button";
 import { BlurFade } from "../components/ui/blur-fade";
 import { Skeleton } from "../components/ui/skeleton";
+import {
+  GuideCard,
+  GuideCardDecoration,
+  GuideCardBody,
+  GuideCardTitle,
+  GuideCardText,
+} from "../components/ui/guide-card";
 
 const BLUR_FADE_DELAY = 0.02;
 
@@ -105,7 +112,7 @@ function GuidesContent() {
   const [isFetching, setIsFetching] = useState<boolean>(true);
 
   useEffect(() => {
-    router.push(`?type=${selected}`);
+    router.push(`?type=${selected}`, { scroll: false });
   }, [selected, router]);
 
   const handleToggle = (option: "before" | "after") => {
@@ -188,58 +195,57 @@ function GuidesContent() {
       </BlurFade>
 
       {/* Guide Cards */}
-      <div className="text-center">
+      <div className="space-y-6">
         {isFetching ? (
-          <div className="flex flex-col gap-4 items-center justify-center">
-            <Skeleton skeletonColor="blue" className="h-6 w-56" />
-            <Skeleton skeletonColor="blue" className="h-4 w-64" />
-            <Skeleton skeletonColor="blue" className="h-4 w-64" />
-            <Skeleton skeletonColor="blue" className="h-4 w-64" />
-            <Skeleton skeletonColor="red" className="h-6 w-56" />
-            <Skeleton skeletonColor="red" className="h-4 w-64" />
-            <Skeleton skeletonColor="red" className="h-4 w-64" />
-            <Skeleton skeletonColor="red" className="h-4 w-64" />
-          </div>
-        ) : filteredGuides.length > 0 ? (
-          filteredGuides.map((guide, index) => (
-            <BlurFade
-              key={guide.id}
-              delay={BLUR_FADE_DELAY * (index + 1)}
-              inView
-            >
-              <div className="mb-4 cursor-pointer">
-                <h1
-                  className="text-xl font-bold"
-                  onClick={() => router.push(`/guides/${guide.id}`)}
-                >
-                  {guide.properties.Name.title[0].plain_text}
-                </h1>
-                <div className="pl-5 italic">
-                  {guide.properties.Description?.rich_text?.length > 0 ? (
-                    guide.properties.Description.rich_text[0].plain_text
-                      .split("\n")
-                      .map((line, i) => (
-                        <div
-                          key={i}
-                          onClick={() =>
-                            router.push(
-                              `/guides/${guide.id}#${line.split("—")[1]}`
-                            )
-                          }
-                          className="cursor-pointer"
-                        >
-                          {line.split("—")[0]}
-                        </div>
-                      ))
-                  ) : (
-                    <div>No description available</div>
-                  )}
+          <>
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="flex gap-8">
+                <Skeleton
+                  skeletonColor={selected === "before" ? "blue" : "red"}
+                  className="w-1 h-[70px]"
+                />
+                <div className="flex-grow space-y-4">
+                  <Skeleton
+                    skeletonColor={selected === "before" ? "blue" : "red"}
+                    className="h-6 w-3/4"
+                  />
+                  <div className="space-y-2">
+                    <Skeleton
+                      skeletonColor={selected === "before" ? "blue" : "red"}
+                      className="h-4 w-full"
+                    />
+                    <Skeleton
+                      skeletonColor={selected === "before" ? "blue" : "red"}
+                      className="h-4 w-5/6"
+                    />
+                    <Skeleton
+                      skeletonColor={selected === "before" ? "blue" : "red"}
+                      className="h-4 w-4/6"
+                    />
+                  </div>
                 </div>
               </div>
-            </BlurFade>
-          ))
+            ))}
+          </>
+        ) : filteredGuides.length > 0 ? (
+          <>
+            {filteredGuides.map((guide, index) => (
+              <BlurFade
+                key={guide.id}
+                delay={BLUR_FADE_DELAY * (index + 1)}
+                inView
+              >
+                <GuideContent
+                  guide={guide}
+                  onClick={(id) =>
+                    router.push(`/guides/${guide.id}${id ? `#${id}` : ""}`)
+                  }
+                />
+              </BlurFade>
+            ))}
+          </>
         ) : (
-          <div className="text-center">
+          <div className="text-center text-muted-foreground">
             No guides available for this category.
           </div>
         )}
@@ -270,5 +276,49 @@ export default function Guides() {
         </Suspense>
       </div>
     </div>
+  );
+}
+
+function GuideContent({
+  guide,
+  onClick,
+}: {
+  guide: NotionPage;
+  onClick: (id: string) => void;
+}) {
+  const color =
+    guide.properties.Chapter.select.name === "Before Acceptance"
+      ? "blue"
+      : "red";
+
+  return (
+    <GuideCard className="group cursor-pointer hover:opacity-80 transition-opacity">
+      <GuideCardDecoration color={color} width={4} height={70} />
+      <GuideCardBody>
+        <GuideCardTitle onClick={() => onClick("")}>
+          {guide.properties.Name.title[0].plain_text}
+        </GuideCardTitle>
+        <GuideCardText>
+          {guide.properties.Description?.rich_text?.length > 0 ? (
+            guide.properties.Description.rich_text[0].plain_text
+              .split("\n")
+              .map((line, i) => {
+                const [content, id] = line.split("—");
+                return (
+                  <div
+                    key={i}
+                    className="italic cursor-pointer hover:underline"
+                    onClick={() => onClick(id ? id.trim() : "")}
+                  >
+                    {content}
+                  </div>
+                );
+              })
+          ) : (
+            <div>No description available</div>
+          )}
+        </GuideCardText>
+      </GuideCardBody>
+    </GuideCard>
   );
 }
