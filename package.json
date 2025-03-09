@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@notionhq/client": "^2.2.15",
+    "@notionhq/client": "^2.2.16",
     "@radix-ui/react-accordion": "^1.2.2",
     "@radix-ui/react-select": "^2.1.4",
     "motion": "^11.15.0",
