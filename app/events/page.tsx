@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+export const runtime = 'edge';
+
+import { useRef, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { TitleHeader } from "../components/ui/title";
 import { Button } from "../components/ui/button";
@@ -10,57 +12,103 @@ import {
   CardImage,
   CardHeader,
   CardTitle,
-  CardDescription,
   CardContent,
   CardFooter,
   CardBadge,
-  CardTags
 } from "../components/ui/card";
-import { events, all_events } from "./data";
+
+interface PINUSEvent {
+  title: string;
+  description: string;
+  thumbnail?: string;  // Thumbnail is optional
+  subcom: string;
+}
 
 const BLUR_FADE_DELAY = 0.04;
-const COLORS: Array<"yellow" | "red" | "blue" | "black"> = [
-  "yellow",
-  "red",
-  "blue",
+const categories = [
+  "All",
+  "Executive Committee",
+  "Creative Marketing",
+  "PPD",
+  "Ambassador",
+  "Press",
+  "Welfare",
+  "Tech",
 ];
+
+const API_BASE_URL = process.env.URL || "http://localhost:3000";
+
+async function getEvents(category: string): Promise<PINUSEvent[]> {
+  const url = category === "All" 
+    ? `${API_BASE_URL}/api/events/`
+    : `${API_BASE_URL}/api/events?subcomm=${encodeURIComponent(category)}`;
+
+  const res = await fetch(url, { cache: "no-store" });
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch events");
+  }
+  return res.json();
+}
 
 function EventsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const queryType = searchParams.get("type");
+  const queryType = searchParams.get("type") || "All";
 
-  const [selected, setSelected] = useState<"All" | "Executive Committee" | "Creative Marketing" | "PPD" | "Ambassador" | "Press" | "Welfare" | "Tech" | "Orientation Committee">(
-    queryType === "All" ? "All" : 
-    queryType === "Executive Committee" ? "Executive Committee" :
-    queryType === "Creative Marketing" ? "Creative Marketing" :
-    queryType === "PPD" ? "PPD" :
-    queryType === "Ambassador" ? "Ambassador" :
-    queryType === "Press" ? "Press" :
-    queryType === "Welfare" ? "Welfare" :
-    queryType === "Tech" ? "Tech" :
-    queryType === "" ? "All" : "All"
+  const [selected, setSelected] = useState<typeof categories[number]>(
+    categories.includes(queryType) ? queryType : "All"
   );
+  const [events, setEvents] = useState<PINUSEvent[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    router.push(`?type=${selected}`);
-  }, [selected, router]);
+    const fetchEvents = async () => {
+      setLoading(true);
+      try {
+        const eventsData = await getEvents(selected);
+        setEvents(eventsData);
+      } catch (error) {
+        console.error("Error fetching events:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const handleToggle = (option: "All" | "Executive Committee" | "Creative Marketing" | "PPD" | "Ambassador" | "Press" | "Welfare" | "Tech" | "Orientation Committee") => {
-    if (option !== selected) {
-      setSelected(option);
+    fetchEvents();
+  }, [selected]);
+
+  useEffect(() => {
+    if (queryType !== selected) {
+      router.replace(`?type=${selected}`, { scroll: false });
     }
+  }, [selected, queryType, router]);
+
+  const handleToggle = (category: string) => {
+    setSelected(category);
   };
 
-  const categories = ["All", "Executive Committee", "Creative Marketing", "PPD", "Ambassador", "Press", "Welfare", "Tech", "Orientation Committee"];
+  const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  useEffect(() => {
+    setTimeout(() => {
+      if (buttonRefs.current[0]) {
+        buttonRefs.current[0].scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+          inline: "center",
+        });
+      }
+    }, 300); // Slight delay to ensure render is complete
+  }, []);
 
 
   return (
     <>
       {/* Buttons */}
-      <div className="w-full">
+      <div className="w-full flex justify-center">
         <BlurFade delay={BLUR_FADE_DELAY * 1.5} className="my-8" inView>
-          <div className="flex overflow-x-auto space-x-2 lg:w-full sm:w-full w-1/2 justify-center">
+          <div className="flex overflow-x-auto space-x-2 w-full justify-center px-4">
             {categories.slice(0,-1).map((cat, index) => (
                 <section key={index} className="flex-shrink-0">
                   <span>
@@ -79,16 +127,18 @@ function EventsContent() {
         </BlurFade>
       </div>
 
-      
-
       {/* Event Cards */}
       <BlurFade key={`cards-${selected}`} delay={BLUR_FADE_DELAY * 4} inView>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8 px-4 sm:px-0 justify-items-center">
-          {(selected === "All" ? all_events :  events.find(eventCategory => eventCategory.category === selected)?.events || []).map(
-            (event, index) => (
+        {loading ? (
+          <div className="text-center text-lg font-semibold">Loading...</div>
+        ) : events.length === 0 || (selected != "All" && events[0].subcom != selected) ? (
+          <div className="text-center text-gray-500">No events found.</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8 px-4 sm:px-0 justify-items-center">
+            {events.map((event, index) => (
               <Card key={index} className="flex flex-col h-full max-w-xs w-full">
                 <CardImage 
-                  src={event.thumbnail}
+                  src={event.thumbnail && event.thumbnail !== "No Image" ? event.thumbnail : "/test_img2.png"}
                   alt={`Image for ${event.title}`}
                   className="rounded-xl h-48 object-cover"
                   width={1000}
@@ -104,9 +154,9 @@ function EventsContent() {
                   <CardBadge>{event.subcom}</CardBadge>
                 </CardFooter>
               </Card>
-            )
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </BlurFade>
     </>
   );
@@ -115,8 +165,6 @@ function EventsContent() {
 export default function Events() {
   return (
     <div className="flex flex-col gap-8 items-center min-h-screen">
-      {/* Header */}
-
       <div className="w-full h-[25vh] md:h-[35vh] lg:h-[50vh]">
         <img
           src="/test_img2.png"
@@ -129,9 +177,7 @@ export default function Events() {
         <BlurFade key="header" delay={BLUR_FADE_DELAY} inView>
           <TitleHeader text="Events" color="blue" />
         </BlurFade>
-          <EventsContent />
-        <Suspense fallback={<div></div>}>
-        </Suspense>
+        <EventsContent />
       </div>
     </div>
   );
