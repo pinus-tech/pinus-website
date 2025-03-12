@@ -1,6 +1,6 @@
 "use client";
 
-export const runtime = 'edge';
+export const runtime = "edge";
 
 import { useRef, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -20,7 +20,7 @@ import {
 interface PINUSEvent {
   title: string;
   description: string;
-  thumbnail?: string;  // Thumbnail is optional
+  thumbnail?: string; // Thumbnail is optional
   subcom: string;
 }
 
@@ -36,12 +36,11 @@ const categories = [
   "Tech",
 ];
 
-const API_BASE_URL = process.env.URL || "http://localhost:3000";
-
 async function getEvents(category: string): Promise<PINUSEvent[]> {
-  const url = category === "All" 
-    ? `${API_BASE_URL}/api/events/`
-    : `${API_BASE_URL}/api/events?subcomm=${encodeURIComponent(category)}`;
+  const url =
+    category === "All"
+      ? `/api/events/`
+      : `/api/events?subcomm=${encodeURIComponent(category)}`;
 
   const res = await fetch(url, { cache: "no-store" });
 
@@ -56,7 +55,7 @@ function EventsContent() {
   const searchParams = useSearchParams();
   const queryType = searchParams.get("type") || "All";
 
-  const [selected, setSelected] = useState<typeof categories[number]>(
+  const [selected, setSelected] = useState<(typeof categories)[number]>(
     categories.includes(queryType) ? queryType : "All"
   );
   const [events, setEvents] = useState<PINUSEvent[]>([]);
@@ -102,26 +101,25 @@ function EventsContent() {
     }, 300); // Slight delay to ensure render is complete
   }, []);
 
-
   return (
     <>
       {/* Buttons */}
       <div className="w-full flex justify-center">
         <BlurFade delay={BLUR_FADE_DELAY * 1.5} className="my-8" inView>
           <div className="flex overflow-x-auto space-x-2 w-full justify-center px-4">
-            {categories.slice(0,-1).map((cat, index) => (
-                <section key={index} className="flex-shrink-0">
-                  <span>
-                    <Button
-                      rounding="2xl"
-                      className={selected === cat ? "font-semibold" : ""}
-                      outline={selected !== cat}
-                      onClick={() => handleToggle(cat)}
-                    >
-                      {cat}
-                    </Button>
-                  </span>
-                </section>
+            {categories.slice(0, -1).map((cat, index) => (
+              <section key={index} className="flex-shrink-0">
+                <span>
+                  <Button
+                    rounding="2xl"
+                    className={selected === cat ? "font-semibold" : ""}
+                    outline={selected !== cat}
+                    onClick={() => handleToggle(cat)}
+                  >
+                    {cat}
+                  </Button>
+                </span>
+              </section>
             ))}
           </div>
         </BlurFade>
@@ -131,29 +129,42 @@ function EventsContent() {
       <BlurFade key={`cards-${selected}`} delay={BLUR_FADE_DELAY * 4} inView>
         {loading ? (
           <div className="text-center text-lg font-semibold">Loading...</div>
-        ) : events.length === 0 || (selected != "All" && events[0].subcom != selected) ? (
-          <div className="text-center text-gray-500">No events found.</div>
+        ) : events.length === 0 ||
+          (selected != "All" && events[0].subcom != selected) ? (
+          <BlurFade delay={BLUR_FADE_DELAY * 1} inView>
+            <div className="text-center text-gray-500">No events found.</div>
+          </BlurFade>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8 px-4 sm:px-0 justify-items-center">
             {events.map((event, index) => (
-              <Card key={index} className="flex flex-col h-full max-w-xs w-full">
-                <CardImage 
-                  src={event.thumbnail && event.thumbnail !== "No Image" ? event.thumbnail : "/test_img2.png"}
-                  alt={`Image for ${event.title}`}
-                  className="rounded-xl h-48 object-cover"
-                  width={1000}
-                  height={1000}
-                />
-                <CardHeader>
-                  <CardTitle>{event.title}</CardTitle>
-                </CardHeader>
-                <CardContent className="flex-grow">
-                  <p>{event.description}</p>
-                </CardContent>
-                <CardFooter>
-                  <CardBadge>{event.subcom}</CardBadge>
-                </CardFooter>
-              </Card>
+              <BlurFade
+                delay={BLUR_FADE_DELAY * (index + 1.5)}
+                inView
+                key={index}
+              >
+                <Card className="flex flex-col h-full max-w-xs w-full">
+                  <CardImage
+                    src={
+                      event.thumbnail && event.thumbnail !== "No Image"
+                        ? event.thumbnail
+                        : "/test_img2.png"
+                    }
+                    alt={`Image for ${event.title}`}
+                    className="rounded-xl h-48 object-cover"
+                    width={1000}
+                    height={1000}
+                  />
+                  <CardHeader>
+                    <CardTitle>{event.title}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex-grow">
+                    <p>{event.description}</p>
+                  </CardContent>
+                  <CardFooter>
+                    <CardBadge>{event.subcom}</CardBadge>
+                  </CardFooter>
+                </Card>
+              </BlurFade>
             ))}
           </div>
         )}
