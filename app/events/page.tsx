@@ -104,10 +104,14 @@ function EventsContent() {
   return (
     <>
       {/* Buttons */}
-      <div className="w-full flex justify-center">
-        <BlurFade delay={BLUR_FADE_DELAY * 1.5} className="my-8" inView>
-          <div className="flex overflow-x-auto space-x-2 w-full justify-center px-4">
-            {categories.slice(0, -1).map((cat, index) => (
+      <div className="w-full flex justify-center mx-auto">
+        <BlurFade
+          delay={BLUR_FADE_DELAY * 1.5}
+          className="my-8 mx-auto flex justify-center items-center"
+          inView
+        >
+          <div className="flex overflow-x-auto w-full md:max-w-5xl max-w-xs justify-start px-4 gap-4 items-center pb-2">
+            {categories.map((cat, index) => (
               <section key={index} className="flex-shrink-0">
                 <span>
                   <Button
@@ -126,7 +130,12 @@ function EventsContent() {
       </div>
 
       {/* Event Cards */}
-      <BlurFade key={`cards-${selected}`} delay={BLUR_FADE_DELAY * 4} inView>
+      <BlurFade
+        key={`cards-${selected}`}
+        delay={BLUR_FADE_DELAY * 4}
+        inView
+        className="w-fit mx-auto"
+      >
         {loading ? (
           <div className="text-center text-lg font-semibold">Loading...</div>
         ) : events.length === 0 ||
@@ -184,7 +193,7 @@ export default function Events() {
         />
       </div>
 
-      <div className="px-8 justify-center md:px-72 py-2 md:py-5 pb-20 md:pb-20">
+      <div className="px-8 justify-center py-4 md:py-10">
         <BlurFade key="header" delay={BLUR_FADE_DELAY} inView>
           <TitleHeader text="Events" color="blue" />
         </BlurFade>
