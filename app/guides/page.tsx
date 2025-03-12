@@ -125,7 +125,7 @@ function GuidesContent() {
     async function fetchData() {
       setIsFetching(true);
       try {
-        const data = await getSharingSessions();
+        const data = await getGuides();
         setGuidesContent(data);
       } catch (error) {
         console.error("Error fetching data from Notion:", error);
@@ -136,7 +136,7 @@ function GuidesContent() {
     fetchData();
   }, []);
 
-  async function getSharingSessions(): Promise<NotionPage[]> {
+  async function getGuides(): Promise<NotionPage[]> {
     const res = await fetch("/api/guides", {
       cache: "no-store",
     });
