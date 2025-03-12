@@ -36,9 +36,15 @@ const Footer = () => {
         <div className="flex flex-col items-center">
           <div className="flex space-x-4 mb-4">
             {/* Replace these with actual icons or images */}
-            <div className="h-10 w-10 bg-gray-300"></div>
-            <div className="h-10 w-10 bg-gray-300"></div>
-            <div className="h-10 w-10 bg-gray-300"></div>
+            <Link href="https://www.instagram.com/pinusonline" target='_blank'>              
+              <img src="/ic-instagram-white.svg" alt="Instagram" className="h-10 w-10" />              
+            </Link>
+            <Link href="https://www.facebook.com/PerhimpunanIndonesiaNUS" target='_blank'>              
+              <img src="/ic-facebook-white.svg" alt="Instagram" className="h-10 w-10" />              
+            </Link>
+            <Link href="https://www.youtube.com/channel/UCfYU_ttUpJWNEKIbiWoQQHQ" target='_blank'>              
+              <img src="/ic-youtube-white.svg" alt="Instagram" className="h-10 w-10" />              
+            </Link>
           </div>
           <a href="#contact" className="hover:underline">
             Contact Us
