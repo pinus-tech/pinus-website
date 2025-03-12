@@ -46,7 +46,7 @@ const Footer = () => {
 
         {/* Right Section: Copyright */}
         <div className="text-center md:text-right">
-          <p>© 2024 PINUS</p>
+          <p>© {(new Date().getFullYear())} PINUS</p>
         </div>
       </div>
     </footer>
