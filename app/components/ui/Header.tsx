@@ -25,7 +25,7 @@ const Header = () => {
           <div className="flex items-center">
             <Link href="/">
               <img
-                src="logo-pinus.svg" // Replace with your logo path
+                src="/logo-pinus.svg" // Replace with your logo path
                 alt="Logo"
                 className="h-8 cursor-pointer"
               />
@@ -48,6 +48,9 @@ const Header = () => {
             </Link>
             <Link href="/blog" className="text-gray-700 hover:text-blue-main">
               Blogs
+            </Link>
+            <Link href="/faq" className="text-gray-700 hover:text-blue-main">
+              FAQ
             </Link>
             <Link href="/contact-us" className="text-gray-700 hover:text-blue-main">
               Contact Us
@@ -121,6 +124,9 @@ const Header = () => {
             </Link>
             <Link href="/blog" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
               Blogs
+            </Link>
+            <Link href="/faq" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
+              FAQ
             </Link>
             <Link href="/contact-us" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
               Contact Us

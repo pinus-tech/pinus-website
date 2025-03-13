@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 
 const Footer = () => {
   return (
@@ -9,24 +10,24 @@ const Footer = () => {
           <h2 className="text-xl font-bold mb-4">Explore</h2>
           <ul className="space-y-2">
             <li>
-              <a href="#committee" className="hover:underline">
+              <Link href="/committee" className="hover:underline">
                 Committee
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="#events" className="hover:underline">
+              <Link href="/events" className="hover:underline">
                 Event
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="#guides" className="hover:underline">
+              <Link href="/guides" className="hover:underline">
                 Guides
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="#blogs" className="hover:underline">
+              <Link href="/blogs" className="hover:underline">
                 Blog
-              </a>
+              </Link>
             </li>
           </ul>
         </div>
@@ -35,9 +36,15 @@ const Footer = () => {
         <div className="flex flex-col items-center">
           <div className="flex space-x-4 mb-4">
             {/* Replace these with actual icons or images */}
-            <div className="h-10 w-10 bg-gray-300"></div>
-            <div className="h-10 w-10 bg-gray-300"></div>
-            <div className="h-10 w-10 bg-gray-300"></div>
+            <Link href="https://www.instagram.com/pinusonline" target='_blank'>              
+              <img src="/ic-instagram-white.svg" alt="Instagram" className="h-10 w-10" />              
+            </Link>
+            <Link href="https://www.facebook.com/PerhimpunanIndonesiaNUS" target='_blank'>              
+              <img src="/ic-facebook-white.svg" alt="Instagram" className="h-10 w-10" />              
+            </Link>
+            <Link href="https://www.youtube.com/channel/UCfYU_ttUpJWNEKIbiWoQQHQ" target='_blank'>              
+              <img src="/ic-youtube-white.svg" alt="Instagram" className="h-10 w-10" />              
+            </Link>
           </div>
           <a href="#contact" className="hover:underline">
             Contact Us
@@ -46,7 +53,7 @@ const Footer = () => {
 
         {/* Right Section: Copyright */}
         <div className="text-center md:text-right">
-          <p>© 2024 PINUS</p>
+          <p>© {(new Date().getFullYear())} PINUS</p>
         </div>
       </div>
     </footer>

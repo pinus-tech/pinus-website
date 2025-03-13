@@ -10,8 +10,8 @@ const figtree = Figtree({
 });
 
 export const metadata: Metadata = {
-  title: "PINUS Website",
-  description: "Developed by pinustech",
+  title: "Pelajar Indonesia NUS | PINUS",
+  description: "Perhimpunan Indonesia at NUS (PINUS) is a student organization dedicated to fostering a strong sense of community among Indonesian students at the National University of Singapore (NUS).",
 };
 
 export default function RootLayout({
