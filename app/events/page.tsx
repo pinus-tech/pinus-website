@@ -16,6 +16,7 @@ import {
   CardFooter,
   CardBadge,
 } from "../components/ui/card";
+import { Skeleton } from "../components/ui/skeleton";
 
 interface PINUSEvent {
   title: string;
@@ -130,54 +131,64 @@ function EventsContent() {
       </div>
 
       {/* Event Cards */}
-      <BlurFade
-        key={`cards-${selected}`}
-        delay={BLUR_FADE_DELAY * 4}
-        inView
-        className="w-fit mx-auto"
-      >
-        {loading ? (
-          <div className="text-center text-lg font-semibold">Loading...</div>
-        ) : events.length === 0 ||
-          (selected != "All" && events[0].subcom != selected) ? (
-          <BlurFade delay={BLUR_FADE_DELAY * 1} inView>
-            <div className="text-center text-gray-500">No events found.</div>
-          </BlurFade>
-        ) : (
+      {loading ? (
+        <div className="w-full">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8 px-4 sm:px-0 justify-items-center">
-            {events.map((event, index) => (
+            {[...Array(6)].map((_, index) => (
               <BlurFade
                 delay={BLUR_FADE_DELAY * (index + 1.5)}
-                inView
                 key={index}
+                className="flex flex-col h-full max-w-xs w-full"
+                inView
               >
-                <Card className="flex flex-col h-full max-w-xs w-full">
-                  <CardImage
-                    src={
-                      event.thumbnail && event.thumbnail !== "No Image"
-                        ? event.thumbnail
-                        : "/test_img2.png"
-                    }
-                    alt={`Image for ${event.title}`}
-                    className="rounded-xl h-48 object-cover"
-                    width={1000}
-                    height={1000}
-                  />
-                  <CardHeader>
-                    <CardTitle>{event.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex-grow">
-                    <p>{event.description}</p>
-                  </CardContent>
-                  <CardFooter>
-                    <CardBadge>{event.subcom}</CardBadge>
-                  </CardFooter>
-                </Card>
+                <Skeleton className="rounded-xl h-48 w-full" />
+                <Skeleton className="mt-4 h-6 w-3/4" />
+                <Skeleton className="mt-2 h-4 w-full" />
+                <Skeleton className="mt-2 h-4 w-2/3" />
+                <Skeleton className="mt-4 h-6 w-1/4" />
               </BlurFade>
             ))}
           </div>
-        )}
-      </BlurFade>
+        </div>
+      ) : events.length === 0 ||
+        (selected != "All" && events[0].subcom != selected) ? (
+        <BlurFade delay={BLUR_FADE_DELAY * 1} inView>
+          <div className="text-center text-gray-500">No events found.</div>
+        </BlurFade>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8 px-4 sm:px-0 justify-items-center">
+          {events.map((event, index) => (
+            <BlurFade
+              delay={BLUR_FADE_DELAY * (index + 1.5)}
+              inView
+              key={index}
+            >
+              <Card className="flex flex-col h-full max-w-xs w-full">
+                <CardImage
+                  src={
+                    event.thumbnail && event.thumbnail !== "No Image"
+                      ? event.thumbnail
+                      : "/test_img2.png"
+                  }
+                  alt={`Image for ${event.title}`}
+                  className="rounded-xl h-48 object-cover"
+                  width={1000}
+                  height={1000}
+                />
+                <CardHeader>
+                  <CardTitle>{event.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <p>{event.description}</p>
+                </CardContent>
+                <CardFooter>
+                  <CardBadge>{event.subcom}</CardBadge>
+                </CardFooter>
+              </Card>
+            </BlurFade>
+          ))}
+        </div>
+      )}
     </>
   );
 }
