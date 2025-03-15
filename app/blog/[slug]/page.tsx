@@ -26,15 +26,15 @@ async function getBlogPage(slug: string) {
     const data = await res.json();
 
     const blocksOnly = {
-      block: data.block || {},
-      signed_urls: data.signed_urls || {},
+      block: data.recordMap.block || {},
+      signed_urls: data.recordMap.signed_urls || {},
       collection: {},
       collection_view: {},
       notion_user: {},
       collection_query: {},
     };
 
-    return blocksOnly;
+    return {blocksOnly: blocksOnly, blogProps: data.blogProps};
   } catch (error) {
     console.error("Error fetching guide content:", error);
     return null;
@@ -59,8 +59,8 @@ async function BlogContent(props: { params: tParams} ) {
         <span>⏳ 5 min read</span>
         <span className="text-blue-600 font-semibold">#Community</span>
       </div>
-
-      <Renderer recordMap={response} />
+      <h1>{response.blogProps.properties.Title.title[0].plain_text}</h1>
+      <Renderer recordMap={response.blocksOnly} />
     </article>
   );
 };
