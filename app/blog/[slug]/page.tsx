@@ -46,63 +46,75 @@ async function BlogContent(props: { params: tParams} ) {
   const { slug } = await props.params;
   const response = await getBlogPage(slug);
 
-  console.log(response);
-
   if(!response) {
     return <div>Error loading content. Please try again later.</div>;
   }
 
-  return (
-    <article className="max-w-4xl w-full bg-white p-6 sm:p-10 rounded-2xl shadow-lg text-gray-800">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 text-gray-500 text-sm">
-        <span>📅 February 6, 2025</span>
-        <span>⏳ 5 min read</span>
-        <span className="text-blue-600 font-semibold">#Community</span>
-      </div>
-      <h1>{response.blogProps.properties.Title.title[0].plain_text}</h1>
-      <Renderer recordMap={response.blocksOnly} />
-    </article>
-  );
-};
+  // For now, 1 tag 1 author
+  const metablog = {
+    title: response.blogProps.properties.Title.title[0].plain_text,
+    tags: response.blogProps.properties.Tags.multi_select[0].name,
+    author: response.blogProps.properties.Author.people[0].name,
+    date: response.blogProps.properties["Published Date"].date.start,
+  }
+  console.log(response.blogProps);
 
-const BlogFooter = () => {
   return (
-    <div className="w-full max-w-3xl flex justify-between items-center py-6 border-t border-gray-200 mx-auto">
-      <div className="flex items-center space-x-4">
-        <a href="/previous-post" className="text-lg text-blue-600 hover:underline flex items-center">
-          <span className="mr-2">←</span> Pinus Takram Cup
-        </a>
-      </div>
+    <>
+      {/* Blog Header */}
+      <div className="flex flex-col gap-2 mb-6 text-gray-600">
+        {/* Tags */}
+        <span className="text-xl sm:text-2xl font-semibold uppercase tracking-wide drop-shadow-lg text-blue-900">
+          {metablog.tags}
+        </span>
 
-      <div className="flex items-center space-x-4 justify-end">
-        <a href="/next-post" className="text-lg text-blue-600 hover:underline flex items-center">
-          PINUS CNY Dinner <span className="ml-2">→</span>
-        </a>
+        {/* Title with stronger Text Shadow */}
+        <h1 className="text-3xl sm:text-54l font-bold text-gray-900 [text-shadow:_0_1px_2px_rgba(0,0,0,0.5)]">
+          {metablog.title}
+        </h1>
+
+        {/* Author & Date with larger font sizes */}
+        <span className="text-lg sm:text-xl font-semibold text-gray-900">
+          By <span className="font-bold text-gray-700">{metablog.author}</span>
+          &nbsp;• {new Date(metablog.date).toLocaleDateString("en-GB", {
+            day: "numeric", month: "long", year: "numeric"
+          })}
+        </span>
       </div>
-    </div>
+  
+      {/* Blog Content */}
+      <article className="max-w-4xl w-full bg-white p-6 sm:p-10 rounded-2xl shadow-lg text-gray-800">
+        <Renderer recordMap={response.blocksOnly} />
+      </article>
+    </>
   );
 };
 
 
 export default function BlogDetail(props: {params: tParams}) {
   return (    
-    <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start min-h-screen">
-      <div className="relative w-full h-auto">
-        <div className={styles.titleImageGradient}></div>
-        
-        <div className="relative z-0">
-          <picture>
-            <source media="(max-width: 768px)" srcSet="/hero_mobile.png" />
-            <img alt="" src="/hero_desktop.png" className={styles.coverImage} />
-          </picture>
+    <main className="relative flex flex-col min-h-screen">
+      <div className="absolute top-0 left-0 w-full h-[50vh] sm:h-[60vh] overflow-hidden">
+        <div className="absolute inset-0 bg-white/60 z-10" />
+
+        <picture>
+          <source media="(max-width: 768px)" srcSet="/hero_mobile.png" />
+          <img 
+            alt="" 
+            src="/hero_desktop.png" 
+            className="absolute top-0 left-0 w-full h-full object-cover"
+          />
+        </picture>
+
+        <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-white to-transparent"></div>
+      </div>
+
+      <div className="relative flex flex-col flex-grow justify-center items-center z-20 pt-4 sm:pt-6">
+        <div className="w-full max-w-3xl p-6 sm:p-8">
+          <BlogContent params={props.params} />
         </div>
       </div>
 
-      <div className="w-full flex justify-center mb-4">
-        <BlogContent params={props.params} />
-      </div>
-
-      <BlogFooter />
-    </main>   
+    </main>
   );
 }
