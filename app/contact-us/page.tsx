@@ -1,5 +1,4 @@
 import ContactForm from "../components/ui/ContactForm";
-import Header from "../components/ui/Header";
 import TitleHeader from "../components/ui/title";
 
 export default function ContactUs() {
@@ -17,7 +16,8 @@ export default function ContactUs() {
         </div>
       </header> */}
 
-      {/* Klo yg ini aku comment juga yaa, krn si Brians ada bikinin component namanya "Header" buat standardize smua headingnya. tpi good work it looks good!
+      {/* Klo yg ini aku comment juga yaa, krn si Brians ada bikinin component namanya "TitleHeader" buat standardize smua headingnya.
+       tpi good work it looks good! Klo mo liat component apa aja yg udah premade, visit https://pinus.website/examples
       <h1 className="text-2xl font-bold text-center">Contact Us</h1>
       <div className="w-20 border-b-2 border-blue-900 mx-auto mb-6"></div> */}
 
