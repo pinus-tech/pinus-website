@@ -63,5 +63,5 @@ form > div {
 
 input,
 textarea {
-  @apply  px-6 py-2  bg-slate-100 h-16 text-black rounded-xl;
+  @apply  px-4 py-2  bg-slate-100 text-black rounded-xl;
 }
