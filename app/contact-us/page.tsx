@@ -1,8 +1,10 @@
 import ContactForm from "../components/ui/ContactForm";
+import Header from "../components/ui/Header";
+import TitleHeader from "../components/ui/title";
 
 export default function ContactUs() {
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-6 w-full mx-auto">
       {/* NOTE: Zayyan, ini aku comment out dulu ya, krn navbar PINUS udah dibikinin & di-set up sama Brians/Babono. :D */}
       {/* <header className="bg-[#F8F3E8] flex items-center justify-between px-4 py-3 relative mb-6">
 
@@ -14,9 +16,14 @@ export default function ContactUs() {
           </span>
         </div>
       </header> */}
-      <h1 className="text-2xl font-bold text-center">Contact Us</h1>
-      <div className="w-20 border-b-2 border-blue-900 mx-auto mb-6"></div>
 
+      {/* Klo yg ini aku comment juga yaa, krn si Brians ada bikinin component namanya "Header" buat standardize smua headingnya. tpi good work it looks good!
+      <h1 className="text-2xl font-bold text-center">Contact Us</h1>
+      <div className="w-20 border-b-2 border-blue-900 mx-auto mb-6"></div> */}
+
+      <div className="w-full">
+        <TitleHeader text="Contact Us" color="blue" />
+      </div>
       <div className="mt-6">
         <ContactForm />
       </div>
