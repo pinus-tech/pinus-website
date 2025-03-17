@@ -1,8 +1,9 @@
 import ContactForm from "../components/ui/ContactForm";
 
-export default function Home() {
+export default function ContactUs() {
   return (
     <div className="p-6 max-w-3xl mx-auto">
+      {/* NOTE: Zayyan, ini aku comment out dulu ya, krn navbar PINUS udah dibikinin & di-set up sama Brians/Babono. :D */}
       {/* <header className="bg-[#F8F3E8] flex items-center justify-between px-4 py-3 relative mb-6">
 
         <button className="text-2xl text-gray-700">&#9776;</button>
