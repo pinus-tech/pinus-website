@@ -4,15 +4,32 @@ import { useState } from "react";
 import Button from "./button";
 
 export default function ContactForm() {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [message, setMessage] = useState("");
+  const [name, setName] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
+  const [message, setMessage] = useState<string>("");
+
+  const [errorMessage, setErrorMessage] = useState<string | undefined>();
+
+  const submitForm = () => {
+    if (name.trim().length == 0) {
+      setErrorMessage("Please enter your name.");
+      return;
+    } else if (email.trim().length === 0) {
+      setErrorMessage("Please enter your email.");
+      return;
+    } else if (message.trim().length === 0) {
+      setErrorMessage("Please enter a message.");
+    }
+
+    // Backend logic here
+  };
 
   return (
     <>
       <form
         className="py-4 mt-4 border-t flex flex-col
         gap-5"
+        onSubmit={(e) => e.preventDefault()}
       >
         <div>
           <input
@@ -49,6 +66,10 @@ export default function ContactForm() {
           rounding="lg"
           size="md"
           className="font-semibold !bg-[#EFB61E] shadow-md"
+          onClick={(e) => {
+            e.preventDefault();
+            submitForm();
+          }}
         >
           Submit
         </Button>
@@ -61,9 +82,11 @@ export default function ContactForm() {
         </button> */}
       </form>
 
-      <div className="bg-slate-100 flex flex-col">
-        <div className="text-red-600 px-5 py-2">Error message</div>
-      </div>
+      {errorMessage && errorMessage.trim().length > 0 ? (
+        <div className="bg-slate-100 flex flex-col rounded-lg">
+          <div className="text-red-600 px-5 py-2">{errorMessage}</div>
+        </div>
+      ) : null}
     </>
   );
 }
