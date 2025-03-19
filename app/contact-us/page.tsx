@@ -3,7 +3,7 @@ import TitleHeader from "../components/ui/title";
 
 export default function ContactUs() {
   return (
-    <div className="p-6 w-full mx-auto">
+    <div className="p-8 w-full flex flex-col justify-center gap-y-4">
       {/* NOTE: Zayyan, ini aku comment out dulu ya, krn navbar PINUS udah dibikinin & di-set up sama Brians/Babono. :D */}
       {/* <header className="bg-[#F8F3E8] flex items-center justify-between px-4 py-3 relative mb-6">
 
@@ -24,7 +24,7 @@ export default function ContactUs() {
       <div className="w-full">
         <TitleHeader text="Contact Us" color="blue" />
       </div>
-      <div className="mt-6">
+      <div>
         <ContactForm />
       </div>
     </div>
