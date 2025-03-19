@@ -24,7 +24,7 @@ export default function ContactUs() {
       <div className="w-full">
         <TitleHeader text="Contact Us" color="blue" />
       </div>
-      <div className="w-full lg:max-w-screen-lg">
+      <div className="w-full lg:max-w-[60%]">
         <ContactForm />
       </div>
     </div>
