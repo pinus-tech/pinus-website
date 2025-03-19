@@ -26,50 +26,70 @@ export default function ContactForm() {
 
   return (
     <>
-      <form
-        className="py-4 mt-4 border-t flex flex-col
-        gap-5"
+      <form className="py-4 mt-4 border-t flex flex-col gap-5"
         onSubmit={(e) => e.preventDefault()}
       >
-        <div>
+        <div className="relative">
           <input
             type="text"
             id="fullname"
-            placeholder="Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            className="w-full border-b-2 outline-none focus:border-blue-500"
           />
+          <label
+          className={`absolute left-6 transition-all ${
+            name ? "text-xs -top-4 text-blue-600" : "text-gray-400 top-1/2 transform -translate-y-1/2"
+        }`}
+          >
+          Name
+          </label>
         </div>
 
-        <div>
+        <div className="relative">
           <input
-            type="email"
-            id="email"
-            placeholder="Email Address"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              id="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full border-b-2 outline-none focus:border-blue-500"
           />
+          <label
+              className={`absolute left-6 transition-all ${
+                  email ? "text-xs -top-4 text-blue-600" : "text-gray-400 top-1/2 transform -translate-y-1/2"
+              }`}
+
+          >
+            Email Address
+          </label>
         </div>
 
-        <div>
+        <div className="relative">
           <textarea
-            className="h-32"
-            id="message"
-            placeholder="Message"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-          ></textarea>
+              className="w-full border-b-2 outline-none h-32 pt-3 pb-2 focus:border-blue-500"
+              id="message"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}>
+          </textarea>
+          <label
+              className={`absolute left-6 transition-all ${
+                  message ? "text-xs -top-4 text-blue-600" : "text-gray-400 top-6 transform -translate-y-1/2"
+              }`}
+
+          >
+            Message
+          </label>
         </div>
 
         <Button
-          variant="yellow"
-          rounding="lg"
-          size="md"
-          className="font-semibold !bg-[#EFB61E] shadow-md"
-          onClick={(e) => {
-            e.preventDefault();
-            submitForm();
-          }}
+            variant="yellow"
+            rounding="lg"
+            size="md"
+            className="font-semibold !bg-[#EFB61E] shadow-md"
+            onClick={(e) => {
+              e.preventDefault();
+              submitForm();
+            }}
         >
           Submit
         </Button>
