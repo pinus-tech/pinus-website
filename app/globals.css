@@ -39,3 +39,12 @@ body {
 html {
   scroll-behavior: smooth;
 }
+
+form > div {
+  @apply flex flex-col gap-6;
+}
+
+input,
+textarea {
+  @apply  px-4 py-2  bg-slate-100 text-black rounded-xl;
+}
