@@ -27,8 +27,8 @@ export async function POST(req: NextRequest) {
         });
 
         return NextResponse.json({ message: 'Success! Entry added to Notion.', data: response }, { status: 200 });
-    } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    } catch (error) {
+        return NextResponse.json({ error: "Failed to fetch data" }, { status: 500 });
     }
 }
 
