@@ -2,6 +2,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { TitleHeader } from "../components/ui/title";
+import Link from "next/link";
 import {
   Select,
   SelectContent,
@@ -24,6 +25,7 @@ import {
 
 interface Blog {
   id: string;
+  url: string;
   title: string;
   description: string;
   date: string;
@@ -39,6 +41,11 @@ async function getBlogs(): Promise<Blog[]> {
   }
   return res.json();
 }
+
+const trimNotionURL = (url: string) => {
+  const splitURL = url.split("/");
+  return splitURL[splitURL.length - 1];
+};
 
 function BlogListContent() {
   const [selected, setSelected] = useState<string>("");
@@ -138,27 +145,29 @@ function BlogListContent() {
         {currentBlogs
           .filter((blog) => !selected || selected == "all" || blog.categories.includes(selected))
           .map((blog) => (
-            <Card key={blog.id} className="overflow-hidden shadow-md flex flex-col h-full">
-              <CardImage
-                width={400}
-                height={250}
-                src={blog.thumbnail || "/blue.png"}
-                alt={blog.title}
-                className="w-full object-cover"
-                />
-              <CardHeader>
-                <CardTitle>{blog.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>By {blog.author} on {blog.date}</CardDescription>
-              </CardContent>
-              <CardContent>
-                <CardDescription>{blog.description}</CardDescription>
-              </CardContent>
-              <CardFooter>
-                <CardTags teamName="" eventType={blog.categories.join(', ')} />
-              </CardFooter>
-            </Card>
+            <Link href={`/blog/${trimNotionURL(blog.url)}`} key={blog.id}>
+              <Card className="overflow-hidden shadow-md flex flex-col h-full">
+                <CardImage
+                  width={400}
+                  height={250}
+                  src={blog.thumbnail || "/blue.png"}
+                  alt={blog.title}
+                  className="w-full object-cover"
+                  />
+                <CardHeader>
+                  <CardTitle>{blog.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription>By {blog.author} on {blog.date}</CardDescription>
+                </CardContent>
+                <CardContent>
+                  <CardDescription>{blog.description}</CardDescription>
+                </CardContent>
+                <CardFooter>
+                  <CardTags teamName="" eventType={blog.categories.join(', ')} />
+                </CardFooter>
+              </Card>
+            </Link>
           ))}
       </div>
 
