@@ -3,7 +3,7 @@ import TitleHeader from "../components/ui/title";
 
 export default function ContactUs() {
   return (
-    <div className="p-8 w-full flex flex-col justify-center items-center gap-y-4">
+    <div className="p-8 w-full flex flex-col justify-center items-center gap-y-4 min-h-[68.9vh]">
       <div className="w-full">
         <TitleHeader text="Contact Us" color="blue" />
       </div>

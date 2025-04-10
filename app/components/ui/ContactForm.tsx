@@ -79,7 +79,7 @@ export default function ContactForm() {
 
         <div className="relative">
           <textarea
-            className="w-full border-b-2 outline-none h-32 pt-3 pb-2 focus:border-blue-500"
+            className="w-full border-b-2 outline-none pt-3 pb-2 focus:border-blue-500 min-h-32"
             id="message"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
