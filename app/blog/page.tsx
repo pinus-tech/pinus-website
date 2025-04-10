@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { TitleHeader } from "../components/ui/title";
 import { BlurFade } from "../components/ui/blur-fade";
+import { Suspense } from "react";
 
 import {
   Select,
@@ -123,40 +124,26 @@ function BlogListContent() {
 
   return (
     <>
+      {/* Category Filter */}
       <div className="flex justify-center items-center">
-        {/* <Select value={selected} onValueChange={setSelected}>
+        <Select value={selected} onValueChange={setSelected}>
           <SelectTrigger className="w-64 font-bold">
             <SelectValue placeholder="All Categories" />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
               <SelectItem value="all">All Categories</SelectItem>
-              <SelectLabel>Events</SelectLabel>
-              <SelectItem value="Orientation">Orientation</SelectItem>
-              <SelectItem value="Sharing Session">Sharing Session</SelectItem>
-              <SelectLabel>Committee</SelectLabel>
-              <SelectItem value="Welfare">Welfare</SelectItem>
+              {tagOptions.map((tag) => (
+                <SelectItem key={tag} value={tag}>
+                  {tag}
+                </SelectItem>
+              ))}
             </SelectGroup>
           </SelectContent>
-        </Select> */}
-      <Select value={selected} onValueChange={setSelected}>
-        <SelectTrigger className="w-64 font-bold">
-          <SelectValue placeholder="All Categories" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            <SelectItem value="all">All Categories</SelectItem>
-            {tagOptions.map((tag) => (
-              <SelectItem key={tag} value={tag}>
-                {tag}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-
+        </Select>
       </div>
-
+  
+      {/* Blog Content */}
       {loading ? (
         <div className="w-full">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-8 px-4 sm:px-0 justify-items-center">
@@ -217,7 +204,10 @@ function BlogListContent() {
                     </p>
                   </CardContent>
                   <CardFooter>
-                    <CardTags teamName="" eventType={blog.categories.join(", ")} />
+                    <CardTags
+                      teamName=""
+                      eventType={blog.categories.join(", ")}
+                    />
                   </CardFooter>
                 </Card>
               </Link>
@@ -225,9 +215,9 @@ function BlogListContent() {
           ))}
         </div>
       )}
-
-
-      {!loading && (
+  
+      {/* Pagination */}
+      {!loading && totalPages > 1 && (
         <div className="mt-8 flex justify-center items-center space-x-4">
           {currentPage > 1 && (
             <button
@@ -263,6 +253,7 @@ function BlogListContent() {
       )}
     </>
   );
+  
 }
 
 export default function BlogList() {
@@ -276,9 +267,11 @@ export default function BlogList() {
         />
       </div>
       <main className="w-full max-w-4xl mx-auto px-8 py-10 flex flex-col gap-8">
-      <TitleHeader text="Blog" color="blue" />
-      <BlogListContent />
-    </main>
+        <TitleHeader text="Blog" color="blue" />
+        <Suspense fallback={<div>Loading...</div>}>
+          <BlogListContent />
+        </Suspense>    
+      </main>
     </div>
   );
 }
