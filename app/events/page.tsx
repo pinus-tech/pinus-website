@@ -28,7 +28,7 @@ interface PINUSEvent {
 const BLUR_FADE_DELAY = 0.04;
 const categories = [
   "All",
-  "Executive Committee",
+  "Core Exco",
   "Creative Marketing",
   "PPD",
   "Ambassador",
