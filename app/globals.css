@@ -48,3 +48,35 @@ input,
 textarea {
   @apply  px-4 py-2  bg-slate-100 text-black rounded-xl;
 }
+
+.pinus-study-button{
+  margin-top: -4px;
+  cursor: pointer;
+  border: 2px solid rgb(64, 59, 59);
+  border-radius: 8px;
+  background-color: rgb(220, 243, 252);
+  color: rgb(64, 59, 59);
+  font-weight: 600;
+  font-size: 13px;
+  padding: 2px 6px;
+  display: flex;
+  -webkit-box-pack: center;
+  justify-content: center;
+  -webkit-box-align: center;
+  align-items: center;
+  transition: background-color 0.3s, color 0.3s;
+  box-shadow: rgb(128, 155, 206) 4px 4px 0px, rgb(64, 59, 59) 4px 4px 0px 2px;
+}
+
+.pinus-study-button:hover {
+  background-color: rgb(241, 251, 255);
+}
+
+.pinus-study-button:active {
+  background-color: rgb(241, 251, 255);
+  color: rgb(20, 18, 18);
+  position: relative;
+  top: 2px;
+  left: 2px;
+  box-shadow: rgb(128, 155, 206) 2px 2px 0px, rgb(64, 59, 59) 2px 2px 0px 2px;
+}

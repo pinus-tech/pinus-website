@@ -55,6 +55,9 @@ const Header = () => {
             <Link href="/contact-us" className="text-gray-700 hover:text-blue-main">
               Contact Us
             </Link>
+            <Link href="https://www.pinusstudy.com/" target="_blank" className="pinus-study-button">
+              PINUS Study
+            </Link>
           </nav>
 
           {/* Sign In Button */}
@@ -130,6 +133,9 @@ const Header = () => {
             </Link>
             <Link href="/contact-us" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
               Contact Us
+            </Link>
+            <Link href="https://www.pinusstudy.com/" target="_blank" className="pinus-study-button" onClick={toggleMenu}>
+              PINUS Study
             </Link>
           </nav>
           {/* <button
