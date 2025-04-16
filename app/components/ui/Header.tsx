@@ -24,11 +24,18 @@ const Header = () => {
           {/* Logo */}
           <div className="flex items-center">
             <Link href="/">
+              <div className="flex items-center">
               <img
-                src="/logo-pinus.svg" // Replace with your logo path
-                alt="Logo"
-                className="h-8 cursor-pointer"
-              />
+                  src="/logo-icon-pinus.svg" 
+                  alt="Logo"
+                  className="h-8 cursor-pointer animate-[spin_4500ms_linear_infinite]"
+                />
+                <img
+                  src="/logo-text-pinus.svg" 
+                  alt="Logo"
+                  className="h-4 ml-3 cursor-pointer"
+                />
+              </div>
             </Link>
           </div>
 
