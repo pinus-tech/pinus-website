@@ -262,7 +262,7 @@ export default function BlogList() {
     <div className="flex flex-col gap-8 items-center min-h-screen">
       <div className="w-full relative h-[25vh] md:h-[35vh] lg:h-[50vh]">
         <Image
-          src="/hero-blog.png"
+          src="/hero-blog.jpg"
           fill
           objectFit="cover"
           alt="Picture of hero blog"
