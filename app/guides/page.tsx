@@ -13,6 +13,7 @@ import {
   GuideCardTitle,
   GuideCardText,
 } from "../components/ui/guide-card";
+import Image from 'next/image'
 
 const BLUR_FADE_DELAY = 0.02;
 
@@ -258,13 +259,15 @@ export default function Guides() {
   return (
     <div className="flex flex-col gap-8 row-start-2 items-center sm:items-start min-h-screen">
       {/* Header Image */}
-      <div className="w-full h-[25vh] md:h-[35vh] lg:h-[50vh]">
-        <img
-          src="/test_img2.png"
-          alt="PINUS Committee Image"
-          className="w-full h-full object-cover object-center"
+      <div className="w-full relative h-[25vh] md:h-[35vh] lg:h-[50vh]">
+        <Image
+          src="/hero-guides.png"
+          fill
+          objectFit="cover"
+          alt="Picture of hero guides"
+          className="w-full h-full top-0 left-0 object-cover"
         />
-      </div>
+      </div> 
 
       <div className="px-8 md:px-72 py-2 md:py-5 pb-20 md:pb-20 w-full">
         <BlurFade key="header" delay={BLUR_FADE_DELAY} inView>
