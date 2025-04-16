@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import styles from "./styles.module.css";
+import Image from 'next/image'
 
 const aboutUsText =
   "Perhimpunan Indonesia at NUS (PINUS) is a student organization dedicated to fostering a strong sense of community among Indonesian students at the National University of Singapore (NUS). Through a variety of social, cultural, and educational events, we aim to preserve and promote Indonesian culture, while also helping members adapt to life in Singapore. PINUS serves as a platform for students to develop their talents, strengthen leadership skills, and build lifelong friendships with fellow Indonesians and the wider NUS community.";
@@ -73,15 +74,16 @@ export default function Home() {
           <div className="text-3xl font-bold text-center text-[#727272] md:text-5xl md:mt-10">
             Our Ad-Hoc Organisations
           </div>
-          <div className="flex flex-col items-centre gap-5">
-            <picture>
-              <source media="(max-width: 768px)" srcSet="/adhoc_mobile.png" />
-              <img
-                alt=""
-                src="/adhoc_desktop.png"
-                className={styles.adHocImage}
+          <div className="flex flex-col items-centre gap-5 w-full">
+            <div className="w-full relative aspect-video rounded-3xl overflow-hidden shadow-xl">
+              <Image
+                src="/adhoc-thumbnail-nuansa.jpg"
+                fill
+                objectFit="cover"
+                alt="Picture of nuansa"
+                className="w-full h-full top-0 left-0 object-cover"
               />
-            </picture>
+            </div> 
             <div className="flex flex-col items-center gap-1">
               <div className="text-3xl font-bold text-[#9D8270] md:text-4xl">
                 NUANSA
@@ -91,22 +93,79 @@ export default function Home() {
               </div>
             </div>
           </div>
-
-          <div className="flex flex-col items-centre gap-8 mt-10">
-            <picture>
-              <source media="(max-width: 768px)" srcSet="/adhoc_mobile.png" />
-              <img
-                alt=""
-                src="/adhoc_desktop.png"
-                className={styles.adHocImage}
+          <div className="flex flex-col items-centre gap-5 mt-10 w-full">
+            <div className="w-full relative aspect-video rounded-3xl overflow-hidden shadow-xl">
+              <Image
+                src="/adhoc-thumbnail-mkp.jpg"
+                fill
+                objectFit="cover"
+                alt="Picture of mkp"
+                className="w-full h-full top-0 left-0 object-cover"
               />
-            </picture>
+            </div> 
             <div className="flex flex-col items-center gap-1">
               <div className="text-3xl font-bold text-[#9D8270] md:text-4xl">
                 Misi Kami Peduli
               </div>
               <div className="text-3xl font-bold text-center italic text-[#866C49] md:text-4xl">
                 Volunteering Initiative
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col items-centre gap-5 mt-10 w-full">
+            <div className="w-full relative aspect-video rounded-3xl overflow-hidden shadow-xl">
+              <Image
+                src="/adhoc-thumbnail-mkp.jpg"
+                fill
+                objectFit="cover"
+                alt="Picture of mkp"
+                className="w-full h-full top-0 left-0 object-cover"
+              />
+            </div> 
+            <div className="flex flex-col items-center gap-1">
+              <div className="text-3xl font-bold text-[#9D8270] md:text-4xl">
+                Misi Kami Peduli
+              </div>
+              <div className="text-3xl font-bold text-center italic text-[#866C49] md:text-4xl">
+                Volunteering Initiative
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col items-centre gap-5 mt-10 w-full">
+            <div className="w-full relative aspect-video rounded-3xl overflow-hidden shadow-xl">
+              <Image
+                src="/adhoc-thumbnail-angklung.jpg"
+                fill
+                objectFit="cover"
+                alt="Picture of angklung"
+                className="w-full h-full top-0 left-0 object-cover"
+              />
+            </div> 
+            <div className="flex flex-col items-center gap-1">
+              <div className="text-3xl font-bold text-[#9D8270] md:text-4xl">
+                NUS CAC Angklung Ensemble
+              </div>
+              <div className="text-3xl font-bold text-center italic text-[#866C49] md:text-4xl">
+                NUS Cultural Activity Club
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-col items-centre gap-5 mt-10 w-full">
+            <div className="w-full relative aspect-video rounded-3xl overflow-hidden shadow-xl">
+              <Image
+                src="/adhoc-thumbnail-religious.jpeg"
+                fill
+                objectFit="cover"
+                alt="Picture of angklung"
+                className="w-full h-full top-0 left-0 object-cover"
+              />
+            </div> 
+            <div className="flex flex-col items-center gap-1">
+              <div className="text-3xl font-bold text-[#9D8270] md:text-4xl">
+                PINUS Ukhtis & Akhis
+              </div>
+              <div className="text-3xl font-bold text-center italic text-[#866C49] md:text-4xl">
+                Religious Organization
               </div>
             </div>
           </div>
