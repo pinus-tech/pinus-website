@@ -46,9 +46,9 @@ const Footer = () => {
               <img src="/ic-youtube-white.svg" alt="Instagram" className="h-10 w-10" />              
             </Link>
           </div>
-          <a href="#contact" className="hover:underline">
+          <Link href="/contact-us" className="hover:underline">
             Contact Us
-          </a>
+          </Link>
         </div>
 
         {/* Right Section: Copyright */}
