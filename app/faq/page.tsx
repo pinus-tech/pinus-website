@@ -26,14 +26,14 @@ export default function Faq() {
           <AccordionItem value="item2">
             <AccordionTrigger>How to join PINUS?</AccordionTrigger>
             <AccordionContent>
-              Lorem ipsum dolor sit amet consectetur, adipisicing elit. Quo, alias dolor. Explicabo corrupti laborum quidem voluptates fugit assumenda sequi nobis dolores dolorem, corporis est dolore. Impedit ex dolor est ut.
+              Silahkan tanya Cullen Sean ya hehe
             </AccordionContent>
           </AccordionItem>
 
           <AccordionItem value="item3">
             <AccordionTrigger>What events organized by PINUS?</AccordionTrigger>
             <AccordionContent>
-              Lorem ipsum dolor sit amet, consectetur adipisicing elit. Quibusdam est ex fuga aliquam quaerat, nulla perspiciatis. Excepturi voluptatem, debitis expedita itaque, maxime corrupti nihil porro rerum atque enim rem fuga?
+              There are many events held by PINUS, you can check the events page for more information.
             </AccordionContent>
           </AccordionItem>
         </Accordion>
