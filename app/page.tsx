@@ -33,14 +33,15 @@ export default function Home() {
           {/* Gradient overlay div */}
           <div className={styles.coverImageGradient}></div>
           {/* Image div with background */}
-          <div className="relative z-0">
-            <picture>
-              <source media="(max-width: 768px)" srcSet="/hero_mobile.png" />
-              <img alt="" src="/hero_desktop.png" className={styles.coverImage} />
-            </picture>
-          </div>
-
-          <div className={styles.coverText}>Indonesia</div>
+          <div className="w-full relative h-[25vh] md:h-[35vh] lg:h-[60vh] z-0">
+            <Image
+              src="/hero-main.png"
+              fill
+              objectFit="cover"
+              alt="Picture of hero main"
+              className="w-full h-full top-0 left-0 object-cover"
+            />
+          </div>           
         </div>
         <div className="flex flex-col max-w-screen-sm mx-auto pt-2 pb-20 px-6 w-full items-center justify-center gap-20 md:max-w-screen-lg md:pt-14 md:px-10 md:gap-20">
           {/* About Us */}
