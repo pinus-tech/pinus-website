@@ -25,6 +25,7 @@ interface CommitteeMember {
   committeeGroup: string;
   name: string;
   role: string;
+  photo: string;
 }
 
 async function getCommittee(): Promise<{ results: CommitteeMember[] }> {
@@ -97,7 +98,7 @@ export default function Committee() {
   }, []);
 
   return (
-    <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start min-h-screen">
+    <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start min-h-screen pb-16">
       <div className="w-full h-[25vh] md:h-[35vh] lg:h-[50vh]">
         <img
           src="/test_img2.png"
@@ -138,7 +139,7 @@ export default function Committee() {
                 {members.map((member) => (
                   <CommCard key={member.id}>
                     <CommCardImage
-                      src="/test_img.jpg"
+                      src={member.photo ? member.photo : "/test_img.jpg"}
                       alt={member.name}
                       width={24}
                       height={32}

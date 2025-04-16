@@ -12,6 +12,7 @@ interface NotionCommitteeMember {
   committeeGroup: string;
   name: string;
   role: string;
+  photo: string;
 }
 
 export async function GET() {
@@ -37,6 +38,7 @@ export async function GET() {
             committeeGroup: page.properties["committee-group"]?.type === "select"? page.properties["committee-group"]?.select?.name || "" : "",
             name: page.properties.name?.type === "title"? page.properties.name?.title?.[0]?.type === "text"? page.properties.name?.title?.[0]?.text?.content || "" : "" : "",
             role: page.properties.role.type === "rich_text"? page.properties.role?.rich_text?.[0]?.type === "text"? page.properties.role?.rich_text?.[0]?.text?.content || "" : "" : "",
+            photo: page.properties.photo.type === "files"? page.properties.photo?.files?.[0]?.type === "file"? page.properties.photo?.files?.[0]?.file?.url || "" : "" : "",
           };
         });
 
