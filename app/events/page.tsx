@@ -17,6 +17,7 @@ import {
   CardBadge,
 } from "../components/ui/card";
 import { Skeleton } from "../components/ui/skeleton";
+import Image from 'next/image'
 
 interface PINUSEvent {
   title: string;
@@ -196,13 +197,15 @@ function EventsContent() {
 export default function Events() {
   return (
     <div className="flex flex-col gap-8 items-center min-h-screen">
-      <div className="w-full h-[25vh] md:h-[35vh] lg:h-[50vh]">
-        <img
-          src="/test_img2.png"
-          alt="PINUS Committee Image"
-          className="w-full h-full object-cover object-center"
+      <div className="w-full relative h-[25vh] md:h-[35vh] lg:h-[50vh]">
+        <Image
+          src="/hero-event.png"
+          fill
+          objectFit="cover"
+          alt="Picture of hero event"
+          className="w-full h-full top-0 left-0 object-cover"
         />
-      </div>
+      </div> 
 
       <div className="px-8 justify-center py-4 md:py-10">
         <BlurFade key="header" delay={BLUR_FADE_DELAY} inView>

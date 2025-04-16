@@ -6,6 +6,7 @@ import Link from "next/link";
 import { TitleHeader } from "../components/ui/title";
 import { BlurFade } from "../components/ui/blur-fade";
 import { Suspense } from "react";
+import Image from 'next/image'
 
 import {
   Select,
@@ -259,13 +260,15 @@ function BlogListContent() {
 export default function BlogList() {
   return (
     <div className="flex flex-col gap-8 items-center min-h-screen">
-      <div className="w-full h-[25vh] md:h-[35vh] lg:h-[50vh]">
-        <img
-          src="/test_img2.png"
-          alt="PINUS Committee Image"
-          className="w-full h-full object-cover object-center"
+      <div className="w-full relative h-[25vh] md:h-[35vh] lg:h-[50vh]">
+        <Image
+          src="/hero-blog.png"
+          fill
+          objectFit="cover"
+          alt="Picture of hero blog"
+          className="w-full h-full top-0 left-0 object-cover"
         />
-      </div>
+      </div> 
       <main className="w-full max-w-4xl mx-auto px-8 py-10 flex flex-col gap-8">
         <TitleHeader text="Blog" color="blue" />
         <Suspense fallback={<div>Loading...</div>}>
