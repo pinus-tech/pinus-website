@@ -4,9 +4,9 @@ import Link from 'next/link';
 const Footer = () => {
   return (
     <footer className="bg-blue-main text-white py-8 px-4">
-      <div className="container mx-auto flex flex-col md:flex-row justify-between items-start md:items-center space-y-6 md:space-y-0">
+      <div className="container mx-auto flex flex-col md:flex-row justify-between items-center space-y-6 md:space-y-0">
         {/* Left Section: Explore */}
-        <div>
+        <div className='text-center md:text-left'>
           <h2 className="text-xl font-bold mb-4">Explore</h2>
           <ul className="space-y-2">
             <li>
@@ -33,7 +33,7 @@ const Footer = () => {
         </div>
 
         {/* Center Section: Icons */}
-        <div className="flex flex-col items-center">
+        <div className="flex flex-col items-center py-8 md:py-0">
           <div className="flex space-x-4 mb-4">
             {/* Replace these with actual icons or images */}
             <Link href="https://www.instagram.com/pinusonline" target='_blank'>              

@@ -85,11 +85,11 @@ export default function Home() {
                 className="w-full h-full top-0 left-0 object-cover"
               />
             </div> 
-            <div className="flex flex-col items-center gap-1">
-              <div className="text-3xl font-bold text-[#9D8270] md:text-4xl">
+            <div className="flex flex-col items-center gap-1 text-center">
+              <div className="text-lg font-bold text-[#9D8270] md:text-3xl">
                 NUANSA
               </div>
-              <div className="text-3xl font-bold text-center italic text-[#866C49] md:text-4xl">
+              <div className="text-lg font-bold text-center italic text-[#866C49] md:text-3xl">
                 Cultural Productions
               </div>
             </div>
@@ -104,30 +104,11 @@ export default function Home() {
                 className="w-full h-full top-0 left-0 object-cover"
               />
             </div> 
-            <div className="flex flex-col items-center gap-1">
-              <div className="text-3xl font-bold text-[#9D8270] md:text-4xl">
+            <div className="flex flex-col items-center gap-1 text-center">
+              <div className="text-lg font-bold text-[#9D8270] md:text-3xl">
                 Misi Kami Peduli
               </div>
-              <div className="text-3xl font-bold text-center italic text-[#866C49] md:text-4xl">
-                Volunteering Initiative
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-col items-centre gap-5 mt-10 w-full">
-            <div className="w-full relative aspect-video rounded-3xl overflow-hidden shadow-xl">
-              <Image
-                src="/adhoc-thumbnail-mkp.jpg"
-                fill
-                objectFit="cover"
-                alt="Picture of mkp"
-                className="w-full h-full top-0 left-0 object-cover"
-              />
-            </div> 
-            <div className="flex flex-col items-center gap-1">
-              <div className="text-3xl font-bold text-[#9D8270] md:text-4xl">
-                Misi Kami Peduli
-              </div>
-              <div className="text-3xl font-bold text-center italic text-[#866C49] md:text-4xl">
+              <div className="text-lg font-bold text-center italic text-[#866C49] md:text-3xl">
                 Volunteering Initiative
               </div>
             </div>
@@ -142,11 +123,11 @@ export default function Home() {
                 className="w-full h-full top-0 left-0 object-cover"
               />
             </div> 
-            <div className="flex flex-col items-center gap-1">
-              <div className="text-3xl font-bold text-[#9D8270] md:text-4xl">
+            <div className="flex flex-col items-center gap-1 text-center">
+              <div className="text-lg font-bold text-[#9D8270] md:text-3xl">
                 NUS CAC Angklung Ensemble
               </div>
-              <div className="text-3xl font-bold text-center italic text-[#866C49] md:text-4xl">
+              <div className="text-lg font-bold text-center italic text-[#866C49] md:text-3xl">
                 NUS Cultural Activity Club
               </div>
             </div>
@@ -161,11 +142,11 @@ export default function Home() {
                 className="w-full h-full top-0 left-0 object-cover"
               />
             </div> 
-            <div className="flex flex-col items-center gap-1">
-              <div className="text-3xl font-bold text-[#9D8270] md:text-4xl">
+            <div className="flex flex-col items-center gap-1 text-center">
+              <div className="text-lg font-bold text-[#9D8270] md:text-3xl">
                 PINUS Ukhtis & Akhis
               </div>
-              <div className="text-3xl font-bold text-center italic text-[#866C49] md:text-4xl">
+              <div className="text-lg font-bold text-center italic text-[#866C49] md:text-3xl">
                 Religious Organization
               </div>
             </div>
