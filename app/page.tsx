@@ -78,7 +78,7 @@ export default function Home() {
           <div className="flex flex-col items-centre gap-5 w-full">
             <div className="w-full relative aspect-video rounded-3xl overflow-hidden shadow-xl">
               <Image
-                src="/adhoc-thumbnail-latest-nuansa.png"
+                src="/adhoc-thumbnail-latest-nuansa.jpeg"
                 fill
                 objectFit="cover"
                 alt="Picture of nuansa"
@@ -97,7 +97,7 @@ export default function Home() {
           <div className="flex flex-col items-centre gap-5 mt-10 w-full">
             <div className="w-full relative aspect-video rounded-3xl overflow-hidden shadow-xl">
               <Image
-                src="/adhoc-thumbnail-latest-mkp.png"
+                src="/adhoc-thumbnail-latest-mkp.jpeg"
                 fill
                 objectFit="cover"
                 alt="Picture of mkp"
