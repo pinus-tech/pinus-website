@@ -131,26 +131,7 @@ export default function Home() {
                 NUS Cultural Activity Club
               </div>
             </div>
-          </div>
-          <div className="flex flex-col items-centre gap-5 mt-10 w-full">
-            <div className="w-full relative aspect-video rounded-3xl overflow-hidden shadow-xl">
-              <Image
-                src="/adhoc-thumbnail-religious.jpeg"
-                fill
-                objectFit="cover"
-                alt="Picture of angklung"
-                className="w-full h-full top-0 left-0 object-cover"
-              />
-            </div> 
-            <div className="flex flex-col items-center gap-1 text-center">
-              <div className="text-xl font-bold text-[#9D8270] md:text-3xl">
-                PINUS Ukhtis & Akhis
-              </div>
-              <div className="text-lg font-bold text-center italic text-[#866C49] md:text-3xl">
-                Religious Organization
-              </div>
-            </div>
-          </div>
+          </div>          
         </div>
       </div>
     </GradientWrapper>

@@ -36,6 +36,12 @@ export default function Faq() {
               There are many events held by PINUS, you can check the events page for more information.
             </AccordionContent>
           </AccordionItem>
+          <AccordionItem value="item4">
+            <AccordionTrigger>Any religious community within PINUS?</AccordionTrigger>
+            <AccordionContent>
+              There are some such as ISCF, ICY and Ukhtis & Akhtis. You can ask us for more information.
+            </AccordionContent>
+          </AccordionItem>
         </Accordion>
       </div>
     </main>  
