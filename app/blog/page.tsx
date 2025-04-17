@@ -128,7 +128,7 @@ function BlogListContent() {
       {/* Category Filter */}
       <div className="flex justify-center items-center">
         <Select value={selected} onValueChange={setSelected}>
-          <SelectTrigger className="w-64 font-bold">
+          <SelectTrigger className="w-64 font-bold rounded-xl">
             <SelectValue placeholder="All Categories" />
           </SelectTrigger>
           <SelectContent>
