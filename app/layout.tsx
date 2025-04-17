@@ -12,6 +12,7 @@ const figtree = Figtree({
 export const metadata: Metadata = {
   title: "Pelajar Indonesia NUS | PINUS",
   description: "Perhimpunan Indonesia at NUS (PINUS) is a student organization dedicated to fostering a strong sense of community among Indonesian students at the National University of Singapore (NUS).",
+  metadataBase: new URL('https://pinusonline.org/')
 };
 
 export default function RootLayout({
