@@ -46,7 +46,7 @@ export default function Home() {
         <div className="flex flex-col max-w-screen-sm mx-auto pt-2 pb-20 px-6 w-full items-center justify-center gap-20 md:max-w-screen-lg md:pt-14 md:px-10 md:gap-20">
           {/* About Us */}
           <div className="flex flex-col pt-20 items-center gap-5">
-            <div className="text-5xl font-bold text-[#222E89]">About Us</div>
+            <div className="text-3xl md:text-4xl font-bold text-[#222E89]">About Us</div>
             <p className="font-bold text-justify text-md text-[#222E89] md:text-lg">
               {aboutUsText}
             </p>
@@ -54,14 +54,14 @@ export default function Home() {
 
           {/* Vision */}
           <div className="flex flex-col gap-5">
-            <div className="text-5xl font-bold text-[#8A1010]">Vision</div>
+            <div className="text-3xl md:text-4xl font-bold text-[#8A1010]">Vision</div>
             <p className="font-bold text-justify text-md text-[#832626] md:text-lg">
               {visionText}
             </p>
           </div>
 
           <div className="flex flex-col gap-5">
-            <div className="text-5xl font-bold text-[#AC8228]">Mission</div>
+            <div className="text-3xl md:text-4xl font-bold text-[#AC8228]">Mission</div>
             {missionsPoints.map((text, idx) => (
               <p
                 key={idx}
@@ -72,7 +72,7 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="text-3xl font-bold text-center text-[#727272] md:text-5xl md:mt-10">
+          <div className="text-2xl font-bold text-center text-[#727272] md:text-5xl md:mt-10">
             Our Ad-Hoc Organisations
           </div>
           <div className="flex flex-col items-centre gap-5 w-full">
@@ -86,7 +86,7 @@ export default function Home() {
               />
             </div> 
             <div className="flex flex-col items-center gap-1 text-center">
-              <div className="text-lg font-bold text-[#9D8270] md:text-3xl">
+              <div className="text-xl font-bold text-[#9D8270] md:text-3xl">
                 NUANSA
               </div>
               <div className="text-lg font-bold text-center italic text-[#866C49] md:text-3xl">
@@ -105,7 +105,7 @@ export default function Home() {
               />
             </div> 
             <div className="flex flex-col items-center gap-1 text-center">
-              <div className="text-lg font-bold text-[#9D8270] md:text-3xl">
+              <div className="text-xl font-bold text-[#9D8270] md:text-3xl">
                 Misi Kami Peduli
               </div>
               <div className="text-lg font-bold text-center italic text-[#866C49] md:text-3xl">
@@ -124,7 +124,7 @@ export default function Home() {
               />
             </div> 
             <div className="flex flex-col items-center gap-1 text-center">
-              <div className="text-lg font-bold text-[#9D8270] md:text-3xl">
+              <div className="text-xl font-bold text-[#9D8270] md:text-3xl">
                 NUS CAC Angklung Ensemble
               </div>
               <div className="text-lg font-bold text-center italic text-[#866C49] md:text-3xl">
@@ -143,7 +143,7 @@ export default function Home() {
               />
             </div> 
             <div className="flex flex-col items-center gap-1 text-center">
-              <div className="text-lg font-bold text-[#9D8270] md:text-3xl">
+              <div className="text-xl font-bold text-[#9D8270] md:text-3xl">
                 PINUS Ukhtis & Akhis
               </div>
               <div className="text-lg font-bold text-center italic text-[#866C49] md:text-3xl">
