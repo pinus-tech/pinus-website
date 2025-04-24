@@ -261,7 +261,7 @@ export default function Guides() {
       {/* Header Image */}
       <div className="w-full relative h-[25vh] md:h-[35vh] lg:h-[50vh]">
         <Image
-          src="/hero-guides.png"
+          src="/hero-guides.jpeg"
           fill
           objectFit="cover"
           alt="Picture of hero guides"
