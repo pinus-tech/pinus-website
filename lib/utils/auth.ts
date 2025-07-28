@@ -1,8 +1,8 @@
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import mailjet from 'node-mailjet';
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import mailjet from "node-mailjet";
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 const MAILJET_API_KEY = process.env.MAILJET_API_KEY!;
 const MAILJET_SECRET_KEY = process.env.MAILJET_SECRET_KEY!;
 const MAILJET_FROM_EMAIL = process.env.MAILJET_FROM_EMAIL!;
@@ -10,77 +10,125 @@ const MAILJET_FROM_EMAIL = process.env.MAILJET_FROM_EMAIL!;
 // Initialize Mailjet
 const mailjetClient = mailjet.apiConnect(MAILJET_API_KEY, MAILJET_SECRET_KEY);
 
+// Define proper types for permissions and user
+interface UserPermissions {
+  canApproveAccounts: boolean;
+  canCreateForms: boolean;
+  canManageUsers: boolean;
+  canViewAnalytics: boolean;
+}
+
+interface User {
+  isSuperAdmin: boolean;
+  isAdmin: boolean;
+  permissions: UserPermissions;
+}
+
+interface JWTPayload {
+  userId: string;
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
+  permissions: UserPermissions;
+}
+
 export const hashPassword = async (password: string): Promise<string> => {
   const salt = await bcrypt.genSalt(12);
   return bcrypt.hash(password, salt);
 };
 
-export const comparePassword = async (password: string, hashedPassword: string): Promise<boolean> => {
+export const comparePassword = async (
+  password: string,
+  hashedPassword: string
+): Promise<boolean> => {
   return bcrypt.compare(password, hashedPassword);
 };
 
-export const generateToken = (userId: string, isAdmin: boolean, isSuperAdmin: boolean = false, permissions: any = {}) => {
+export const generateToken = (
+  userId: string,
+  isAdmin: boolean,
+  isSuperAdmin: boolean = false,
+  permissions: UserPermissions = {
+    canApproveAccounts: false,
+    canCreateForms: false,
+    canManageUsers: false,
+    canViewAnalytics: false,
+  }
+): string => {
   return jwt.sign(
-    { 
-      userId, 
-      isAdmin, 
+    {
+      userId,
+      isAdmin,
       isSuperAdmin,
-      permissions
-    },
+      permissions,
+    } as JWTPayload,
     JWT_SECRET,
-    { expiresIn: '7d' }
+    { expiresIn: "7d" }
   );
 };
 
-export const verifyToken = (token: string): any => {
+export const verifyToken = (token: string): JWTPayload | null => {
   try {
-    return jwt.verify(token, JWT_SECRET);
+    return jwt.verify(token, JWT_SECRET) as JWTPayload;
   } catch (error) {
     return null;
   }
 };
 
 // Permission checking utilities
-export const hasPermission = (user: any, permission: string): boolean => {
+export const hasPermission = (
+  user: User,
+  permission: keyof UserPermissions
+): boolean => {
   if (user.isSuperAdmin) return true; // Super admin has all permissions
   return user.permissions && user.permissions[permission];
 };
 
-export const canApproveAccounts = (user: any): boolean => {
-  return user.isSuperAdmin || (user.isAdmin && hasPermission(user, 'canApproveAccounts'));
+export const canApproveAccounts = (user: User): boolean => {
+  return (
+    user.isSuperAdmin ||
+    (user.isAdmin && hasPermission(user, "canApproveAccounts"))
+  );
 };
 
-export const canCreateForms = (user: any): boolean => {
-  return user.isSuperAdmin || (user.isAdmin && hasPermission(user, 'canCreateForms'));
+export const canCreateForms = (user: User): boolean => {
+  return (
+    user.isSuperAdmin || (user.isAdmin && hasPermission(user, "canCreateForms"))
+  );
 };
 
-export const canManageUsers = (user: any): boolean => {
-  return user.isSuperAdmin || (user.isAdmin && hasPermission(user, 'canManageUsers'));
+export const canManageUsers = (user: User): boolean => {
+  return (
+    user.isSuperAdmin || (user.isAdmin && hasPermission(user, "canManageUsers"))
+  );
 };
 
-export const canViewAnalytics = (user: any): boolean => {
-  return user.isSuperAdmin || (user.isAdmin && hasPermission(user, 'canViewAnalytics'));
+export const canViewAnalytics = (user: User): boolean => {
+  return (
+    user.isSuperAdmin ||
+    (user.isAdmin && hasPermission(user, "canViewAnalytics"))
+  );
 };
 
-export const sendApprovalEmail = async (email: string, name: string): Promise<void> => {
+export const sendApprovalEmail = async (
+  email: string,
+  name: string
+): Promise<void> => {
   try {
-    const request = mailjetClient
-      .post('send', { version: 'v3.1' })
-      .request({
-        Messages: [
-          {
-            From: {
-              Email: MAILJET_FROM_EMAIL,
-              Name: 'PINUS Online'
+    const request = mailjetClient.post("send", { version: "v3.1" }).request({
+      Messages: [
+        {
+          From: {
+            Email: MAILJET_FROM_EMAIL,
+            Name: "PINUS Online",
+          },
+          To: [
+            {
+              Email: email,
+              Name: name,
             },
-            To: [
-              {
-                Email: email,
-                Name: name
-              }
-            ],
-            Subject: 'Welcome to PINUS Online - Your Account Has Been Approved!',
-            HTMLPart: `
+          ],
+          Subject: "Welcome to PINUS Online - Your Account Has Been Approved!",
+          HTMLPart: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
                 <div style="text-align: center; margin-bottom: 30px;">
                   <img src="https://pinusonline.org/logo-icon-pinus.svg" alt="PINUS Logo" style="height: 60px;">
@@ -117,7 +165,7 @@ export const sendApprovalEmail = async (email: string, name: string): Promise<vo
                 </div>
               </div>
             `,
-            TextPart: `
+          TextPart: `
               Congratulations, ${name}!
               
               Your PINUS Online account has been approved by our admin team.
@@ -127,14 +175,14 @@ export const sendApprovalEmail = async (email: string, name: string): Promise<vo
               
               Best regards,
               PINUS Online Team
-            `
-          }
-        ]
-      });
+            `,
+        },
+      ],
+    });
 
     await request;
   } catch (error) {
-    console.error('Error sending approval email:', error);
-    throw new Error('Failed to send approval email');
+    console.error("Error sending approval email:", error);
+    throw new Error("Failed to send approval email");
   }
-}; 
+};

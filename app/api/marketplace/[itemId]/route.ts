@@ -18,10 +18,12 @@ async function verifyLoggedInUser(req: NextRequest) {
 // GET - Get specific item details (anyone can view)
 export async function GET(
   req: NextRequest,
-  { params }: { params: { itemId: string } }
+  { params }: { params: Promise<{ itemId: string }> }
 ) {
   try {
     await dbConnect();
+
+    const { itemId } = await params;
 
     // TODO: Implement individual item fetching logic
     // - Find item by ID with full details
@@ -51,7 +53,7 @@ export async function GET(
 // PATCH - Update item (only item seller or super admin)
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { itemId: string } }
+  { params }: { params: Promise<{ itemId: string }> }
 ) {
   try {
     const user = await verifyLoggedInUser(req);
@@ -64,6 +66,8 @@ export async function PATCH(
 
     await dbConnect();
 
+    const { itemId } = await params;
+
     // TODO: Implement item update logic
     // - Find item by ID
     // - Check if user can edit this item (seller or super admin)
@@ -71,8 +75,6 @@ export async function PATCH(
     // - Handle image updates (add/remove/reorder)
     // - Update item document with change history
     // - Handle status changes (mark as sold, reserved, available)
-    // - Send notifications to interested users about changes
-    // - Update search index if using external search
     // - Return updated item information
 
     return NextResponse.json(
@@ -94,7 +96,7 @@ export async function PATCH(
 // DELETE - Delete item (only item seller or super admin)
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { itemId: string } }
+  { params }: { params: Promise<{ itemId: string }> }
 ) {
   try {
     const user = await verifyLoggedInUser(req);
@@ -107,15 +109,12 @@ export async function DELETE(
 
     await dbConnect();
 
+    const { itemId } = await params;
+
     // TODO: Implement item deletion logic
     // - Find item by ID
     // - Check if user can delete this item (seller or super admin only)
-    // - Consider soft delete vs hard delete based on business rules
     // - Handle image cleanup (delete from storage)
-    // - Remove from user wishlists/favorites
-    // - Cancel any pending transactions/negotiations
-    // - Send notifications to interested users
-    // - Update seller statistics
     // - Clean up related data (views, messages, etc.)
 
     return NextResponse.json(

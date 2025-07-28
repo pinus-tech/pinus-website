@@ -1,11 +1,14 @@
 import mongoose from 'mongoose';
 
+// Define the possible types for form response values
+type FormResponseValue = string | number | boolean | string[] | Date | null;
+
 export interface IResponse extends mongoose.Document {
   formId: mongoose.Types.ObjectId;
   respondent: mongoose.Types.ObjectId;
   responses: {
     fieldLabel: string;
-    value: any;
+    value: FormResponseValue;
   }[];
   submittedAt: Date;
 }

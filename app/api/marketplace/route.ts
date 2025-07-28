@@ -27,7 +27,6 @@ export async function GET(req: NextRequest) {
     // - Add pagination for large datasets
     // - Sort by date, price, popularity, distance
     // - Include item images and thumbnails
-    // - Add wishlist/favorite functionality
 
     // Placeholder response - remove when implementing
     return NextResponse.json(
@@ -65,10 +64,7 @@ export async function POST(req: NextRequest) {
     // - Validate price is positive number or allow free items
     // - Set default category if not provided
     // - Add location/pickup details
-    // - Implement item moderation/approval system
-    // - Add tags and keywords for better searchability
     // - Create item document with seller information
-    // - Send notifications to interested users
     // - Return created item information
 
     return NextResponse.json(

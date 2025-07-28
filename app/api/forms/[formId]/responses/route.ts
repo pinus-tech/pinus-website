@@ -19,7 +19,7 @@ async function verifyLoggedInUser(req: NextRequest) {
 // GET - Get all responses for a form (form creator, assigned managers, or super admin only)
 export async function GET(
   req: NextRequest,
-  { params }: { params: { formId: string } }
+  { params }: { params: Promise<{ formId: string }> }
 ) {
   try {
     const user = await verifyLoggedInUser(req);
@@ -32,6 +32,8 @@ export async function GET(
 
     await dbConnect();
 
+    const { formId } = await params;
+
     // TODO: Implement response fetching logic
     // - Find form by ID
     // - Check if user can view responses (form creator, assigned manager, or super admin)
@@ -40,12 +42,14 @@ export async function GET(
     // - Format response data for easy viewing
     // - Add pagination if needed
     // - Include analytics data (response count, completion rate, etc.)
-    
-    return NextResponse.json({
-      message: 'TODO: Form response viewing not yet implemented',
-      error: 'Feature under development'
-    }, { status: 501 });
 
+    return NextResponse.json(
+      {
+        message: "TODO: Form response viewing not yet implemented",
+        error: "Feature under development",
+      },
+      { status: 501 }
+    );
   } catch (error) {
     console.error("Error fetching form responses:", error);
     return NextResponse.json(
@@ -58,7 +62,7 @@ export async function GET(
 // POST - Submit form response (any logged in user)
 export async function POST(
   req: NextRequest,
-  { params }: { params: { formId: string } }
+  { params }: { params: Promise<{ formId: string }> }
 ) {
   try {
     const user = await verifyLoggedInUser(req);
@@ -71,6 +75,8 @@ export async function POST(
 
     await dbConnect();
 
+    const { formId } = await params;
+
     // TODO: Implement form response submission logic
     // - Find form by ID
     // - Check if form is active and accepting responses
@@ -80,14 +86,15 @@ export async function POST(
     // - Prevent duplicate submissions if needed
     // - Save response to database
     // - Update form response count
-    // - Send notification to form managers
     // - Return success confirmation
-    
-    return NextResponse.json({
-      message: 'TODO: Form submission not yet implemented',
-      error: 'Feature under development'
-    }, { status: 501 });
 
+    return NextResponse.json(
+      {
+        message: "TODO: Form submission not yet implemented",
+        error: "Feature under development",
+      },
+      { status: 501 }
+    );
   } catch (error) {
     console.error("Error submitting form response:", error);
     return NextResponse.json(

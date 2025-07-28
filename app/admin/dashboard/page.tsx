@@ -19,6 +19,12 @@ import {
   CardTitle,
 } from "@/app/components/ui/card";
 
+interface UserPermissions {
+  canApproveAccounts: boolean;
+  canCreateForms: boolean;
+  canManageUsers: boolean;
+  canViewAnalytics: boolean;
+}
 interface User {
   _id: string;
   name: string;
@@ -205,7 +211,7 @@ export default function AdminDashboard() {
 
   const handlePermissionUpdate = async (
     userId: string,
-    permissions: any,
+    permissions: UserPermissions,
     isAdmin?: boolean
   ) => {
     if (!user?.isSuperAdmin) {
