@@ -3,6 +3,8 @@ import dbConnect from '@/lib/mongodb';
 import User from '@/lib/models/User';
 import { verifyToken, sendApprovalEmail, canApproveAccounts } from '@/lib/utils/auth';
 
+export const runtime = 'edge';
+
 // Middleware to check admin authentication with account approval permission
 async function verifyAdminWithApprovalPermission(req: NextRequest) {
   const token = req.cookies.get('auth-token')?.value;

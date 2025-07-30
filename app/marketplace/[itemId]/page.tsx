@@ -1,8 +1,10 @@
-"use client";
+'use client';
 
 import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
+
+export const runtime = 'edge';
 
 export default function MarketplaceItemDetailPage() {
   const [loading, setLoading] = useState(true);

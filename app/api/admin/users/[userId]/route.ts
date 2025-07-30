@@ -3,6 +3,8 @@ import dbConnect from "@/lib/mongodb";
 import User from "@/lib/models/User";
 import { verifyToken, canManageUsers } from "@/lib/utils/auth";
 
+export const runtime = 'edge';
+
 // Middleware to check admin authentication with user management permission
 async function verifyAdminWithUserManagement(req: NextRequest) {
   const token = req.cookies.get("auth-token")?.value;

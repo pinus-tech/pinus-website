@@ -3,6 +3,8 @@ import dbConnect from '@/lib/mongodb';
 import User from '@/lib/models/User';
 import { hashPassword } from '@/lib/utils/auth';
 
+export const runtime = 'edge';
+
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();

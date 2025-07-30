@@ -3,6 +3,8 @@ import dbConnect from "@/lib/mongodb";
 import Form from "@/lib/models/Form";
 import { verifyToken, canCreateForms } from "@/lib/utils/auth";
 
+export const runtime = 'edge';
+
 // Middleware to check if user is logged in
 async function verifyLoggedInUser(req: NextRequest) {
   const token = req.cookies.get("auth-token")?.value;
