@@ -3,8 +3,6 @@ import dbConnect from "@/lib/mongodb";
 import Form from "@/lib/models/Form";
 import { verifyToken, canCreateForms } from "@/lib/utils/auth";
 
-export const runtime = 'edge';
-
 // Middleware to check form creation permission
 async function verifyFormCreationPermission(req: NextRequest) {
   const token = req.cookies.get("auth-token")?.value;

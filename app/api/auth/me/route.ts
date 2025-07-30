@@ -3,8 +3,6 @@ import dbConnect from "@/lib/mongodb";
 import User from "@/lib/models/User";
 import { verifyToken } from "@/lib/utils/auth";
 
-export const runtime = 'edge';
-
 export async function GET(req: NextRequest) {
   try {
     const token = req.cookies.get("auth-token")?.value;

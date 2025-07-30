@@ -3,8 +3,6 @@ import dbConnect from '@/lib/mongodb';
 import User from '@/lib/models/User';
 import { verifyToken } from '@/lib/utils/auth';
 
-export const runtime = 'edge';
-
 // Middleware to check super admin authentication
 async function verifySuperAdmin(req: NextRequest) {
   const token = req.cookies.get('auth-token')?.value;
