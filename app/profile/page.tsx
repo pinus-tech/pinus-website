@@ -238,7 +238,7 @@ export default function ProfilePage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-main focus:border-blue-main disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
                     <option value="undergrad">Undergraduate</option>
-                    <option value="master">Master's</option>
+                    <option value="master">Master&apos;s</option>
                     <option value="phd">PhD</option>
                   </select>
                 </div>
