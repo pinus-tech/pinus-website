@@ -59,11 +59,11 @@ export async function POST(req: NextRequest) {
     await dbConnect();
 
     // TODO: Implement item creation logic
-    // - Validate item data (title, price, description, category)
+    // - Validate item data (title, price, description, category, meetupLocation)
     // - Handle multiple image uploads with compression
-    // - Validate price is positive number or allow free items
+    // - Validate price is positive number or allow free items (price = 0)
     // - Set default category if not provided
-    // - Add location/pickup details
+    // - Add location/pickup details (meetupLocation field)
     // - Create item document with seller information
     // - Return created item information
 

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import { MARKETPLACE_CATEGORIES } from "@/lib/constants/marketplace-categories";
 
 export default function MarketplacePage() {
   const [loading, setLoading] = useState(true);
@@ -43,6 +44,7 @@ export default function MarketplacePage() {
           <div className="text-sm text-gray-500 space-y-1">
             <p>• Public access: Anyone can view items (no login required)</p>
             <p>• Post items: Login required</p>
+            <p>• Contact sellers: Login required to see telegram/phone</p>
             {user && (
               <>
                 <p>
@@ -50,10 +52,38 @@ export default function MarketplacePage() {
                 </p>
                 <p>• Can post items: Yes (logged in)</p>
                 <p>• Can manage own items: Yes</p>
+                <p>• Can contact sellers: Yes (logged in)</p>
                 <p>• Admin override: {user.isAdmin ? "Yes" : "No"}</p>
               </>
             )}
-            {!user && <p>• Not logged in - can view items but cannot post</p>}
+            {!user && (
+              <>
+                <p>• Not logged in - can view items but cannot post</p>
+                <p>• Not logged in - cannot see seller contact information</p>
+              </>
+            )}
+          </div>
+
+          {/* Available Categories */}
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+              Available Categories ({MARKETPLACE_CATEGORIES.length})
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {MARKETPLACE_CATEGORIES.map((category) => (
+                <div
+                  key={category.value}
+                  className="bg-gray-50 p-3 rounded border"
+                >
+                  <div className="font-medium text-gray-900">
+                    {category.label}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {category.description}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -69,21 +99,21 @@ export default function MarketplacePage() {
         
         2. SEARCH & FILTERING
         - Search by item title and description
-        - Filter by category (Electronics, Books, Furniture, Clothing, etc.)
+        - Filter by category (using MARKETPLACE_CATEGORIES)
         - Filter by price range
         - Sort by price, date posted
         
         3. ITEM DETAILS
         - Individual item page with full details
         - Image gallery with zoom functionality
-        - Seller contact information (for logged-in users)
+        - Seller contact information (telegram/phone - login required)
         - Item description, condition, pickup details
         
         4. ITEM POSTING (Requires login)
         - Link to /marketplace/create page
         - Item creation form with image upload
         - Multiple image support with compression
-        - Category selection and pricing
+        - Category selection (using MARKETPLACE_CATEGORIES)
         - Location/pickup details
         - Contact preferences
         
@@ -95,17 +125,13 @@ export default function MarketplacePage() {
         
         6. CONTACT SYSTEM
         - Email seller button (for logged-in users)
-        - Telegram contact 
-        - Phone number display
+        - Telegram contact (login required)
+        - Phone number display (login required)
         
         7. CATEGORIES
-        - Electronics (phones, laptops, accessories)
-        - Books (textbooks, novels, academic)
-        - Furniture (desks, chairs, storage)
-        - Clothing (casual, formal, accessories)
-        - Sports & Recreation
-        - Household items
-        - Free items section
+        - Use MARKETPLACE_CATEGORIES for consistent categorization
+        - Filter items by category
+        - Show category-specific items
         
         8. ADMIN FEATURES
         - Content moderation
@@ -126,6 +152,7 @@ export default function MarketplacePage() {
         - Item management: Users can edit/delete their own items
         - Admin override: Admins can manage all items
         - Content moderation: Admins can approve/reject items
+        - Contact sellers: Login required to see telegram/phone numbers
       */}
     </div>
   );

@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
     // TODO: Implement form creation logic
     // - Validate form data (title, description, fields)
     // - Validate field types and options
-    // - Allow selection of users who can manage this form
+    // - Allow selection of users who can manage this form (invite people to see results and edit)
     // - Create new form document with managers array
     // - Send notifications to assigned managers
     // - Return created form information

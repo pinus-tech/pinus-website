@@ -15,7 +15,7 @@ async function verifyLoggedInUser(req: NextRequest) {
   return decoded;
 }
 
-// GET - Get specific item details (anyone can view)
+// GET - Get specific item details (anyone can view, but contact info only for logged-in users)
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
@@ -25,19 +25,25 @@ export async function GET(
 
     const { itemId } = await params;
 
+    // Check if user is logged in for contact information
+    const user = await verifyLoggedInUser(req);
+    const isLoggedIn = !!user;
+
     // TODO: Implement individual item fetching logic
     // - Find item by ID with full details
-    // - Populate seller information (contact details)
+    // - Populate seller information (contact details only if logged in)
     // - Include all item images and descriptions
     // - Track view count and analytics
     // - Show similar/related items
     // - Include seller rating/reviews
     // - Add item to recently viewed
+    // - Only include seller telegram and phone number if user is logged in
 
     return NextResponse.json(
       {
         message: "TODO: Individual item viewing not yet implemented",
         error: "Feature under development",
+        isLoggedIn, // Include this for frontend to know if contact info should be shown
       },
       { status: 501 }
     );
@@ -50,7 +56,7 @@ export async function GET(
   }
 }
 
-// PATCH - Update item (only item seller or super admin)
+// PATCH - Update item (only item seller, admin, or super admin)
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
@@ -70,8 +76,8 @@ export async function PATCH(
 
     // TODO: Implement item update logic
     // - Find item by ID
-    // - Check if user can edit this item (seller or super admin)
-    // - Validate updated fields (title, price, description, images)
+    // - Check if user can edit this item (seller, admin, or super admin)
+    // - Validate updated fields (title, price, description, images, meetupLocation)
     // - Handle image updates (add/remove/reorder)
     // - Update item document with change history
     // - Handle status changes (mark as sold, reserved, available)
@@ -93,7 +99,7 @@ export async function PATCH(
   }
 }
 
-// DELETE - Delete item (only item seller or super admin)
+// DELETE - Delete item (only item seller, admin, or super admin)
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
@@ -113,9 +119,10 @@ export async function DELETE(
 
     // TODO: Implement item deletion logic
     // - Find item by ID
-    // - Check if user can delete this item (seller or super admin only)
+    // - Check if user can delete this item (seller, admin, or super admin)
     // - Handle image cleanup (delete from storage)
     // - Clean up related data (views, messages, etc.)
+    // - Admin can remove any listing if inappropriate
 
     return NextResponse.json(
       {
