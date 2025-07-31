@@ -343,7 +343,7 @@ export default function RegisterPage() {
                   value={formData.career}
                   onChange={(e) => handleSelectChange("career", e.target.value)}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-main focus:border-blue-main"
+                  className="text-sm w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-main focus:border-blue-main"
                 >
                   <option value="undergrad">Undergraduate</option>
                   <option value="master">Master&apos;s</option>

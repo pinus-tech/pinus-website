@@ -233,9 +233,11 @@ export default function ProfilePage() {
                   <select
                     name="career"
                     value={formData.career}
-                    onChange={(e) => handleSelectChange("career", e.target.value)}
+                    onChange={(e) =>
+                      handleSelectChange("career", e.target.value)
+                    }
                     disabled={!isEditing}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-main focus:border-blue-main disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="text-sm w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-main focus:border-blue-main disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
                     <option value="undergrad">Undergraduate</option>
                     <option value="master">Master&apos;s</option>
