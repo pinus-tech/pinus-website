@@ -60,7 +60,7 @@ export async function PATCH(req: NextRequest) {
     await dbConnect();
 
     const body = await req.json();
-    const { name, telegram, phoneNumber, city, major } = body;
+    const { name, telegram, phoneNumber, city, major, career } = body;
 
     // Validate required fields
     if (!name || !phoneNumber || !city) {
@@ -85,6 +85,7 @@ export async function PATCH(req: NextRequest) {
     userProfile.phoneNumber = phoneNumber;
     userProfile.city = city;
     userProfile.major = major || '';
+    userProfile.career = career || 'undergrad';
 
     await userProfile.save();
 

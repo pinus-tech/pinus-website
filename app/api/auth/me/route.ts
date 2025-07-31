@@ -42,6 +42,7 @@ export async function GET(req: NextRequest) {
           intakeYear: user.intakeYear,
           yearOfStudy: user.yearOfStudy,
           highSchool: user.highSchool,
+          career: user.career,
           isAdmin: user.isAdmin,
           isSuperAdmin: user.isSuperAdmin,
           permissions: user.permissions,

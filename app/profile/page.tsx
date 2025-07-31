@@ -24,6 +24,7 @@ export default function ProfilePage() {
     phoneNumber: "",
     city: "",
     major: "",
+    career: "undergrad",
   });
 
   const { user, refreshUser } = useAuth();
@@ -42,6 +43,7 @@ export default function ProfilePage() {
       phoneNumber: user.phoneNumber || "",
       city: user.city || "",
       major: user.major || "",
+      career: user.career || "undergrad",
     });
   }, [user, router]);
 
@@ -66,6 +68,13 @@ export default function ProfilePage() {
     setFormData((prev) => ({
       ...prev,
       phoneNumber: value,
+    }));
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
     }));
   };
 
@@ -108,6 +117,7 @@ export default function ProfilePage() {
       phoneNumber: user?.phoneNumber || "",
       city: user?.city || "",
       major: user?.major || "",
+      career: user?.career || "undergrad",
     });
     setIsEditing(false);
     setError("");
@@ -215,6 +225,23 @@ export default function ProfilePage() {
                   disabled={!isEditing}
                   placeholder="Your major/field of study"
                 />
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Career Level
+                  </label>
+                  <select
+                    name="career"
+                    value={formData.career}
+                    onChange={(e) => handleSelectChange("career", e.target.value)}
+                    disabled={!isEditing}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-main focus:border-blue-main disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  >
+                    <option value="undergrad">Undergraduate</option>
+                    <option value="master">Master's</option>
+                    <option value="phd">PhD</option>
+                  </select>
+                </div>
 
                 {/* Read-only Fields */}
                 <Input

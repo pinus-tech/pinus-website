@@ -13,6 +13,7 @@ interface User {
   intakeYear?: number;
   yearOfStudy?: number;
   highSchool?: string;
+  career?: string;
   isAdmin: boolean;
   isSuperAdmin: boolean;
   permissions: {
@@ -50,6 +51,7 @@ interface RegisterData {
   intakeYear?: number;
   yearOfStudy?: number;
   highSchool?: string;
+  career?: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

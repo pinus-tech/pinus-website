@@ -90,6 +90,7 @@ export async function PATCH(
       intakeYear,
       yearOfStudy,
       highSchool,
+      career,
     } = body;
 
     const user = await User.findById(userId);
@@ -126,6 +127,7 @@ export async function PATCH(
     if (intakeYear !== undefined) user.intakeYear = intakeYear;
     if (yearOfStudy !== undefined) user.yearOfStudy = yearOfStudy;
     if (highSchool !== undefined) user.highSchool = highSchool;
+    if (career !== undefined) user.career = career;
 
     await user.save();
 
@@ -143,6 +145,7 @@ export async function PATCH(
           intakeYear: user.intakeYear,
           yearOfStudy: user.yearOfStudy,
           highSchool: user.highSchool,
+          career: user.career,
           isAdmin: user.isAdmin,
           isSuperAdmin: user.isSuperAdmin,
           permissions: user.permissions,

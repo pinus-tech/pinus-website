@@ -36,6 +36,7 @@ interface User {
   intakeYear?: number;
   yearOfStudy?: number;
   highSchool?: string;
+  career?: string;
   isAdmin: boolean;
   isSuperAdmin: boolean;
   permissions: {
@@ -308,6 +309,7 @@ export default function AdminDashboard() {
       intakeYear: userToEdit.intakeYear,
       yearOfStudy: userToEdit.yearOfStudy,
       highSchool: userToEdit.highSchool,
+      career: userToEdit.career,
     });
     setShowEditModal(true);
   };
@@ -977,6 +979,22 @@ export default function AdminDashboard() {
                   setEditFormData({ ...editFormData, major: e.target.value })
                 }
               />
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Career Level
+                </label>
+                <select
+                  value={editFormData.career || "undergrad"}
+                  onChange={(e) =>
+                    setEditFormData({ ...editFormData, career: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-main focus:border-blue-main"
+                >
+                  <option value="undergrad">Undergraduate</option>
+                  <option value="master">Master's</option>
+                  <option value="phd">PhD</option>
+                </select>
+              </div>
               <Input
                 label="Intake Year"
                 type="number"

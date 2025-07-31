@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
           isSuperAdmin: user.isSuperAdmin,
           permissions: user.permissions,
           isApproved: user.isApproved,
+          career: user.career,
         },
       },
       { status: 200 }

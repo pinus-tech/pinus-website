@@ -1,5 +1,9 @@
 import mongoose from 'mongoose';
 
+// Career options
+export const CAREER_OPTIONS = ['undergrad', 'master', 'phd'] as const;
+export type CareerType = typeof CAREER_OPTIONS[number];
+
 export interface IUser extends mongoose.Document {
   name: string;
   email: string;
@@ -19,6 +23,7 @@ export interface IUser extends mongoose.Document {
   intakeYear?: number;
   yearOfStudy?: number;
   highSchool?: string;
+  career?: CareerType;
   isApproved: boolean;
   approvedAt?: Date;
   createdAt: Date;
@@ -44,6 +49,11 @@ const userSchema = new mongoose.Schema({
   intakeYear: { type: Number },
   yearOfStudy: { type: Number },
   highSchool: { type: String },
+  career: { 
+    type: String, 
+    enum: CAREER_OPTIONS,
+    default: 'undergrad'
+  },
   isApproved: { type: Boolean, default: false },
   approvedAt: { type: Date },
 }, {

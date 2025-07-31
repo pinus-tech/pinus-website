@@ -8,6 +8,7 @@ import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { PhoneInput } from "@/app/components/ui/phone-input";
 import { Form } from "@/app/components/ui/form";
+import { Select } from "@/app/components/ui/select";
 import {
   Card,
   CardContent,
@@ -28,6 +29,7 @@ export default function RegisterPage() {
     intakeYear: "",
     yearOfStudy: "",
     highSchool: "",
+    career: "undergrad",
   });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -68,6 +70,13 @@ export default function RegisterPage() {
     setFormData((prev) => ({
       ...prev,
       phoneNumber: value,
+    }));
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
     }));
   };
 
@@ -324,6 +333,23 @@ export default function RegisterPage() {
                 required
                 placeholder="Your high school name"
               />
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Career Level *
+                </label>
+                <select
+                  name="career"
+                  value={formData.career}
+                  onChange={(e) => handleSelectChange("career", e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-main focus:border-blue-main"
+                >
+                  <option value="undergrad">Undergraduate</option>
+                  <option value="master">Master's</option>
+                  <option value="phd">PhD</option>
+                </select>
+              </div>
 
               <Button
                 type="submit"

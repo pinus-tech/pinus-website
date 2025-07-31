@@ -19,6 +19,7 @@ export async function POST(req: NextRequest) {
       intakeYear,
       yearOfStudy,
       highSchool,
+      career,
     } = body;
 
     // Validate required fields
@@ -53,6 +54,7 @@ export async function POST(req: NextRequest) {
       intakeYear,
       yearOfStudy,
       highSchool,
+      career,
       isApproved: false,
       isAdmin: false,
     });
