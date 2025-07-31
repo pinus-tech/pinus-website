@@ -24,3 +24,6 @@ As mentioned the deployment has been setup automatically using cloudflare pages 
 
 ## Contact
 For questions or feedback, please contact pinustech director.
+
+## New Features
+Login support, Marketplace, Forms
