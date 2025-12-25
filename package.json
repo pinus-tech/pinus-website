@@ -28,7 +28,8 @@
     "react-notion-x": "^7.2.6",
     "tailwindcss-animate": "^1.0.7",
     "tailwindcss-animated": "^1.1.2",
-    "vercel": "^44.6.5"
+    "vercel": "^44.6.5",
+    "zod": "^4.2.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
