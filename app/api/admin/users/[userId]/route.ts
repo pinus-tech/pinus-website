@@ -161,3 +161,60 @@ export async function PATCH(
     );
   }
 }
+
+// DELETE - Delete user account (super admin only)
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ userId: string }> }
+) {
+  try {
+    const admin = await verifyAdminWithUserManagement(req);
+    if (!admin || !admin.isSuperAdmin) {
+      return NextResponse.json(
+        {
+          error: "Unauthorized. Super admin access required to delete accounts.",
+        },
+        { status: 401 }
+      );
+    }
+
+    await dbConnect();
+
+    const { userId } = await params;
+    const user = await User.findById(userId);
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Prevent super admin from deleting other super admin accounts
+    if (user.isSuperAdmin && admin.userId !== userId) {
+      return NextResponse.json(
+        { error: "Cannot delete other super admin accounts" },
+        { status: 403 }
+      );
+    }
+
+    // Prevent super admin from deleting their own account
+    if (user.isSuperAdmin && admin.userId === userId) {
+      return NextResponse.json(
+        { error: "Cannot delete your own super admin account" },
+        { status: 403 }
+      );
+    }
+
+    await User.findByIdAndDelete(userId);
+
+    return NextResponse.json(
+      {
+        message: "User account deleted successfully",
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}

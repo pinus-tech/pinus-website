@@ -20,7 +20,6 @@ import {
 } from "@/app/components/ui/card";
 
 interface UserPermissions {
-  canApproveAccounts: boolean;
   canCreateForms: boolean;
   canManageUsers: boolean;
   canViewAnalytics: boolean;
@@ -39,8 +38,8 @@ interface User {
   career?: string;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  isEmailVerified: boolean;
   permissions: {
-    canApproveAccounts: boolean;
     canCreateForms: boolean;
     canManageUsers: boolean;
     canViewAnalytics: boolean;
@@ -71,7 +70,7 @@ export default function AdminDashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  const { user, logout, canApproveAccounts, canManageUsers } = useAuth();
+  const { user, logout, canManageUsers } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -128,11 +127,11 @@ export default function AdminDashboard() {
     // Apply status filter
     if (filterStatus !== "all") {
       switch (filterStatus) {
-        case "pending":
-          filtered = filtered.filter((u) => !u.isApproved && !u.isAdmin);
+        case "unverified":
+          filtered = filtered.filter((u) => !u.isEmailVerified && !u.isAdmin);
           break;
-        case "approved":
-          filtered = filtered.filter((u) => u.isApproved && !u.isAdmin);
+        case "verified":
+          filtered = filtered.filter((u) => u.isEmailVerified && !u.isAdmin);
           break;
         case "admin":
           filtered = filtered.filter((u) => u.isAdmin);
@@ -176,38 +175,6 @@ export default function AdminDashboard() {
 
     setFilteredUsers(filtered);
     setCurrentPage(1); // Reset to first page when filters change
-  };
-
-  const handleUserAction = async (
-    userId: string,
-    action: "approve" | "reject"
-  ) => {
-    if (!canApproveAccounts()) {
-      setError("You do not have permission to approve accounts");
-      return;
-    }
-
-    setActionLoading(userId);
-    try {
-      const response = await fetch("/api/admin/users", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ userId, action }),
-      });
-
-      if (response.ok) {
-        await fetchUsers();
-      } else {
-        const data = await response.json();
-        setError(data.error || "Action failed");
-      }
-    } catch (error) {
-      setError("Network error occurred");
-    } finally {
-      setActionLoading(null);
-    }
   };
 
   const handlePermissionUpdate = async (
@@ -279,6 +246,42 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleDeleteUser = async (userToDelete: User) => {
+    if (!user?.isSuperAdmin) {
+      setError("Only super admins can delete accounts");
+      return;
+    }
+
+    if (userToDelete.isSuperAdmin) {
+      setError("Cannot delete super admin accounts");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${userToDelete.name}'s account? This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    setActionLoading(userToDelete._id);
+    try {
+      const response = await fetch(`/api/admin/users/${userToDelete._id}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        await fetchUsers();
+      } else {
+        const data = await response.json();
+        setError(data.error || "Failed to delete user");
+      }
+    } catch (error) {
+      setError("Network error occurred");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
     router.push("/login");
@@ -341,8 +344,8 @@ export default function AdminDashboard() {
   const endIndex = startIndex + itemsPerPage;
   const currentUsers = filteredUsers.slice(startIndex, endIndex);
 
-  const pendingUsers = users.filter((u) => !u.isApproved && !u.isAdmin);
-  const approvedUsers = users.filter((u) => u.isApproved || u.isAdmin);
+  const unverifiedUsers = users.filter((u) => !u.isEmailVerified && !u.isAdmin);
+  const verifiedUsers = users.filter((u) => u.isEmailVerified && !u.isAdmin);
   const adminUsers = users.filter((u) => u.isAdmin);
 
   return (
@@ -427,10 +430,10 @@ export default function AdminDashboard() {
                 <div className="ml-5 w-0 flex-1">
                   <dl>
                     <dt className="text-sm font-medium text-gray-500 truncate">
-                      Pending Approval
+                      Unverified Users
                     </dt>
                     <dd className="text-lg font-medium text-gray-900">
-                      {pendingUsers.length}
+                      {unverifiedUsers.length}
                     </dd>
                   </dl>
                 </div>
@@ -461,10 +464,10 @@ export default function AdminDashboard() {
                 <div className="ml-5 w-0 flex-1">
                   <dl>
                     <dt className="text-sm font-medium text-gray-500 truncate">
-                      Approved Users
+                      Verified Users
                     </dt>
                     <dd className="text-lg font-medium text-gray-900">
-                      {approvedUsers.length}
+                      {verifiedUsers.length}
                     </dd>
                   </dl>
                 </div>
@@ -570,8 +573,8 @@ export default function AdminDashboard() {
                   </SelectTrigger>
                   <SelectContent variant="blue" outline>
                     <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending">Pending Approval</SelectItem>
-                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="unverified">Unverified</SelectItem>
+                    <SelectItem value="verified">Verified</SelectItem>
                     <SelectItem value="admin">Admin Users</SelectItem>
                   </SelectContent>
                 </Select>
@@ -761,7 +764,7 @@ export default function AdminDashboard() {
                               ? "bg-red-100 text-red-800"
                               : currentUser.isAdmin
                               ? "bg-purple-100 text-purple-800"
-                              : currentUser.isApproved
+                              : currentUser.isEmailVerified
                               ? "bg-green-100 text-green-800"
                               : "bg-yellow-100 text-yellow-800"
                           }`}
@@ -770,9 +773,9 @@ export default function AdminDashboard() {
                             ? "Super Admin"
                             : currentUser.isAdmin
                             ? "Admin"
-                            : currentUser.isApproved
-                            ? "Approved"
-                            : "Pending"}
+                            : currentUser.isEmailVerified
+                            ? "Verified"
+                            : "Unverified"}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -780,34 +783,6 @@ export default function AdminDashboard() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex space-x-2">
-                          {/* Approve/Reject for pending users */}
-                          {!currentUser.isApproved &&
-                            !currentUser.isAdmin &&
-                            canApproveAccounts() && (
-                              <>
-                                <Button
-                                  onClick={() =>
-                                    handleUserAction(currentUser._id, "approve")
-                                  }
-                                  disabled={actionLoading === currentUser._id}
-                                  variant="blue"
-                                  size="sm"
-                                >
-                                  Approve
-                                </Button>
-                                <Button
-                                  onClick={() =>
-                                    handleUserAction(currentUser._id, "reject")
-                                  }
-                                  disabled={actionLoading === currentUser._id}
-                                  variant="red"
-                                  size="sm"
-                                >
-                                  Reject
-                                </Button>
-                              </>
-                            )}
-
                           {/* Edit User */}
                           {(user?.isSuperAdmin || canManageUsers()) && (
                             <Button
@@ -837,13 +812,12 @@ export default function AdminDashboard() {
                           {/* Make Admin */}
                           {user?.isSuperAdmin &&
                             !currentUser.isAdmin &&
-                            currentUser.isApproved && (
+                            currentUser.isEmailVerified && (
                               <Button
                                 onClick={() =>
                                   handlePermissionUpdate(
                                     currentUser._id,
                                     {
-                                      canApproveAccounts: false,
                                       canCreateForms: false,
                                       canManageUsers: false,
                                       canViewAnalytics: false,
@@ -858,6 +832,18 @@ export default function AdminDashboard() {
                                 Make Admin
                               </Button>
                             )}
+
+                          {/* Delete User */}
+                          {user?.isSuperAdmin && (
+                            <Button
+                              onClick={() => handleDeleteUser(currentUser)}
+                              disabled={actionLoading === currentUser._id}
+                              variant="red"
+                              size="sm"
+                            >
+                              Delete
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -983,17 +969,25 @@ export default function AdminDashboard() {
                 <label className="block text-sm font-medium text-gray-700">
                   Career Level
                 </label>
-                <select
+                <Select 
+                  onValueChange={(value) => setEditFormData({ ...editFormData, career: value })}
                   value={editFormData.career || "undergrad"}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, career: e.target.value })
-                  }
-                  className="text-sm w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-main focus:border-blue-main"
                 >
-                  <option value="undergrad">Undergraduate</option>
-                  <option value="master">Master&apos;s</option>
-                  <option value="phd">PhD</option>
-                </select>
+                  <SelectTrigger 
+                    className="w-full"
+                    variant="blue"
+                    size="md"
+                    rounding="lg"
+                    outline
+                  >
+                    <SelectValue placeholder="Select a career level" />
+                  </SelectTrigger>
+                  <SelectContent variant="blue" outline rounding="lg">
+                    <SelectItem value="undergrad">Undergraduate</SelectItem>
+                    <SelectItem value="master">Master&apos;s</SelectItem>
+                    <SelectItem value="phd">PhD</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <Input
                 label="Intake Year"
@@ -1068,30 +1062,38 @@ export default function AdminDashboard() {
             </h3>
 
             <div className="space-y-4">
-              {Object.entries(selectedUser.permissions).map(([key, value]) => (
-                <label key={key} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={value}
-                    onChange={(e) => {
-                      setSelectedUser({
-                        ...selectedUser,
-                        permissions: {
-                          ...selectedUser.permissions,
-                          [key]: e.target.checked,
-                        },
-                      });
-                    }}
-                    className="mr-2"
-                  />
-                  <span className="text-sm">
-                    {key
-                      .replace("can", "")
-                      .replace(/([A-Z])/g, " $1")
-                      .trim()}
-                  </span>
-                </label>
-              ))}
+              {Object.entries(selectedUser.permissions).map(([key, value]) => {
+                const permissionLabels = {
+                  canCreateForms: "Create Forms",
+                  canManageUsers: "Delete User Accounts", 
+                  canViewAnalytics: "View Analytics"
+                };
+                
+                return (
+                  <label key={key} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={value}
+                      onChange={(e) => {
+                        setSelectedUser({
+                          ...selectedUser,
+                          permissions: {
+                            ...selectedUser.permissions,
+                            [key]: e.target.checked,
+                          },
+                        });
+                      }}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">
+                      {permissionLabels[key as keyof typeof permissionLabels] || key
+                        .replace("can", "")
+                        .replace(/([A-Z])/g, " $1")
+                        .trim()}
+                    </span>
+                  </label>
+                );
+              })}
 
               <label className="flex items-center">
                 <input

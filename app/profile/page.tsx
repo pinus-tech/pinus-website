@@ -7,6 +7,13 @@ import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { PhoneInput } from "@/app/components/ui/phone-input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/app/components/ui/select";
+import {
   Card,
   CardContent,
   CardHeader,
@@ -230,19 +237,26 @@ export default function ProfilePage() {
                   <label className="block text-sm font-medium text-gray-700">
                     Career Level
                   </label>
-                  <select
-                    name="career"
+                  <Select 
+                    onValueChange={(value) => handleSelectChange("career", value)} 
                     value={formData.career}
-                    onChange={(e) =>
-                      handleSelectChange("career", e.target.value)
-                    }
                     disabled={!isEditing}
-                    className="text-sm w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-main focus:border-blue-main disabled:bg-gray-100 disabled:cursor-not-allowed"
                   >
-                    <option value="undergrad">Undergraduate</option>
-                    <option value="master">Master&apos;s</option>
-                    <option value="phd">PhD</option>
-                  </select>
+                    <SelectTrigger 
+                      className="w-full"
+                      variant="blue"
+                      size="md"
+                      rounding="lg"
+                      outline
+                    >
+                      <SelectValue placeholder="Select a career level" />
+                    </SelectTrigger>
+                    <SelectContent variant="blue" outline rounding="lg">
+                      <SelectItem value="undergrad">Undergraduate</SelectItem>
+                      <SelectItem value="master">Master&apos;s</SelectItem>
+                      <SelectItem value="phd">PhD</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Read-only Fields */}

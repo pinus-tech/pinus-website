@@ -8,7 +8,13 @@ import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { PhoneInput } from "@/app/components/ui/phone-input";
 import { Form } from "@/app/components/ui/form";
-import { Select } from "@/app/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/app/components/ui/select";
 import {
   Card,
   CardContent,
@@ -151,7 +157,12 @@ export default function RegisterPage() {
     const result = await register(registerData);
 
     if (result.success) {
-      setSuccess(true);
+      // Redirect to verification page with user info
+      router.push(
+        `/verify-email?userId=${result.userId}&email=${encodeURIComponent(
+          result.email || ""
+        )}`
+      );
     } else {
       setError(result.error || "Registration failed");
     }
@@ -334,21 +345,29 @@ export default function RegisterPage() {
                 placeholder="Your high school name"
               />
 
-              <div className="space-y-2">
+              <div className="w-full flex flex-col gap-2">
                 <label className="block text-sm font-medium text-gray-700">
                   Career Level *
                 </label>
-                <select
-                  name="career"
-                  value={formData.career}
-                  onChange={(e) => handleSelectChange("career", e.target.value)}
-                  required
-                  className="text-sm w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-main focus:border-blue-main"
+                <Select
+                  onValueChange={(value) => handleSelectChange("career", value)}
+                  defaultValue={formData.career}
                 >
-                  <option value="undergrad">Undergraduate</option>
-                  <option value="master">Master&apos;s</option>
-                  <option value="phd">PhD</option>
-                </select>
+                  <SelectTrigger
+                    className="w-full"
+                    variant="blue"
+                    size="md"
+                    rounding="lg"
+                    outline
+                  >
+                    <SelectValue placeholder="Select a career level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="undergrad">Undergraduate</SelectItem>
+                    <SelectItem value="master">Master&apos;s</SelectItem>
+                    <SelectItem value="phd">PhD</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <Button

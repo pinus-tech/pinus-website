@@ -45,6 +45,7 @@ export async function GET(req: NextRequest) {
           career: user.career,
           isAdmin: user.isAdmin,
           isSuperAdmin: user.isSuperAdmin,
+          isEmailVerified: user.isEmailVerified,
           permissions: user.permissions,
           isApproved: user.isApproved,
           createdAt: user.createdAt,

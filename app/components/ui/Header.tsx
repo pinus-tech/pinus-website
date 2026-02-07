@@ -1,9 +1,12 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/lib/contexts/AuthContext';
+import { Button } from './button';
 
 const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { user, logout, loading } = useAuth();
 
   const toggleMenu = () => {
     setMenuOpen(!menuOpen);
@@ -16,6 +19,11 @@ const Header = () => {
       document.body.style.overflow = 'auto';
     }
   }, [menuOpen]);
+
+  const handleLogout = async () => {
+    await logout();
+    setMenuOpen(false);
+  };
 
   return (
     <>
@@ -67,10 +75,44 @@ const Header = () => {
             </Link>
           </nav>
 
-          {/* Sign In Button */}
-          {/* <button className="hidden md:inline-block bg-blue-main text-white py-2 px-4 rounded hover:bg-blue-main">
-            Sign In
-          </button> */}
+          {/* Auth Section */}
+          <div className="hidden md:flex items-center space-x-3">
+            {loading ? (
+              <div className="w-8 h-8 animate-spin rounded-full border-2 border-blue-main border-t-transparent"></div>
+            ) : user ? (
+              <div className="flex items-center space-x-3">
+                <span className="text-sm text-gray-600">Hello, {user.name}</span>
+                <Link href="/profile">
+                  <Button variant="blue" outline size="sm">
+                    Profile
+                  </Button>
+                </Link>
+                {user.isAdmin && (
+                  <Link href="/admin/dashboard">
+                    <Button variant="yellow" size="sm">
+                      Admin Dashboard
+                    </Button>
+                  </Link>
+                )}
+                <Button onClick={handleLogout} variant="red" size="sm">
+                  Logout
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <Link href="/login">
+                  <Button variant="blue" size="sm">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link href="/register">
+                  <Button variant="blue" outline size="sm">
+                    Register
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </div>
 
           {/* Hamburger Menu Button */}
           <button
@@ -96,61 +138,80 @@ const Header = () => {
 
         {/* Mobile Menu */}
         <div
-          className={`fixed inset-0 bg-white flex flex-col items-center justify-center transform ${
-            menuOpen ? 'translate-y-0' : '-translate-y-full'
-          } transition-transform duration-300 ease-in-out h-screen`}
+          className={`md:hidden fixed inset-0 bg-white z-40 transform transition-transform duration-300 ease-in-out ${
+            menuOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+          style={{ top: '80px' }}
         >
-          <button
-            className="absolute top-4 right-4 text-gray-700 focus:outline-none"
-            onClick={toggleMenu}
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-          <nav className="flex flex-col space-y-6 text-center">
-            <Link href="/" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
-              About Us
-            </Link>
-            <Link href="/guides" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
-              Guides
-            </Link>
-            <Link href="/committee" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
-              Committee
-            </Link>
-            <Link href="/events" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
-              Events
-            </Link>
-            <Link href="/blog" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
-              Blogs
-            </Link>
-            <Link href="/faq" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
-              FAQ
-            </Link>
-            <Link href="/contact-us" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
-              Contact Us
-            </Link>
-            <Link href="https://www.pinusstudy.com/" target="_blank" className="pinus-study-button" onClick={toggleMenu}>
-              PINUS Study
-            </Link>
-          </nav>
-          {/* <button
-            className="mt-6 bg-blue-main text-white py-2 px-6 rounded hover:bg-blue-700"
-            onClick={toggleMenu}
-          >
-            Sign In
-          </button> */}
+          <div className="flex flex-col h-full justify-between p-6">
+            <nav className="flex flex-col space-y-6 text-center">
+              <Link href="/" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
+                About Us
+              </Link>
+              <Link href="/guides" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
+                Guides
+              </Link>
+              <Link href="/committee" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
+                Committee
+              </Link>
+              <Link href="/events" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
+                Events
+              </Link>
+              <Link href="/blog" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
+                Blogs
+              </Link>
+              <Link href="/faq" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
+                FAQ
+              </Link>
+              <Link href="/contact-us" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
+                Contact Us
+              </Link>
+              <Link href="https://www.pinusstudy.com/" target="_blank" className="pinus-study-button" onClick={toggleMenu}>
+                PINUS Study
+              </Link>
+            </nav>
+            
+            {/* Mobile Auth Section */}
+            <div className="flex flex-col space-y-4 mt-6">
+              {loading ? (
+                <div className="flex justify-center">
+                  <div className="w-8 h-8 animate-spin rounded-full border-2 border-blue-main border-t-transparent"></div>
+                </div>
+              ) : user ? (
+                <div className="text-center space-y-4">
+                  <p className="text-gray-600">Hello, {user.name}</p>
+                  <Link href="/profile" onClick={toggleMenu}>
+                    <Button variant="blue" outline className="w-full">
+                      My Profile
+                    </Button>
+                  </Link>
+                  {user.isAdmin && (
+                    <Link href="/admin/dashboard" onClick={toggleMenu}>
+                      <Button variant="yellow" className="w-full">
+                        Admin Dashboard
+                      </Button>
+                    </Link>
+                  )}
+                  <Button onClick={handleLogout} variant="red" className="w-full">
+                    Logout
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <Link href="/login" onClick={toggleMenu}>
+                    <Button variant="blue" className="w-full">
+                      Sign In
+                    </Button>
+                  </Link>
+                  <Link href="/register" onClick={toggleMenu}>
+                    <Button variant="blue" outline className="w-full">
+                      Register
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </header>
       {/* Offset for sticky header */}
