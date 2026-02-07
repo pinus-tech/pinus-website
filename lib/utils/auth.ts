@@ -1,14 +1,39 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import mailjet from "node-mailjet";
+import mailjet, { Client } from "node-mailjet";
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
-const MAILJET_API_KEY = process.env.MAILJET_API_KEY!;
-const MAILJET_SECRET_KEY = process.env.MAILJET_SECRET_KEY!;
-const MAILJET_FROM_EMAIL = process.env.MAILJET_FROM_EMAIL!;
+/**
+ * NOTE:
+ * - Mailjet MUST NOT be initialized at import time, otherwise the whole server will crash
+ *   when MAILJET_* env vars are missing.
+ * - This file now lazily creates the Mailjet client only when sendApprovalEmail() is called.
+ */
 
-// Initialize Mailjet
-const mailjetClient = mailjet.apiConnect(MAILJET_API_KEY, MAILJET_SECRET_KEY);
+// --- ENV (JWT) ---
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"; // keep as-is for now
+
+// --- ENV (Mailjet) ---
+const MAILJET_FROM_EMAIL = process.env.MAILJET_FROM_EMAIL;
+
+let mailjetClient : Client | null = null;
+
+/**
+ * Lazily create Mailjet client.
+ * Returns null if env vars are missing (prevents import-time crash).
+ */
+function getMailjetClient() : Client | null {
+  if (mailjetClient) {
+    return mailjetClient;
+  }
+
+  const apiKey = process.env.MAILJET_API_KEY;
+  const secretKey = process.env.MAILJET_SECRET_KEY;
+
+  if (!apiKey || !secretKey) return null;
+  mailjetClient = mailjet.apiConnect(apiKey, secretKey);
+
+  return mailjetClient;
+}
 
 // Define proper types for permissions and user
 interface UserPermissions {
@@ -23,7 +48,7 @@ interface User {
   permissions: UserPermissions;
 }
 
-interface JWTPayload {
+export interface JWTPayload {
   userId: string;
   isAdmin: boolean;
   isSuperAdmin: boolean;
@@ -67,7 +92,7 @@ export const generateToken = (
 export const verifyToken = (token: string): JWTPayload | null => {
   try {
     return jwt.verify(token, JWT_SECRET) as JWTPayload;
-  } catch (error) {
+  } catch {
     return null;
   }
 };
@@ -105,6 +130,19 @@ export const sendApprovalEmail = async (
   name: string
 ): Promise<void> => {
   try {
+    // ✅ Create Mailjet client only when sending email
+    const mailjetClient = getMailjetClient();
+
+    if (!mailjetClient) {
+      throw new Error(
+        "Mailjet is not configured (missing MAILJET_API_KEY / MAILJET_SECRET_KEY)"
+      );
+    }
+
+    if (!MAILJET_FROM_EMAIL) {
+      throw new Error("Mailjet is not configured (missing MAILJET_FROM_EMAIL)");
+    }
+
     const request = mailjetClient.post("send", { version: "v3.1" }).request({
       Messages: [
         {
@@ -125,31 +163,31 @@ export const sendApprovalEmail = async (
                   <img src="https://pinusonline.org/logo-icon-pinus.svg" alt="PINUS Logo" style="height: 60px;">
                   <h1 style="color: #2563eb; margin-top: 10px;">PINUS Online</h1>
                 </div>
-                
+
                 <div style="background: #f8fafc; padding: 30px; border-radius: 10px; border-left: 4px solid #2563eb;">
                   <h2 style="color: #1e293b; margin-top: 0;">Congratulations, ${name}!</h2>
-                  
+
                   <p style="color: #475569; font-size: 16px; line-height: 1.6;">
                     We're excited to inform you that your PINUS Online account has been approved by our admin team!
                   </p>
-                  
+
                   <p style="color: #475569; font-size: 16px; line-height: 1.6;">
                     You can now access all the features and resources available on our platform.
                   </p>
-                  
+
                   <div style="text-align: center; margin: 30px 0;">
-                    <a href="https://pinusonline.org/login" 
+                    <a href="https://pinusonline.org/login"
                        style="background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
                       Login to Your Account
                     </a>
                   </div>
-                  
+
                   <p style="color: #475569; font-size: 14px; line-height: 1.6;">
                     If you have any questions or need assistance, please don't hesitate to contact our support team.
                   </p>
-                  
+
                   <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
-                  
+
                   <p style="color: #64748b; font-size: 12px; text-align: center;">
                     This email was sent by PINUS Online. If you didn't request this, please ignore this email.
                   </p>
@@ -158,12 +196,12 @@ export const sendApprovalEmail = async (
             `,
           TextPart: `
               Congratulations, ${name}!
-              
+
               Your PINUS Online account has been approved by our admin team.
               You can now login at: https://pinusonline.org/login
-              
+
               If you have any questions, please contact our support team.
-              
+
               Best regards,
               PINUS Online Team
             `,

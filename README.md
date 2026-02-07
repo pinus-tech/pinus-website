@@ -2,6 +2,7 @@
 
 Welcome to the **Pinus Website** project! This repository contains the source code and assets for the Pinus Website that currently hosted on cloudflare pages.
 
+
 ## Features
 - Home Page / About Us
 - Guides
@@ -12,6 +13,7 @@ Welcome to the **Pinus Website** project! This repository contains the source co
 - Contact Us
 - Sharing Session (Hidden)
 - Example (Hidden)
+- Login
 
 ## Tech Stack
 Both FE and BE is under next.js framework. The client side is based on next.js react and the backend is using Next.js API. Most use cases for the BE is it will hit the notion cms as their database source
