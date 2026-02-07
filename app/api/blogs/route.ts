@@ -1,15 +1,13 @@
-export const runtime = "edge"; 
+export const runtime = "edge";
 
-import { Client } from "@notionhq/client";
 import { NextResponse } from "next/server";
+import { notionClient as notion } from "@/lib/notion";
 import { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
-
-const notion = new Client({ auth: process.env.NOTION_API_KEY });
 const databaseId = process.env.NOTION_DATABASE_BLOGS_ID!;
 
-interface NotionProperties {  
-  Title: { title: { text: { content: string } }[] };  
+interface NotionProperties {
+  Title: { title: { text: { content: string } }[] };
   Description: { rich_text: { text: { content: string } }[] };
   "Published Date": { date?: { start: string } };
   Tags: { multi_select: { name: string }[] };
@@ -58,8 +56,8 @@ export async function GET() {
           };
         }
       } else {
-          console.error("Result does not have properties field", result);
-          return null;
+        console.error("Result does not have properties field", result);
+        return null;
       }
     }).filter(blog => blog !== null);
     console.log("Blogs fetched:", blogs);

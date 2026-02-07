@@ -1,9 +1,8 @@
 export const runtime = "edge";
 
-import { Client } from "@notionhq/client";
 import { NextResponse } from "next/server";
+import { notionClient as notion } from "@/lib/notion";
 
-const notion = new Client({ auth: process.env.NOTION_API_KEY });
 const databaseId = process.env.NOTION_DATABASE_BLOGS_ID!;
 
 export async function GET() {

@@ -4,6 +4,8 @@ import Renderer from "../../components/ui/NotionRendererId";
 import "react-notion-x/src/styles.css";
 import { RedirectToGuides } from "./goBack";
 
+import { notion } from "@/lib/notion";
+
 export const runtime = "edge";
 
 type tParams = Promise<{ slug: string }>;
@@ -13,20 +15,11 @@ export default async function GuidePage(props: { params: tParams }) {
 
   async function getGuideContent(slug: string) {
     try {
-      const baseUrl = process.env.URL || "http://localhost:3000";
-      const res = await fetch(`${baseUrl}/api/guides-page?id=${slug}`, {
-        cache: "no-store",
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to fetch Guide Page");
-      }
-
-      const data = await res.json();
+      const recordMap = await notion.getPage(slug);
 
       const blocksOnly = {
-        block: data.block || {},
-        signed_urls: data.signed_urls || {},
+        block: recordMap.block || {},
+        signed_urls: recordMap.signed_urls || {},
         collection: {},
         collection_view: {},
         notion_user: {},

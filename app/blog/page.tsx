@@ -6,7 +6,7 @@ import Link from "next/link";
 import { TitleHeader } from "../components/ui/title";
 import { BlurFade } from "../components/ui/blur-fade";
 import { Suspense } from "react";
-import Image from 'next/image'
+import Image from "next/image";
 
 import {
   Select,
@@ -69,7 +69,7 @@ function BlogListContent() {
       .then(setTagOptions)
       .catch((err) => console.error("Failed to load tags", err));
   }, []);
-  
+
   useEffect(() => {
     if (queryType) setSelected(queryType);
   }, [queryType]);
@@ -98,7 +98,7 @@ function BlogListContent() {
   const totalPages = Math.ceil(filteredBlogs.length / blogsPerPage);
   const currentBlogs = filteredBlogs.slice(
     (currentPage - 1) * blogsPerPage,
-    currentPage * blogsPerPage
+    currentPage * blogsPerPage,
   );
 
   const handlePageChange = (page: number) => {
@@ -134,7 +134,7 @@ function BlogListContent() {
           <SelectContent>
             <SelectGroup>
               <SelectItem value="all">All Categories</SelectItem>
-              {tagOptions.map((tag) => (
+              {tagOptions?.map((tag) => (
                 <SelectItem key={tag} value={tag}>
                   {tag}
                 </SelectItem>
@@ -143,7 +143,7 @@ function BlogListContent() {
           </SelectContent>
         </Select>
       </div>
-  
+
       {/* Blog Content */}
       {loading ? (
         <div className="w-full">
@@ -216,7 +216,7 @@ function BlogListContent() {
           ))}
         </div>
       )}
-  
+
       {/* Pagination */}
       {!loading && totalPages > 1 && (
         <div className="mt-8 flex justify-center items-center space-x-4">
@@ -254,7 +254,6 @@ function BlogListContent() {
       )}
     </>
   );
-  
 }
 
 export default function BlogList() {
@@ -268,12 +267,12 @@ export default function BlogList() {
           alt="Picture of hero blog"
           className="w-full h-full top-0 left-0 object-cover"
         />
-      </div> 
+      </div>
       <main className="w-full max-w-4xl mx-auto px-8 py-10 flex flex-col gap-8">
         <TitleHeader text="Blog" color="blue" />
         <Suspense fallback={<div>Loading...</div>}>
           <BlogListContent />
-        </Suspense>    
+        </Suspense>
       </main>
     </div>
   );
