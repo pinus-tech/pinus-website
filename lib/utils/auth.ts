@@ -218,6 +218,18 @@ export const sendApprovalEmail = async (
 
 export const sendVerificationEmail = async (email: string, verificationCode: string): Promise<boolean> => {
   try {
+    const mailjetClient = getMailjetClient();
+
+    if (!mailjetClient) {
+      throw new Error(
+        "Mailjet is not configured (missing MAILJET_API_KEY / MAILJET_SECRET_KEY)"
+      );
+    }
+
+    if (!MAILJET_FROM_EMAIL) {
+      throw new Error("Mailjet is not configured (missing MAILJET_FROM_EMAIL)");
+    }
+
     const request = mailjetClient.post('send', { version: 'v3.1' }).request({
       Messages: [
         {
