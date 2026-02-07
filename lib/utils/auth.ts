@@ -12,7 +12,6 @@ const mailjetClient = mailjet.apiConnect(MAILJET_API_KEY, MAILJET_SECRET_KEY);
 
 // Define proper types for permissions and user
 interface UserPermissions {
-  canApproveAccounts: boolean;
   canCreateForms: boolean;
   canManageUsers: boolean;
   canViewAnalytics: boolean;
@@ -48,7 +47,6 @@ export const generateToken = (
   isAdmin: boolean,
   isSuperAdmin: boolean = false,
   permissions: UserPermissions = {
-    canApproveAccounts: false,
     canCreateForms: false,
     canManageUsers: false,
     canViewAnalytics: false,
@@ -81,13 +79,6 @@ export const hasPermission = (
 ): boolean => {
   if (user.isSuperAdmin) return true; // Super admin has all permissions
   return user.permissions && user.permissions[permission];
-};
-
-export const canApproveAccounts = (user: User): boolean => {
-  return (
-    user.isSuperAdmin ||
-    (user.isAdmin && hasPermission(user, "canApproveAccounts"))
-  );
 };
 
 export const canCreateForms = (user: User): boolean => {
@@ -185,4 +176,65 @@ export const sendApprovalEmail = async (
     console.error("Error sending approval email:", error);
     throw new Error("Failed to send approval email");
   }
+};
+
+export const sendVerificationEmail = async (email: string, verificationCode: string): Promise<boolean> => {
+  try {
+    const request = mailjetClient.post('send', { version: 'v3.1' }).request({
+      Messages: [
+        {
+          From: {
+            Email: MAILJET_FROM_EMAIL,
+            Name: 'PINUS Team',
+          },
+          To: [
+            {
+              Email: email,
+            },
+          ],
+          Subject: 'Email Verification - PINUS Website',
+          HTMLPart: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: #2563eb;">Email Verification</h2>
+              <p>Hello,</p>
+              <p>Thank you for registering with PINUS! To complete your registration, please use the verification code below:</p>
+              <div style="background-color: #f3f4f6; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
+                <h1 style="color: #1f2937; font-size: 32px; letter-spacing: 4px; margin: 0;">${verificationCode}</h1>
+              </div>
+              <p>This code will expire in 10 minutes.</p>
+              <p>If you didn't create an account with us, please ignore this email.</p>
+              <br>
+              <p>Best regards,<br>The PINUS Team</p>
+            </div>
+          `,
+          TextPart: `
+            Email Verification - PINUS Website
+            
+            Hello,
+            
+            Thank you for registering with PINUS! To complete your registration, please use the verification code below:
+            
+            ${verificationCode}
+            
+            This code will expire in 10 minutes.
+            
+            If you didn't create an account with us, please ignore this email.
+            
+            Best regards,
+            The PINUS Team
+          `,
+        },
+      ],
+    });
+
+    await request;
+    return true;
+  } catch (error) {
+    console.error('Error sending verification email:', error);
+    return false;
+  }
+};
+
+export const generateVerificationCode = (): string => {
+  return Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
 };

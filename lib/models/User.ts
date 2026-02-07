@@ -13,7 +13,6 @@ export interface IUser extends mongoose.Document {
   isAdmin: boolean;
   isSuperAdmin: boolean; // Main admin with all permissions
   permissions: {
-    canApproveAccounts: boolean;
     canCreateForms: boolean;
     canManageUsers: boolean;
     canViewAnalytics: boolean;
@@ -24,6 +23,9 @@ export interface IUser extends mongoose.Document {
   yearOfStudy?: number;
   highSchool?: string;
   career?: CareerType;
+  isEmailVerified: boolean;
+  emailVerificationToken?: string;
+  emailVerificationExpires?: Date;
   isApproved: boolean;
   approvedAt?: Date;
   createdAt: Date;
@@ -39,7 +41,6 @@ const userSchema = new mongoose.Schema({
   isAdmin: { type: Boolean, default: false },
   isSuperAdmin: { type: Boolean, default: false },
   permissions: {
-    canApproveAccounts: { type: Boolean, default: false },
     canCreateForms: { type: Boolean, default: false },
     canManageUsers: { type: Boolean, default: false },
     canViewAnalytics: { type: Boolean, default: false },
@@ -54,7 +55,10 @@ const userSchema = new mongoose.Schema({
     enum: CAREER_OPTIONS,
     default: 'undergrad'
   },
-  isApproved: { type: Boolean, default: false },
+  isEmailVerified: { type: Boolean, default: false },
+  emailVerificationToken: { type: String },
+  emailVerificationExpires: { type: Date },
+  isApproved: { type: Boolean, default: true }, // Auto-approve after email verification
   approvedAt: { type: Date },
 }, {
   timestamps: true,

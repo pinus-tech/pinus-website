@@ -16,8 +16,8 @@ interface User {
   career?: string;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  isEmailVerified: boolean;
   permissions: {
-    canApproveAccounts: boolean;
     canCreateForms: boolean;
     canManageUsers: boolean;
     canViewAnalytics: boolean;
@@ -30,11 +30,10 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (userData: RegisterData) => Promise<{ success: boolean; error?: string }>;
+  register: (userData: RegisterData) => Promise<{ success: boolean; error?: string; userId?: string; email?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   hasPermission: (permission: keyof User['permissions']) => boolean;
-  canApproveAccounts: () => boolean;
   canCreateForms: () => boolean;
   canManageUsers: () => boolean;
   canViewAnalytics: () => boolean;
@@ -113,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json();
 
       if (response.ok) {
-        return { success: true };
+        return { success: true, userId: data.userId, email: data.email };
       } else {
         return { success: false, error: data.error };
       }
@@ -145,10 +144,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return user.isAdmin && user.permissions[permission];
   };
 
-  const canApproveAccounts = (): boolean => {
-    return hasPermission('canApproveAccounts');
-  };
-
   const canCreateForms = (): boolean => {
     return hasPermission('canCreateForms');
   };
@@ -173,7 +168,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     refreshUser,
     hasPermission,
-    canApproveAccounts,
     canCreateForms,
     canManageUsers,
     canViewAnalytics,

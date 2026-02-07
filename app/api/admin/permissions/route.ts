@@ -61,7 +61,6 @@ export async function PATCH(req: NextRequest) {
     // Update user permissions and admin status
     if (permissions !== undefined) {
       user.permissions = {
-        canApproveAccounts: permissions.canApproveAccounts || false,
         canCreateForms: permissions.canCreateForms || false,
         canManageUsers: permissions.canManageUsers || false,
         canViewAnalytics: permissions.canViewAnalytics || false,

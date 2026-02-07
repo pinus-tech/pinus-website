@@ -27,10 +27,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if user is approved
-    if (!user.isApproved && !user.isAdmin) {
+    // Check if user email is verified
+    if (!user.isEmailVerified && !user.isAdmin) {
       return NextResponse.json(
-        { error: 'Your account is pending admin approval. Please wait for approval before logging in.' },
+        { error: 'Please verify your email address before logging in. Check your email for the verification code.' },
         { status: 403 }
       );
     }
@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
           email: user.email,
           isAdmin: user.isAdmin,
           isSuperAdmin: user.isSuperAdmin,
+          isEmailVerified: user.isEmailVerified,
           permissions: user.permissions,
           isApproved: user.isApproved,
           career: user.career,
