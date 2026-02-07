@@ -74,16 +74,19 @@ export default function Committee() {
         const reversedData = [...data.results].reverse();
 
         // Group to an array of objects, with the EXCO Dept as the key, and the array of members as the value.
-        const groupedData = reversedData.reduce((acc, member) => {
-          const groupName = member.committeeGroup; // Get the committee group name.
+        const groupedData = reversedData.reduce(
+          (acc, member) => {
+            const groupName = member.committeeGroup; // Get the committee group name.
 
-          if (!acc[groupName]) {
-            acc[groupName] = [];
-          }
+            if (!acc[groupName]) {
+              acc[groupName] = [];
+            }
 
-          acc[groupName].push(member);
-          return acc;
-        }, {} as Record<string, CommitteeMember[]>);
+            acc[groupName].push(member);
+            return acc;
+          },
+          {} as Record<string, CommitteeMember[]>,
+        );
 
         // Update the state with the grouped data.
         setCommitteeData(groupedData);

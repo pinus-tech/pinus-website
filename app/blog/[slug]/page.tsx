@@ -4,56 +4,62 @@ import "react-notion-x/src/styles.css";
 // This is blog list page and should be done by Team Ella
 // Todo: Slicing the design and need to create functionallity to fetch the data from the notion database and render the data on this page. For this one need to read the parameter from the URL and fetch the data based on the parameter. Good Luck!
 
+import { notion, notionClient } from "@/lib/notion";
+
 export const runtime = "edge";
 
 type tParams = Promise<{ slug: string }>;
 
+const trimNotionURL = (url: string) => {
+  const splitURL = url.split("-");
+  return splitURL[splitURL.length - 1];
+};
+
 async function getBlogPage(slug: string) {
   try {
-    const baseUrl = process.env.URL || "http://localhost:3000";
-    const res = await fetch(`${baseUrl}/api/blog-detail?id=${slug}`, {
-      cache: "no-store",
-    });
-
-    if (!res.ok) {
-      throw new Error("Failed to fetch Guide Page");
-    }
-
-    const data = await res.json();
+    const recordMap = await notion.getPage(slug);
+    const blogId = trimNotionURL(slug);
+    const blogProps = await notionClient.pages.retrieve({ page_id: blogId });
 
     const blocksOnly = {
-      block: data.recordMap.block || {},
-      signed_urls: data.recordMap.signed_urls || {},
+      block: recordMap.block || {},
+      signed_urls: recordMap.signed_urls || {},
       collection: {},
       collection_view: {},
       notion_user: {},
       collection_query: {},
     };
 
-    return {blocksOnly: blocksOnly, blogProps: data.blogProps};
+    return { blocksOnly: blocksOnly, blogProps: blogProps };
   } catch (error) {
     console.error("Error fetching guide content:", error);
     return null;
   }
 }
 
-async function BlogContent(props: { params: tParams} ) {
-
+async function BlogContent(props: { params: tParams }) {
   const { slug } = await props.params;
   const response = await getBlogPage(slug);
 
-  if(!response) {
+  if (!response) {
     return <div>Error loading content. Please try again later.</div>;
   }
 
   // For now, 1 tag 1 author
-  const metablog = {
-    title: response.blogProps.properties.Title.title[0].plain_text,
-    tags: response.blogProps.properties.Tags.multi_select[0].name,
-    author: response.blogProps.properties.Author.people[0].name,
-    date: response.blogProps.properties["Published Date"].date.start,
+  const blogProps = response.blogProps;
+  if (!("properties" in blogProps)) {
+    return <div>Error: Invalid blog data.</div>;
   }
-  console.log(response.blogProps);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const properties = blogProps.properties as any;
+  const metablog = {
+    title: properties.Title?.title[0]?.plain_text || "Untitled",
+    tags: properties.Tags?.multi_select[0]?.name || "Uncategorized",
+    author: properties.Author?.people[0]?.name || "Anonymous",
+    date: properties["Published Date"]?.date?.start || new Date().toISOString(),
+  };
+  console.log(blogProps);
 
   return (
     <>
@@ -72,32 +78,34 @@ async function BlogContent(props: { params: tParams} ) {
         {/* Author & Date with larger font sizes */}
         <span className="text-lg sm:text-xl font-semibold text-gray-900">
           By <span className="font-bold text-gray-700">{metablog.author}</span>
-          &nbsp;• {new Date(metablog.date).toLocaleDateString("en-GB", {
-            day: "numeric", month: "long", year: "numeric"
+          &nbsp;•{" "}
+          {new Date(metablog.date).toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
           })}
         </span>
       </div>
-  
+
       {/* Blog Content */}
       <article className="max-w-4xl w-full bg-white p-6 sm:p-10 rounded-2xl shadow-lg text-gray-800">
         <Renderer recordMap={response.blocksOnly} />
       </article>
     </>
   );
-};
+}
 
-
-export default function BlogDetail(props: {params: tParams}) {
-  return (    
+export default function BlogDetail(props: { params: tParams }) {
+  return (
     <main className="relative flex flex-col min-h-screen">
       <div className="absolute top-0 left-0 w-full h-[50vh] sm:h-[60vh] overflow-hidden">
         <div className="absolute inset-0 bg-white/60 z-10" />
 
         <picture>
           <source media="(max-width: 768px)" srcSet="/hero_mobile.png" />
-          <img 
-            alt="" 
-            src="/hero_desktop.png" 
+          <img
+            alt=""
+            src="/hero_desktop.png"
             className="absolute top-0 left-0 w-full h-full object-cover"
           />
         </picture>
@@ -110,7 +118,6 @@ export default function BlogDetail(props: {params: tParams}) {
           <BlogContent params={props.params} />
         </div>
       </div>
-
     </main>
   );
 }

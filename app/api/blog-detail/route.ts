@@ -1,20 +1,12 @@
 export const runtime = "edge";
 
 import { NextRequest, NextResponse } from "next/server";
-import { NotionAPI } from "notion-client";
-import { Client } from "@notionhq/client";
-
-const notion = new NotionAPI({
-  activeUser: process.env.NOTION_ACTIVE_USER,
-  authToken: process.env.NOTION_TOKEN_V2,
-});
+import { notion, notionClient } from "@/lib/notion";
 
 const trimNotionURL = (url: string) => {
   const splitURL = url.split("-");
   return splitURL[splitURL.length - 1];
 };
-
-const notionClient = new Client({ auth: process.env.NOTION_API_KEY });
 
 export async function GET(req: NextRequest) {
   try {
@@ -28,8 +20,9 @@ export async function GET(req: NextRequest) {
       );
     }
     const recordMap = await notion.getPage(pageId);
-    const blogProps = await notionClient.pages.retrieve({ page_id: trimNotionURL(pageId) });
-    const response = {blogProps : blogProps, recordMap : recordMap};
+    const blogId = trimNotionURL(pageId);
+    const blogProps = await notionClient.pages.retrieve({ page_id: blogId });
+    const response = { blogProps: blogProps, recordMap: recordMap };
 
     return NextResponse.json(response);
   } catch (error) {

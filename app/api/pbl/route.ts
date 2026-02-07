@@ -1,12 +1,8 @@
 export const runtime = 'edge';
 
 import { NextResponse } from "next/server";
-import { NotionAPI } from 'notion-client'
+import { notion } from "@/lib/notion";
 
-const notion = new NotionAPI({
-    activeUser: process.env.NOTION_ACTIVE_USER,
-    authToken: process.env.NOTION_TOKEN_V2
-  })
 const pblPageID = process.env.NOTION_PAGE_PBL_ID!;
 
 export async function GET() {
