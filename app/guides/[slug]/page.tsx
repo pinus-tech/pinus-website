@@ -5,6 +5,7 @@ import "react-notion-x/src/styles.css";
 import { RedirectToGuides } from "./goBack";
 
 import { notion } from "@/lib/notion";
+import { prepareNotionRecordMap } from "@/lib/prepare-notion-record-map";
 import { getBlockTitle, parsePageId } from "notion-utils";
 import type { ExtendedRecordMap } from "notion-types";
 
@@ -51,17 +52,8 @@ export default async function GuidePage(props: { params: tParams }) {
   async function getGuideContent(slug: string) {
     try {
       const recordMap = await notion.getPage(slug);
-
-      const blocksOnly = {
-        block: recordMap.block || {},
-        signed_urls: recordMap.signed_urls || {},
-        collection: {},
-        collection_view: {},
-        notion_user: {},
-        collection_query: {},
-      };
-
-      return blocksOnly;
+      prepareNotionRecordMap(recordMap);
+      return recordMap;
     } catch (error) {
       console.error("Error fetching guide content:", error);
       return null;

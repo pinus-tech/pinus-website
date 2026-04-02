@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { NotionRenderer } from "react-notion-x";
 import { ExtendedRecordMap } from "notion-types";
 import { usePathname, useSearchParams } from "next/navigation";
+import { prepareNotionRecordMap } from "@/lib/prepare-notion-record-map";
 
 interface RendererProps {
   recordMap: ExtendedRecordMap;
@@ -13,6 +14,11 @@ export default function Renderer({ recordMap }: RendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const searchParams = useSearchParams();
+
+  const preparedMap = useMemo(
+    () => prepareNotionRecordMap(recordMap),
+    [recordMap]
+  );
 
   useEffect(() => {
     const scrollToHash = () => {
@@ -76,7 +82,7 @@ export default function Renderer({ recordMap }: RendererProps) {
   return (
     <div ref={containerRef}>
       <NotionRenderer
-        recordMap={recordMap}
+        recordMap={preparedMap}
         components={{
           Link,
           Collection,
