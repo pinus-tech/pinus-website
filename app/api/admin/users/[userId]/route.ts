@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import User from "@/lib/models/User";
 import { verifyToken, canManageUsers } from "@/lib/utils/auth";
+import {
+  emailFilterCaseInsensitive,
+  normalizeEmail,
+} from "@/lib/utils/email";
 
 // Middleware to check admin authentication with user management permission
 async function verifyAdminWithUserManagement(req: NextRequest) {
@@ -106,20 +110,25 @@ export async function PATCH(
       );
     }
 
-    // Check if email is being changed and if it already exists
-    if (email && email !== user.email) {
-      const existingUser = await User.findOne({ email, _id: { $ne: userId } });
-      if (existingUser) {
-        return NextResponse.json(
-          { error: "Email already exists" },
-          { status: 409 }
-        );
+    if (email !== undefined) {
+      const emailNorm = normalizeEmail(email);
+      if (emailNorm !== normalizeEmail(user.email)) {
+        const existingUser = await User.findOne({
+          _id: { $ne: userId },
+          ...emailFilterCaseInsensitive(email),
+        });
+        if (existingUser) {
+          return NextResponse.json(
+            { error: "Email already exists" },
+            { status: 409 }
+          );
+        }
       }
     }
 
     // Update user fields
     if (name !== undefined) user.name = name;
-    if (email !== undefined) user.email = email;
+    if (email !== undefined) user.email = normalizeEmail(email);
     if (telegram !== undefined) user.telegram = telegram.replace(/^@+/, ""); // Remove @ symbols
     if (phoneNumber !== undefined) user.phoneNumber = phoneNumber;
     if (city !== undefined) user.city = city;

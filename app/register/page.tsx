@@ -87,8 +87,8 @@ export default function RegisterPage() {
   };
 
   const validateNUSEmail = (email: string): boolean => {
-    const nusEmailRegex = /^[a-zA-Z0-9]+@u\.nus\.edu$/;
-    return nusEmailRegex.test(email);
+    const nusEmailRegex = /^[a-zA-Z0-9]+@u\.nus\.edu$/i;
+    return nusEmailRegex.test(email.trim());
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -157,12 +157,7 @@ export default function RegisterPage() {
     const result = await register(registerData);
 
     if (result.success) {
-      // Redirect to verification page with user info
-      router.push(
-        `/verify-email?userId=${result.userId}&email=${encodeURIComponent(
-          result.email || ""
-        )}`
-      );
+      router.push("/login?registered=1");
     } else {
       setError(result.error || "Registration failed");
     }

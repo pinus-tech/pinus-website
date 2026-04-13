@@ -15,6 +15,11 @@ const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key"; // keep as-is fo
 // --- ENV (Mailjet) ---
 const MAILJET_FROM_EMAIL = process.env.MAILJET_FROM_EMAIL;
 
+/** Public site origin for absolute image URLs in emails (Mailjet requires publicly reachable URLs). */
+const PUBLIC_SITE_ORIGIN =
+  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
+  "https://pinusonline.org";
+
 let mailjetClient : Client | null = null;
 
 /**
@@ -188,7 +193,7 @@ export const sendApprovalEmail = async (
           HTMLPart: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
                 <div style="text-align: center; margin-bottom: 30px;">
-                  <img src="https://pinusonline.org/logo-icon-pinus.svg" alt="PINUS Logo" style="height: 60px;">
+                  <img src="${PUBLIC_SITE_ORIGIN}/logo-icon-pinus.svg" alt="PINUS Logo" style="height: 60px;">
                   <h1 style="color: #2563eb; margin-top: 10px;">PINUS Online</h1>
                 </div>
 
@@ -278,36 +283,60 @@ export const sendVerificationEmail = async (
               Email: email,
             },
           ],
-          Subject: "Email Verification - PINUS Website",
+          Subject: "Verify your email — PINUS",
           HTMLPart: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #2563eb;">Email Verification</h2>
-              <p>Hello,</p>
-              <p>Thank you for registering with PINUS! To complete your registration, please use the verification code below:</p>
-              <div style="background-color: #f3f4f6; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
-                <h1 style="color: #1f2937; font-size: 32px; letter-spacing: 4px; margin: 0;">${verificationCode}</h1>
-              </div>
-              <p>This code will expire in 10 minutes.</p>
-              <p>If you didn't create an account with us, please ignore this email.</p>
-              <br>
-              <p>Best regards,<br>The PINUS Team</p>
-            </div>
+<table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0;padding:0;background-color:#eef1f8;">
+  <tr>
+    <td align="center" style="padding:24px 12px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="600" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;border-collapse:separate;box-shadow:0 4px 24px rgba(35,46,110,0.12);">
+        <tr>
+          <td style="background-color:#232E6E;padding:28px 20px;text-align:center;border-bottom:4px solid #EBB726;">
+            <img src="${PUBLIC_SITE_ORIGIN}/logo-icon-pinus.svg" alt="PINUS" width="56" height="56" style="display:inline-block;height:56px;width:auto;border:0;" />
+            <div style="margin-top:10px;font-family:Georgia,Times New Roman,serif;font-size:20px;font-weight:bold;color:#ffffff;letter-spacing:0.04em;">PINUS</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px 28px;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1f2937;">
+            <h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;color:#232E6E;">Email verification</h1>
+            <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#374151;">Hello,</p>
+            <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#374151;">Thank you for registering with PINUS! To complete your registration, enter this verification code on the website:</p>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;">
+              <tr>
+                <td align="center" style="padding:22px 16px;background-color:#f4f6fb;border-radius:8px;border-left:5px solid #F7423B;">
+                  <div style="font-size:34px;font-weight:700;letter-spacing:10px;color:#232E6E;font-family:Courier New,Consolas,monospace;line-height:1.2;">${verificationCode}</div>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:20px 0 8px;font-size:14px;line-height:1.5;color:#6b7280;">This code will expire in <strong style="color:#232E6E;">10 minutes</strong>.</p>
+            <p style="margin:0 0 20px;font-size:14px;line-height:1.55;color:#6b7280;">If you did not create an account with us, you can safely ignore this email.</p>
+            <p style="margin:0;font-size:13px;line-height:1.5;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:20px;">Best regards,<br><span style="color:#232E6E;font-weight:600;">The PINUS Team</span></p>
+          </td>
+        </tr>
+        <tr>
+          <td style="background:#232E6E;padding:14px 20px;text-align:center;">
+            <p style="margin:0;font-size:11px;color:#c7d1ea;letter-spacing:0.02em;">Perhimpunan Indonesia NUS · <span style="color:#EBB726;">pinusonline.org</span></p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
           `,
           TextPart: `
-            Email Verification - PINUS Website
-            
-            Hello,
-            
-            Thank you for registering with PINUS! To complete your registration, please use the verification code below:
-            
-            ${verificationCode}
-            
-            This code will expire in 10 minutes.
-            
-            If you didn't create an account with us, please ignore this email.
-            
-            Best regards,
-            The PINUS Team
+Verify your email — PINUS
+
+Hello,
+
+Thank you for registering with PINUS! To complete your registration, use this verification code on the website:
+
+${verificationCode}
+
+This code will expire in 10 minutes.
+
+If you did not create an account with us, you can safely ignore this email.
+
+Best regards,
+The PINUS Team
           `,
         },
       ],

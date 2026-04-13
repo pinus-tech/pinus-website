@@ -1,8 +1,21 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useAuth } from '@/lib/contexts/AuthContext';
-import { Button } from './button';
+
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { useAuth } from "@/lib/contexts/AuthContext";
+import { Button } from "./button";
+import { NavDropdown } from "./nav-dropdown";
+
+const RESOURCES_ITEMS = [
+  { href: "/guides", label: "Guides" },
+  { href: "/blog", label: "Blog" },
+  { href: "/faq", label: "FAQ" },
+];
+
+const PARTICIPATE_ITEMS = [
+  { href: "/forms", label: "Forms" },
+  { href: "/marketplace", label: "Marketplace" },
+];
 
 const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -14,9 +27,9 @@ const Header = () => {
 
   useEffect(() => {
     if (menuOpen) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = 'auto';
+      document.body.style.overflow = "auto";
     }
   }, [menuOpen]);
 
@@ -28,60 +41,63 @@ const Header = () => {
   return (
     <>
       <header className="fixed top-0 left-0 w-full bg-white shadow-md z-50">
-        <div className="flex items-center justify-between px-6 py-4">
-          {/* Logo */}
-          <div className="flex items-center">
+        <div className="flex items-center justify-between gap-4 px-4 sm:px-6 py-3">
+          <div className="flex min-w-0 shrink-0 items-center">
             <Link href="/">
               <div className="flex items-center">
-              <img
-                  src="/logo-icon-pinus.svg" 
+                <img
+                  src="/logo-icon-pinus.svg"
                   alt="Logo"
                   className="h-8 cursor-pointer animate-[spin_4500ms_linear_infinite]"
                 />
                 <img
-                  src="/logo-text-pinus.svg" 
-                  alt="Logo"
-                  className="h-4 ml-3 cursor-pointer"
+                  src="/logo-text-pinus.svg"
+                  alt="PINUS"
+                  className="h-4 ml-2 sm:ml-3 cursor-pointer"
                 />
               </div>
             </Link>
           </div>
 
-          {/* Navigation Links */}
-          <nav className="hidden md:flex space-x-6">
-            <Link href="/" className="text-gray-700 hover:text-blue-main">
-              About Us
-            </Link>
-            <Link href="/guides" className="text-gray-700 hover:text-blue-main">
-              Guides
-            </Link>
-            <Link href="/committee" className="text-gray-700 hover:text-blue-main">
+          <nav className="hidden lg:flex flex-1 items-center justify-center gap-1 xl:gap-2 min-w-0">
+            <Link
+              href="/committee"
+              className="shrink-0 whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-blue-main"
+            >
               Committee
             </Link>
-            <Link href="/events" className="text-gray-700 hover:text-blue-main">
+            <Link
+              href="/events"
+              className="shrink-0 whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-blue-main"
+            >
               Events
             </Link>
-            <Link href="/blog" className="text-gray-700 hover:text-blue-main">
-              Blogs
+            <NavDropdown label="Resources" items={RESOURCES_ITEMS} />
+            <NavDropdown label="Participate" items={PARTICIPATE_ITEMS} />
+            <Link
+              href="/contact-us"
+              className="shrink-0 whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-blue-main"
+            >
+              Contact
             </Link>
-            <Link href="/faq" className="text-gray-700 hover:text-blue-main">
-              FAQ
-            </Link>
-            <Link href="/contact-us" className="text-gray-700 hover:text-blue-main">
-              Contact Us
-            </Link>
-            <Link href="https://www.pinusstudy.com/" target="_blank" className="pinus-study-button">
+            <a
+              href="https://www.pinusstudy.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="pinus-study-button shrink-0 whitespace-nowrap text-sm"
+            >
               PINUS Study
-            </Link>
+            </a>
           </nav>
 
-          {/* Auth Section */}
-          <div className="hidden md:flex items-center space-x-3">
+          <div className="hidden lg:flex shrink-0 items-center gap-2 xl:gap-3">
             {loading ? (
-              <div className="w-8 h-8 animate-spin rounded-full border-2 border-blue-main border-t-transparent"></div>
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-main border-t-transparent" />
             ) : user ? (
-              <div className="flex items-center space-x-3">
-                <span className="text-sm text-gray-600">Hello, {user.name}</span>
+              <div className="flex max-w-[min(280px,40vw)] items-center gap-2">
+                <span className="hidden xl:inline truncate text-sm text-gray-600">
+                  Hello, {user.name}
+                </span>
                 <Link href="/profile">
                   <Button variant="blue" outline size="sm">
                     Profile
@@ -90,7 +106,7 @@ const Header = () => {
                 {user.isAdmin && (
                   <Link href="/admin/dashboard">
                     <Button variant="yellow" size="sm">
-                      Admin Dashboard
+                      Admin
                     </Button>
                   </Link>
                 )}
@@ -99,7 +115,7 @@ const Header = () => {
                 </Button>
               </div>
             ) : (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <Link href="/login">
                   <Button variant="blue" size="sm">
                     Sign In
@@ -114,9 +130,11 @@ const Header = () => {
             )}
           </div>
 
-          {/* Hamburger Menu Button */}
           <button
-            className="md:hidden text-gray-700 focus:outline-none"
+            type="button"
+            className="lg:hidden text-gray-700 focus:outline-none shrink-0"
+            aria-expanded={menuOpen}
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
             onClick={toggleMenu}
           >
             <svg
@@ -130,55 +148,97 @@ const Header = () => {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d={menuOpen ? 'M6 18L18 6M6 6l12 12' : 'M4 6h16M4 12h16M4 18h16'}
+                d={
+                  menuOpen
+                    ? "M6 18L18 6M6 6l12 12"
+                    : "M4 6h16M4 12h16M4 18h16"
+                }
               />
             </svg>
           </button>
         </div>
 
-        {/* Mobile Menu */}
         <div
-          className={`md:hidden fixed inset-0 bg-white z-40 transform transition-transform duration-300 ease-in-out ${
-            menuOpen ? 'translate-x-0' : 'translate-x-full'
+          className={`lg:hidden fixed inset-0 bg-white z-40 transform transition-transform duration-300 ease-in-out ${
+            menuOpen ? "translate-x-0" : "translate-x-full"
           }`}
-          style={{ top: '80px' }}
+          style={{ top: "73px" }}
         >
-          <div className="flex flex-col h-full justify-between p-6">
-            <nav className="flex flex-col space-y-6 text-center">
-              <Link href="/" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
-                About Us
-              </Link>
-              <Link href="/guides" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
-                Guides
-              </Link>
-              <Link href="/committee" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
+          <div className="flex h-[calc(100vh-73px)] flex-col justify-between overflow-y-auto p-6">
+            <nav className="flex flex-col gap-6">
+              <Link
+                href="/committee"
+                className="text-lg text-gray-800 hover:text-blue-main"
+                onClick={toggleMenu}
+              >
                 Committee
               </Link>
-              <Link href="/events" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
+              <Link
+                href="/events"
+                className="text-lg text-gray-800 hover:text-blue-main"
+                onClick={toggleMenu}
+              >
                 Events
               </Link>
-              <Link href="/blog" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
-                Blogs
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Resources
+                </p>
+                <div className="ml-2 flex flex-col gap-3 border-l-2 border-gray-100 pl-3">
+                  {RESOURCES_ITEMS.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className="text-gray-700 hover:text-blue-main"
+                      onClick={toggleMenu}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Participate
+                </p>
+                <div className="ml-2 flex flex-col gap-3 border-l-2 border-gray-100 pl-3">
+                  {PARTICIPATE_ITEMS.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className="text-gray-700 hover:text-blue-main"
+                      onClick={toggleMenu}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+              <Link
+                href="/contact-us"
+                className="text-lg text-gray-800 hover:text-blue-main"
+                onClick={toggleMenu}
+              >
+                Contact
               </Link>
-              <Link href="/faq" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
-                FAQ
-              </Link>
-              <Link href="/contact-us" className="text-gray-700 text-xl hover:text-blue-main" onClick={toggleMenu}>
-                Contact Us
-              </Link>
-              <Link href="https://www.pinusstudy.com/" target="_blank" className="pinus-study-button" onClick={toggleMenu}>
+              <a
+                href="https://www.pinusstudy.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pinus-study-button text-center"
+                onClick={toggleMenu}
+              >
                 PINUS Study
-              </Link>
+              </a>
             </nav>
-            
-            {/* Mobile Auth Section */}
-            <div className="flex flex-col space-y-4 mt-6">
+
+            <div className="mt-8 flex flex-col gap-4 border-t border-gray-100 pt-6">
               {loading ? (
                 <div className="flex justify-center">
-                  <div className="w-8 h-8 animate-spin rounded-full border-2 border-blue-main border-t-transparent"></div>
+                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-main border-t-transparent" />
                 </div>
               ) : user ? (
-                <div className="text-center space-y-4">
+                <div className="space-y-4 text-center">
                   <p className="text-gray-600">Hello, {user.name}</p>
                   <Link href="/profile" onClick={toggleMenu}>
                     <Button variant="blue" outline className="w-full">
@@ -214,8 +274,7 @@ const Header = () => {
           </div>
         </div>
       </header>
-      {/* Offset for sticky header */}
-      <div className="h-16"></div>
+      <div className="h-16" />
     </>
   );
 };

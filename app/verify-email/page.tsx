@@ -157,6 +157,12 @@ function VerifyEmailContent() {
             <span className="font-medium text-blue-main">{email}</span>
           )}
         </p>
+        <p className="mt-4 max-w-md mx-auto text-center text-sm text-gray-600 leading-relaxed px-2">
+          Can&apos;t see the message? Check your{" "}
+          <span className="font-medium text-[#232E6E]">spam</span> or{" "}
+          <span className="font-medium text-[#232E6E]">junk</span> folder —
+          automated emails are sometimes filtered there.
+        </p>
       </div>
 
       <div className="mt-8 mx-auto w-96 flex justify-center">
