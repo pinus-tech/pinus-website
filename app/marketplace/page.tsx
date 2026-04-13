@@ -74,6 +74,16 @@ export default function MarketplacePage() {
     };
   }, [contactModalOpen]);
 
+  useEffect(() => {
+    const msg = error?.trim().toLowerCase() ?? "";
+    if (!msg.includes("internal server error")) return;
+    if (typeof window === "undefined") return;
+    const key = "pinus-marketplace-ise-retry";
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+    window.location.reload();
+  }, [error]);
+
   const fetchItems = async () => {
     try {
       setLoading(true);
@@ -95,6 +105,9 @@ export default function MarketplacePage() {
       if (response.ok) {
         const data = await response.json();
         setItems(data.items);
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem("pinus-marketplace-ise-retry");
+        }
         console.log("Fetched items:", data.items.length);
       } else {
         const errorData = await response.json();
