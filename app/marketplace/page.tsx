@@ -478,34 +478,6 @@ export default function MarketplacePage() {
             ))}
           </div>
         )}
-
-        {/* Info Section */}
-        <div className="mt-8 bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
-            Marketplace Information
-          </h3>
-          <div className="text-sm text-gray-600 space-y-2">
-            <p>• Public access: Anyone can view items (no login required)</p>
-            <p>• Post items: Login required</p>
-            <p>• Contact sellers: Login required to see telegram/phone</p>
-            {user ? (
-              <>
-                <p>
-                  • Current user: {user.name} ({user.email})
-                </p>
-                <p>• Can post items: Yes (logged in)</p>
-                <p>• Can manage own items: Yes</p>
-                <p>• Can contact sellers: Yes (logged in)</p>
-                <p>• Admin override: {user.isAdmin ? "Yes" : "No"}</p>
-              </>
-            ) : (
-              <>
-                <p>• Not logged in - can view items but cannot post</p>
-                <p>• Not logged in - cannot see seller contact information</p>
-              </>
-            )}
-          </div>
-        </div>
       </div>
 
       {/* Contact Modal */}
@@ -540,7 +512,7 @@ export default function MarketplacePage() {
               <p className="text-gray-700 mb-2">
                 Contact{" "}
                 <span className="font-semibold">
-                  {selectedItem.seller.name}
+                  {selectedItem.seller?.name ?? "Seller"}
                 </span>{" "}
                 for:
               </p>
