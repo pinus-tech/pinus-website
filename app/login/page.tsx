@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { Button } from "@/app/components/ui/button";
@@ -14,7 +14,7 @@ import {
   CardTitle,
 } from "@/app/components/ui/card";
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -22,6 +22,8 @@ export default function LoginPage() {
 
   const { login, user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const justRegistered = searchParams.get("registered") === "1";
 
   useEffect(() => {
     if (user) {
@@ -73,6 +75,14 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent>
             <Form onSubmit={handleSubmit}>
+              {justRegistered && !error && (
+                <div className="rounded-md bg-green-50 p-4 mb-4">
+                  <p className="text-sm text-green-800">
+                    Registration successful. Sign in with your NUS email and
+                    password.
+                  </p>
+                </div>
+              )}
               {error && (
                 <div className="rounded-md bg-red-50 p-4">
                   <div className="text-sm text-red-700">{error}</div>
@@ -111,5 +121,19 @@ export default function LoginPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="bg-gray-50 flex flex-col justify-center py-24 min-h-[40vh] items-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-main" />
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }
