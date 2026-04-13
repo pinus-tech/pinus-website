@@ -1,5 +1,6 @@
 import type { FormFieldDefinition } from "@/lib/form-field-types";
 import { FORM_FIELD_TYPES } from "@/lib/form-field-types";
+import { normalizePagesInput } from "@/lib/forms/form-pages";
 import {
   DEFAULT_ACCEPTED_FILE_TOKENS,
   normalizeAcceptedFileTypes,
@@ -140,5 +141,35 @@ function validateOneFormField(raw: unknown): string | null {
       break;
   }
 
+  return null;
+}
+
+/** Validates fields plus multi-page / branching rules. */
+export function validateFormWithPages(
+  pagesRaw: unknown,
+  fieldsRaw: unknown
+): string | null {
+  const fieldsErr = validateFormFieldsArray(fieldsRaw);
+  if (fieldsErr) return fieldsErr;
+
+  const pages = normalizePagesInput(pagesRaw);
+  const pageIds = new Set(pages.map((p) => p.id));
+  if (pageIds.size !== pages.length) {
+    return "Each page must have a unique id";
+  }
+
+  const fields = fieldsRaw as FormFieldDefinition[];
+  for (const f of fields) {
+    if (f.pageId && !pageIds.has(f.pageId)) {
+      return `Field "${f.label}" is assigned to an unknown page`;
+    }
+    if (f.optionGoToPageId && typeof f.optionGoToPageId === "object") {
+      for (const [, pid] of Object.entries(f.optionGoToPageId)) {
+        if (pid !== "_next" && !pageIds.has(String(pid))) {
+          return `Field "${f.label}" has branching to an unknown page`;
+        }
+      }
+    }
+  }
   return null;
 }

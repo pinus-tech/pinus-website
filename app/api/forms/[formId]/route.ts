@@ -3,7 +3,12 @@ import dbConnect from "@/lib/mongodb";
 import Form from "@/lib/models/Form";
 import Response from "@/lib/models/Response";
 import { serializeFormUser } from "@/lib/serialize-form-users";
-import { validateFormFieldsArray } from "@/lib/forms/validate-form-fields";
+import { validateFormWithPages } from "@/lib/forms/validate-form-fields";
+import {
+  serializeFormFieldsAndPages,
+  themeOrDefault,
+  assertOptionalHttpsUrl,
+} from "@/lib/forms/form-api-serialize";
 import {
   assignUniqueFormSlug,
   normalizeFormSlugInput,
@@ -107,6 +112,11 @@ export async function GET(
       !hasSubmitted &&
       (shared || isStaff);
 
+    const { pages, fields: fieldsOut } = serializeFormFieldsAndPages(
+      form.fields,
+      form.pages
+    );
+
     return NextResponse.json({
       form: {
         id: form._id,
@@ -115,7 +125,10 @@ export async function GET(
         descriptionMarkdown: !!form.descriptionMarkdown,
         createdBy,
         managers,
-        fields: form.fields,
+        fields: fieldsOut,
+        pages,
+        theme: themeOrDefault(form.theme),
+        headerImageUrl: form.headerImageUrl ?? null,
         responses: form.responses,
         isActive: form.isActive,
         isShared: shared,
@@ -191,10 +204,30 @@ export async function PATCH(
       );
     }
 
-    if (body.fields && Array.isArray(body.fields)) {
-      const fieldsError = validateFormFieldsArray(body.fields);
-      if (fieldsError) {
-        return NextResponse.json({ error: fieldsError }, { status: 400 });
+    if ("headerImageUrl" in body) {
+      const hErr = assertOptionalHttpsUrl("Header image URL", body.headerImageUrl);
+      if (hErr) {
+        return NextResponse.json({ error: hErr }, { status: 400 });
+      }
+    }
+
+    let pagesFieldsUpdate: ReturnType<typeof serializeFormFieldsAndPages> | null =
+      null;
+    if (body.fields !== undefined || body.pages !== undefined) {
+      const mergedFields =
+        body.fields !== undefined ? body.fields : form.fields;
+      const mergedPages =
+        body.pages !== undefined ? body.pages : form.pages;
+      pagesFieldsUpdate = serializeFormFieldsAndPages(
+        mergedFields,
+        mergedPages
+      );
+      const formErr = validateFormWithPages(
+        pagesFieldsUpdate.pages,
+        pagesFieldsUpdate.fields
+      );
+      if (formErr) {
+        return NextResponse.json({ error: formErr }, { status: 400 });
       }
     }
 
@@ -205,13 +238,27 @@ export async function PATCH(
     if (typeof body.descriptionMarkdown === "boolean") {
       setDoc.descriptionMarkdown = body.descriptionMarkdown;
     }
-    if (body.fields && Array.isArray(body.fields))
-      setDoc.fields = body.fields;
+    if (pagesFieldsUpdate) {
+      setDoc.pages = pagesFieldsUpdate.pages;
+      setDoc.fields = pagesFieldsUpdate.fields;
+    }
+    if (body.theme !== undefined) {
+      setDoc.theme = themeOrDefault(body.theme);
+    }
     if (typeof body.isActive === "boolean") setDoc.isActive = body.isActive;
     if (typeof body.isShared === "boolean") setDoc.isShared = body.isShared;
     if (Array.isArray(body.managers)) setDoc.managers = body.managers;
 
     const unsetDoc: Record<string, 1> = {};
+
+    if ("headerImageUrl" in body) {
+      const u = body.headerImageUrl;
+      if (u === null || u === "") {
+        unsetDoc.headerImageUrl = 1;
+      } else if (typeof u === "string") {
+        setDoc.headerImageUrl = u.trim();
+      }
+    }
 
     if ("slug" in body) {
       const raw = body.slug;
@@ -299,6 +346,11 @@ export async function PATCH(
       !hasSubmittedU &&
       (sharedU || isStaffU);
 
+    const { pages: pagesOut, fields: fieldsOut } = serializeFormFieldsAndPages(
+      updatedForm.fields,
+      updatedForm.pages
+    );
+
     return NextResponse.json({
       message: "Form updated successfully",
       form: {
@@ -308,7 +360,10 @@ export async function PATCH(
         descriptionMarkdown: !!updatedForm.descriptionMarkdown,
         createdBy: createdByU,
         managers: managersU,
-        fields: updatedForm.fields,
+        fields: fieldsOut,
+        pages: pagesOut,
+        theme: themeOrDefault(updatedForm.theme),
+        headerImageUrl: updatedForm.headerImageUrl ?? null,
         responses: updatedForm.responses,
         isActive: updatedForm.isActive,
         isShared: sharedU,

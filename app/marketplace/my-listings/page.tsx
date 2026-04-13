@@ -6,6 +6,8 @@ import { buildLoginUrl } from "@/lib/login-callback";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import Link from "next/link";
 import { descriptionCardPreview } from "@/lib/description-preview";
+import { primaryMarketplaceImageUrl } from "@/lib/marketplace-images";
+import { MARKETPLACE_CONDITION_OPTIONS } from "@/lib/constants/marketplace-conditions";
 
 interface MarketplaceItem {
   id: string;
@@ -18,10 +20,12 @@ interface MarketplaceItem {
     telegram?: string;
     phoneNumber?: string;
   };
-  status: 'available' | 'sold';
+  status: "available" | "reserved" | "sold";
   category?: string;
+  condition?: string;
   meetupLocation?: string;
   imageUrl?: string;
+  imageUrls?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -30,7 +34,9 @@ export default function MyListingsPage() {
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<MarketplaceItem[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [filterStatus, setFilterStatus] = useState<'all' | 'available' | 'sold'>('all');
+  const [filterStatus, setFilterStatus] = useState<
+    "all" | "available" | "reserved" | "sold"
+  >("all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const { user, loading: authLoading } = useAuth();
@@ -73,7 +79,10 @@ export default function MyListingsPage() {
     }
   };
 
-  const handleStatusChange = async (itemId: string, newStatus: 'available' | 'sold') => {
+  const handleStatusChange = async (
+    itemId: string,
+    newStatus: "available" | "reserved" | "sold"
+  ) => {
     setActionLoading(itemId);
     try {
       const response = await fetch(`/api/marketplace/${itemId}`, {
@@ -141,9 +150,25 @@ export default function MyListingsPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    return status === 'available' 
-      ? <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">Available</span>
-      : <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-medium">Sold</span>;
+    if (status === "available") {
+      return (
+        <span className="rounded bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
+          Available
+        </span>
+      );
+    }
+    if (status === "reserved") {
+      return (
+        <span className="rounded bg-amber-100 px-2 py-1 text-xs font-medium text-amber-900">
+          Reserved
+        </span>
+      );
+    }
+    return (
+      <span className="rounded bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
+        Sold
+      </span>
+    );
   };
 
   if (authLoading) {
@@ -202,6 +227,16 @@ export default function MyListingsPage() {
                 Available ({items.filter(item => item.status === 'available').length})
               </button>
               <button
+                onClick={() => setFilterStatus('reserved')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  filterStatus === 'reserved'
+                    ? 'bg-amber-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Reserved ({items.filter(item => item.status === 'reserved').length})
+              </button>
+              <button
                 onClick={() => setFilterStatus('sold')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   filterStatus === 'sold'
@@ -246,12 +281,14 @@ export default function MyListingsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {items
               .filter(item => filterStatus === 'all' || item.status === filterStatus)
-              .map((item) => (
+              .map((item) => {
+                const thumb = primaryMarketplaceImageUrl(item);
+                return (
                 <div key={item.id} className="bg-white rounded-lg shadow overflow-hidden">
-                  {item.imageUrl && (
+                  {thumb && (
                     <div className="aspect-w-16 aspect-h-9 bg-gray-200">
                       <img
-                        src={item.imageUrl}
+                        src={thumb}
                         alt={item.title}
                         className="w-full h-48 object-cover"
                       />
@@ -281,6 +318,16 @@ export default function MyListingsPage() {
                         <span>Category:</span>
                         <span>{getCategoryLabel(item.category || 'Other')}</span>
                       </div>
+                      {item.condition && (
+                        <div className="flex justify-between">
+                          <span>Condition:</span>
+                          <span className="text-right">
+                            {MARKETPLACE_CONDITION_OPTIONS.find(
+                              (o) => o.value === item.condition
+                            )?.label ?? item.condition}
+                          </span>
+                        </div>
+                      )}
                       {item.meetupLocation && (
                         <div className="flex justify-between">
                           <span>Location:</span>
@@ -297,24 +344,29 @@ export default function MyListingsPage() {
                       </div>
                     </div>
 
-                    <div className="flex space-x-2">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:space-x-2">
                       <Link
                         href={`/marketplace/${item.id}`}
                         className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors text-center"
                       >
                         View Details
                       </Link>
-                      <button
-                        onClick={() => handleStatusChange(item.id, item.status === 'available' ? 'sold' : 'available')}
+                      <select
+                        value={item.status}
                         disabled={actionLoading === item.id}
-                        className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
-                          item.status === 'available'
-                            ? 'bg-red-600 hover:bg-red-700 text-white'
-                            : 'bg-green-600 hover:bg-green-700 text-white'
-                        }`}
+                        onChange={(e) =>
+                          handleStatusChange(
+                            item.id,
+                            e.target.value as "available" | "reserved" | "sold"
+                          )
+                        }
+                        className="rounded border border-gray-300 px-2 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                        aria-label="Change listing status"
                       >
-                        {actionLoading === item.id ? 'Updating...' : item.status === 'available' ? 'Mark Sold' : 'Mark Available'}
-                      </button>
+                        <option value="available">Mark: Available</option>
+                        <option value="reserved">Mark: Reserved</option>
+                        <option value="sold">Mark: Sold</option>
+                      </select>
                       <button
                         onClick={() => handleDelete(item.id)}
                         disabled={actionLoading === item.id}
@@ -325,7 +377,8 @@ export default function MyListingsPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+              );
+              })}
           </div>
         )}
 
@@ -333,12 +386,15 @@ export default function MyListingsPage() {
         {items.length > 0 && (
           <div className="mt-8 bg-white p-6 rounded-lg shadow">
             <h3 className="text-lg font-medium text-gray-900 mb-4">Summary</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
               <div>
                 <span className="font-medium">Total Listings:</span> {items.length}
               </div>
               <div>
                 <span className="font-medium">Available:</span> {items.filter(item => item.status === 'available').length}
+              </div>
+              <div>
+                <span className="font-medium">Reserved:</span> {items.filter(item => item.status === 'reserved').length}
               </div>
               <div>
                 <span className="font-medium">Sold:</span> {items.filter(item => item.status === 'sold').length}

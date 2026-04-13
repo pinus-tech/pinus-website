@@ -19,6 +19,13 @@ export interface FormFieldDefinition {
   label: string;
   type: FormFieldType;
   required: boolean;
+  /** Which page this field belongs to (multi-page forms). */
+  pageId?: string;
+  /**
+   * For dropdown / single-select multiple_choice: map option label → target page id,
+   * or `"_next"` for the next page in order (default).
+   */
+  optionGoToPageId?: Record<string, string>;
   /** Optional helper text under the label (like Google Forms description). */
   description?: string;
   options?: string[];

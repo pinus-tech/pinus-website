@@ -6,6 +6,8 @@ import { useRouter, useParams, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { buildLoginUrl } from "@/lib/login-callback";
 import { DescriptionContent } from "@/app/components/DescriptionContent";
+import { galleryImageUrls } from "@/lib/marketplace-images";
+import { MARKETPLACE_CONDITION_OPTIONS } from "@/lib/constants/marketplace-conditions";
 
 interface MarketplaceItem {
   id: string;
@@ -18,10 +20,12 @@ interface MarketplaceItem {
     telegram?: string;
     phoneNumber?: string;
   };
-  status: "available" | "sold";
+  status: "available" | "reserved" | "sold";
   category?: string;
+  condition?: string;
   meetupLocation?: string;
   imageUrl?: string;
+  imageUrls?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -186,6 +190,8 @@ export default function MarketplaceItemDetailPage() {
     );
   }
 
+  const itemGallery = item ? galleryImageUrls(item) : [];
+
   if (!item) {
     return (
       <div className="min-h-screen bg-gray-50 p-8">
@@ -324,15 +330,41 @@ export default function MarketplaceItemDetailPage() {
                     onChange={(e) =>
                       setEditData((prev) => ({
                         ...prev,
-                        status: e.target.value as "available" | "sold",
+                        status: e.target.value as MarketplaceItem["status"],
                       }))
                     }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="available">Available</option>
+                    <option value="reserved">Reserved</option>
                     <option value="sold">Sold</option>
                   </select>
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Condition
+                </label>
+                <select
+                  value={
+                    editData.condition !== undefined
+                      ? editData.condition
+                      : item.condition ?? "Other"
+                  }
+                  onChange={(e) =>
+                    setEditData((prev) => ({
+                      ...prev,
+                      condition: e.target.value,
+                    }))
+                  }
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {MARKETPLACE_CONDITION_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="flex space-x-4">
                 <button
@@ -356,14 +388,26 @@ export default function MarketplaceItemDetailPage() {
 
         {/* Item Details */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          {/* Image */}
-          {item.imageUrl && (
-            <div className="aspect-w-16 aspect-h-9 bg-gray-200">
-              <img
-                src={item.imageUrl}
-                alt={item.title}
-                className="w-full h-64 object-cover"
-              />
+          {itemGallery.length > 0 && (
+            <div
+              className={`grid gap-1 bg-gray-200 p-1 ${
+                itemGallery.length === 1
+                  ? "grid-cols-1"
+                  : itemGallery.length === 2
+                    ? "grid-cols-2"
+                    : "grid-cols-2 sm:grid-cols-3"
+              }`}
+            >
+              {itemGallery.map((url, i) => (
+                <img
+                  key={`${url}-${i}`}
+                  src={url}
+                  alt=""
+                  className={`w-full object-cover ${
+                    itemGallery.length === 1 ? "h-72" : "h-44 sm:h-52"
+                  }`}
+                />
+              ))}
             </div>
           )}
 
@@ -374,7 +418,7 @@ export default function MarketplaceItemDetailPage() {
                 <h1 className="text-3xl font-bold text-gray-900 mb-2">
                   {item.title}
                 </h1>
-                <div className="flex items-center space-x-4 text-sm text-gray-600">
+                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
                   <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
                     {getCategoryLabel(item.category || "Other")}
                   </span>
@@ -382,11 +426,24 @@ export default function MarketplaceItemDetailPage() {
                     className={`px-2 py-1 rounded ${
                       item.status === "available"
                         ? "bg-green-100 text-green-800"
-                        : "bg-red-100 text-red-800"
+                        : item.status === "reserved"
+                          ? "bg-amber-100 text-amber-900"
+                          : "bg-red-100 text-red-800"
                     }`}
                   >
-                    {item.status === "available" ? "Available" : "Sold"}
+                    {item.status === "available"
+                      ? "Available"
+                      : item.status === "reserved"
+                        ? "Reserved"
+                        : "Sold"}
                   </span>
+                  {item.condition && (
+                    <span className="rounded bg-gray-100 px-2 py-1 text-gray-800">
+                      {MARKETPLACE_CONDITION_OPTIONS.find(
+                        (o) => o.value === item.condition
+                      )?.label ?? item.condition}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="text-right">
@@ -435,7 +492,21 @@ export default function MarketplaceItemDetailPage() {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Status:</span>
                     <span className="font-medium">
-                      {item.status === "available" ? "Available" : "Sold"}
+                      {item.status === "available"
+                        ? "Available"
+                        : item.status === "reserved"
+                          ? "Reserved"
+                          : "Sold"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Condition:</span>
+                    <span className="font-medium">
+                      {item.condition
+                        ? MARKETPLACE_CONDITION_OPTIONS.find(
+                            (o) => o.value === item.condition
+                          )?.label ?? item.condition
+                        : "—"}
                     </span>
                   </div>
                   {item.meetupLocation && (
@@ -529,6 +600,14 @@ export default function MarketplaceItemDetailPage() {
                     log in
                   </Link>{" "}
                   to contact the seller.
+                </div>
+              </div>
+            )}
+
+            {item.status === "reserved" && (
+              <div className="border-t pt-6">
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900">
+                  This listing is reserved. The seller may not be taking new enquiries for this item.
                 </div>
               </div>
             )}

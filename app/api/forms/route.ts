@@ -4,7 +4,14 @@ import Form from "@/lib/models/Form";
 import Response from "@/lib/models/Response";
 import User from "@/lib/models/User";
 import { serializeFormUser } from "@/lib/serialize-form-users";
-import { validateFormFieldsArray } from "@/lib/forms/validate-form-fields";
+import {
+  validateFormWithPages,
+} from "@/lib/forms/validate-form-fields";
+import {
+  serializeFormFieldsAndPages,
+  themeOrDefault,
+  assertOptionalHttpsUrl,
+} from "@/lib/forms/form-api-serialize";
 import {
   assignUniqueFormSlug,
   normalizeFormSlugInput,
@@ -180,8 +187,17 @@ export async function POST(req: NextRequest) {
     await dbConnect();
 
     const body = await req.json();
-    const { title, description, fields, managers, shortLink, descriptionMarkdown } =
-      body;
+    const {
+      title,
+      description,
+      fields,
+      managers,
+      shortLink,
+      descriptionMarkdown,
+      pages: pagesBody,
+      theme: themeBody,
+      headerImageUrl: headerBody,
+    } = body;
 
     // Validate required fields
     if (!title || !fields || !Array.isArray(fields)) {
@@ -191,9 +207,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const fieldsError = validateFormFieldsArray(fields);
-    if (fieldsError) {
-      return NextResponse.json({ error: fieldsError }, { status: 400 });
+    const headerErr = assertOptionalHttpsUrl("Header image URL", headerBody);
+    if (headerErr) {
+      return NextResponse.json({ error: headerErr }, { status: 400 });
+    }
+
+    const { pages, fields: normalizedFields } = serializeFormFieldsAndPages(
+      fields,
+      pagesBody
+    );
+    const formError = validateFormWithPages(pages, normalizedFields);
+    if (formError) {
+      return NextResponse.json({ error: formError }, { status: 400 });
     }
 
     let resolvedSlug: string | undefined;
@@ -237,7 +262,13 @@ export async function POST(req: NextRequest) {
       descriptionMarkdown: descriptionMarkdown === true,
       createdBy: user.userId,
       managers: managers || [],
-      fields,
+      fields: normalizedFields,
+      pages,
+      theme: themeOrDefault(themeBody),
+      headerImageUrl:
+        typeof headerBody === "string" && headerBody.trim()
+          ? headerBody.trim()
+          : undefined,
       responses: [],
       isActive: true,
       isShared: false,
@@ -262,6 +293,9 @@ export async function POST(req: NextRequest) {
           serializeFormUser(m)
         ),
         fields: newForm.fields,
+        pages: newForm.pages,
+        theme: newForm.theme ?? "blue",
+        headerImageUrl: newForm.headerImageUrl ?? null,
         responses: newForm.responses,
         isActive: newForm.isActive,
         slug: newForm.slug ?? null,

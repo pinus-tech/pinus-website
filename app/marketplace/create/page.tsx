@@ -5,11 +5,13 @@ import { useRouter, usePathname } from "next/navigation";
 import { buildLoginUrl } from "@/lib/login-callback";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { MARKETPLACE_CATEGORIES } from "@/lib/constants/marketplace-categories";
+import { MARKETPLACE_CONDITION_OPTIONS } from "@/lib/constants/marketplace-conditions";
 import { uploadMarketplaceImage } from "@/lib/firebase/upload-marketplace-image";
 import {
   prepareMarketplaceListingImage,
   FORM_FILE_MAX_SOURCE_BYTES,
 } from "@/lib/forms/form-file-prepare";
+import { MAX_MARKETPLACE_IMAGES } from "@/lib/marketplace-images";
 import { ImageCropModal } from "@/app/components/ImageCropModal";
 import {
   Select,
@@ -26,6 +28,7 @@ interface ItemData {
   descriptionMarkdown: boolean;
   price: number;
   category: string;
+  condition: string;
   meetupLocation: string;
 }
 
@@ -42,9 +45,9 @@ type SgdIdrQuote = {
 export default function CreateMarketplaceItemPage() {
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const previewUrlRef = useRef<string | null>(null);
+  type LocalListingImage = { file: File; preview: string };
+  const [listingImages, setListingImages] = useState<LocalListingImage[]>([]);
+  const replaceIndexRef = useRef<number | null>(null);
   const [cropOpen, setCropOpen] = useState(false);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const cropSrcRef = useRef<string | null>(null);
@@ -55,6 +58,7 @@ export default function CreateMarketplaceItemPage() {
     descriptionMarkdown: false,
     price: 0,
     category: 'Other',
+    condition: 'Other',
     meetupLocation: '',
   });
   const [error, setError] = useState<string | null>(null);
@@ -67,14 +71,15 @@ export default function CreateMarketplaceItemPage() {
   const router = useRouter();
   const pathname = usePathname();
 
+  const listingPreviewUrlsRef = useRef<string[]>([]);
+  listingPreviewUrlsRef.current = listingImages.map((li) => li.preview);
+
   useEffect(() => {
     return () => {
-      if (previewUrlRef.current) {
-        URL.revokeObjectURL(previewUrlRef.current);
-      }
       if (cropSrcRef.current) {
         URL.revokeObjectURL(cropSrcRef.current);
       }
+      listingPreviewUrlsRef.current.forEach((u) => URL.revokeObjectURL(u));
     };
   }, []);
 
@@ -158,23 +163,26 @@ export default function CreateMarketplaceItemPage() {
     setError(null);
 
     try {
-      let imageUrl = "";
+      const imageUrls: string[] = [];
 
-      if (imageFile && user) {
+      if (listingImages.length > 0 && user) {
         setUploadingImage(true);
         try {
-          const prepared = await prepareMarketplaceListingImage(imageFile);
-          imageUrl = await uploadMarketplaceImage(
-            prepared.blob,
-            prepared.filename,
-            prepared.contentType,
-            user.id
-          );
+          for (const slot of listingImages) {
+            const prepared = await prepareMarketplaceListingImage(slot.file);
+            const url = await uploadMarketplaceImage(
+              prepared.blob,
+              prepared.filename,
+              prepared.contentType,
+              user.id
+            );
+            imageUrls.push(url);
+          }
         } catch (uploadErr) {
           setError(
             uploadErr instanceof Error
               ? uploadErr.message
-              : "Failed to upload image"
+              : "Failed to upload images"
           );
           setUploadingImage(false);
           setLoading(false);
@@ -191,7 +199,7 @@ export default function CreateMarketplaceItemPage() {
         },
         body: JSON.stringify({
           ...itemData,
-          imageUrl,
+          ...(imageUrls.length > 0 ? { imageUrls } : {}),
         }),
       });
 
@@ -419,6 +427,34 @@ export default function CreateMarketplaceItemPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Condition *
+                </label>
+                <Select
+                  value={itemData.condition}
+                  onValueChange={(value) =>
+                    setItemData((prev) => ({ ...prev, condition: value }))
+                  }
+                >
+                  <SelectTrigger
+                    variant="blue"
+                    outline
+                    rounding="lg"
+                    className="w-full"
+                  >
+                    <SelectValue placeholder="Item condition" />
+                  </SelectTrigger>
+                  <SelectContent variant="blue" outline rounding="lg">
+                    {MARKETPLACE_CONDITION_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Meetup Location
                 </label>
                 <input
@@ -432,7 +468,7 @@ export default function CreateMarketplaceItemPage() {
 
               <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/80 p-5 shadow-sm">
                 <label className="block text-sm font-semibold text-gray-900 mb-1">
-                  Photo (optional)
+                  Photos (optional, up to {MAX_MARKETPLACE_IMAGES})
                 </label>
                 <p className="text-sm text-gray-500 mb-4">
                   Crop and zoom in the editor. Same rules as form uploads: up to{" "}
@@ -449,6 +485,15 @@ export default function CreateMarketplaceItemPage() {
                     const f = e.target.files?.[0] ?? null;
                     e.target.value = "";
                     if (!f) return;
+                    if (
+                      replaceIndexRef.current === null &&
+                      listingImages.length >= MAX_MARKETPLACE_IMAGES
+                    ) {
+                      setError(
+                        `You can add at most ${MAX_MARKETPLACE_IMAGES} photos.`
+                      );
+                      return;
+                    }
                     if (!/^image\/(jpeg|png|gif|webp)$/i.test(f.type)) {
                       setError("Please choose a JPEG, PNG, GIF, or WebP image.");
                       return;
@@ -468,56 +513,70 @@ export default function CreateMarketplaceItemPage() {
                     setCropOpen(true);
                   }}
                 />
-                {!imagePreview || !imageFile ? (
+                {listingImages.length > 0 && (
+                  <div className="mb-4 grid gap-3 sm:grid-cols-2">
+                    {listingImages.map((slot, index) => (
+                      <div
+                        key={`${slot.preview}-${index}`}
+                        className="rounded-xl border border-slate-200 bg-white p-3 shadow-inner"
+                      >
+                        <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+                          Photo {index + 1}
+                        </p>
+                        <img
+                          src={slot.preview}
+                          alt=""
+                          className="max-h-48 w-full rounded-lg object-contain"
+                        />
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant="blue"
+                            outline
+                            onClick={() => {
+                              replaceIndexRef.current = index;
+                              photoInputRef.current?.click();
+                            }}
+                          >
+                            Change
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="red"
+                            outline
+                            onClick={() => {
+                              setListingImages((prev) => {
+                                const next = [...prev];
+                                const [removed] = next.splice(index, 1);
+                                if (removed) {
+                                  URL.revokeObjectURL(removed.preview);
+                                }
+                                return next;
+                              });
+                              if (photoInputRef.current) {
+                                photoInputRef.current.value = "";
+                              }
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {listingImages.length < MAX_MARKETPLACE_IMAGES && (
                   <Button
                     type="button"
                     variant="blue"
                     outline
-                    onClick={() => photoInputRef.current?.click()}
+                    onClick={() => {
+                      replaceIndexRef.current = null;
+                      photoInputRef.current?.click();
+                    }}
                   >
-                    Add photo
+                    {listingImages.length === 0 ? "Add photo" : "Add another photo"}
                   </Button>
-                ) : (
-                  <div className="mt-1 space-y-3">
-                    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-inner">
-                      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-                        Preview (after crop)
-                      </p>
-                      <img
-                        src={imagePreview}
-                        alt="Listing preview"
-                        className="max-h-64 w-full rounded-lg object-contain"
-                      />
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        variant="blue"
-                        outline
-                        onClick={() => photoInputRef.current?.click()}
-                      >
-                        Change photo
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="red"
-                        outline
-                        onClick={() => {
-                          setImageFile(null);
-                          if (previewUrlRef.current) {
-                            URL.revokeObjectURL(previewUrlRef.current);
-                            previewUrlRef.current = null;
-                          }
-                          setImagePreview(null);
-                          if (photoInputRef.current) {
-                            photoInputRef.current.value = "";
-                          }
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
                 )}
               </div>
             </div>
@@ -563,7 +622,7 @@ export default function CreateMarketplaceItemPage() {
               className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-2 rounded-lg font-medium transition-colors"
             >
               {uploadingImage
-                ? "Uploading image..."
+                ? "Uploading photos..."
                 : loading
                   ? "Posting..."
                   : "Post Item"}
@@ -578,6 +637,7 @@ export default function CreateMarketplaceItemPage() {
         title="Adjust your listing photo"
         outputFileName="listing-photo.jpg"
         onCancel={() => {
+          replaceIndexRef.current = null;
           setCropOpen(false);
           if (cropSrcRef.current) {
             URL.revokeObjectURL(cropSrcRef.current);
@@ -586,14 +646,26 @@ export default function CreateMarketplaceItemPage() {
           setCropSrc(null);
         }}
         onComplete={(file) => {
-          setImageFile(file);
-          if (previewUrlRef.current) {
-            URL.revokeObjectURL(previewUrlRef.current);
-            previewUrlRef.current = null;
-          }
           const pu = URL.createObjectURL(file);
-          previewUrlRef.current = pu;
-          setImagePreview(pu);
+          const idx = replaceIndexRef.current;
+          replaceIndexRef.current = null;
+          if (idx !== null) {
+            setListingImages((prev) => {
+              const next = [...prev];
+              const old = next[idx];
+              if (old) URL.revokeObjectURL(old.preview);
+              next[idx] = { file, preview: pu };
+              return next;
+            });
+          } else {
+            setListingImages((prev) => {
+              if (prev.length >= MAX_MARKETPLACE_IMAGES) {
+                URL.revokeObjectURL(pu);
+                return prev;
+              }
+              return [...prev, { file, preview: pu }];
+            });
+          }
           setCropOpen(false);
           if (cropSrcRef.current) {
             URL.revokeObjectURL(cropSrcRef.current);
