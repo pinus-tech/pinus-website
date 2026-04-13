@@ -2,43 +2,78 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Item from "@/lib/models/Item";
 import { verifyToken } from "@/lib/utils/auth";
-import { createMarketplaceItemSchema } from "@/lib/utils/marketplaceSchemas";
-import mongoose from "mongoose";
-
 
 // Middleware to check if user is logged in
 async function verifyLoggedInUser(req: NextRequest) {
   const token = req.cookies.get("auth-token")?.value;
-  if (!token) return null;
+
+  if (!token) {
+    return null;
+  }
 
   const decoded = verifyToken(token);
-  if (!decoded) return null;
-
   return decoded;
 }
-
 
 // GET - Get all marketplace items (anyone can view, no login required)
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
 
-    // TODO: Implement marketplace item listing logic
-    // - Fetch all available items with seller information
-    // - Add filtering by category, price range, location
-    // - Add search functionality (title, description, tags)
-    // - Add pagination for large datasets
-    // - Sort by date, price, popularity, distance
-    // - Include item images and thumbnails
+    const { searchParams } = new URL(req.url);
+    const category = searchParams.get('category');
+    const search = searchParams.get('search');
+    const minPrice = searchParams.get('minPrice');
+    const maxPrice = searchParams.get('maxPrice');
+    const status = searchParams.get('status') || 'available';
+    const seller = searchParams.get('seller');
 
-    // Placeholder response - remove when implementing
-    return NextResponse.json(
-      {
-        items: [],
-        message: "TODO: Implement marketplace item listing system",
-      },
-      { status: 200 }
-    );
+    // Build query
+    const query: { status: string; category?: string; $or?: Array<{ title: { $regex: string; $options: string } } | { description: { $regex: string; $options: string } }>; price?: { $gte?: number; $lte?: number }; seller?: string } = { status };
+
+    if (category && category !== 'all') {
+      query.category = category;
+    }
+
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    if (minPrice || maxPrice) {
+      query.price = {};
+      if (minPrice) query.price.$gte = Number(minPrice);
+      if (maxPrice) query.price.$lte = Number(maxPrice);
+    }
+
+    // Filter by seller if provided
+    if (seller) {
+      query.seller = seller;
+    }
+
+    // Get items with seller information
+    const items = await Item.find(query)
+      .populate('seller', 'name telegram phoneNumber')
+      .sort({ createdAt: -1 });
+
+    return NextResponse.json({
+      items: items.map(item => ({
+        id: item._id,
+        title: item.title,
+        description: item.description,
+        price: item.price,
+        seller: item.seller,
+        status: item.status,
+        category: item.category,
+        meetupLocation: item.meetupLocation,
+        imageUrl: item.imageUrl,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt
+      })),
+      totalItems: items.length
+    });
   } catch (error) {
     console.error("Error fetching marketplace items:", error);
     return NextResponse.json(
@@ -49,14 +84,6 @@ export async function GET(req: NextRequest) {
 }
 
 // POST - Create new marketplace item (requires login)
-// TODO: Implement item creation logic
-    // - Validate item data (title, price, description, category, meetupLocation)
-    // - Handle multiple image uploads with compression
-    // - Validate price is positive number or allow free items (price = 0)
-    // - Set default category if not provided
-    // - Add location/pickup details (meetupLocation field)
-    // - Create item document with seller information
-    // - Return created item information
 export async function POST(req: NextRequest) {
   try {
     const user = await verifyLoggedInUser(req);
@@ -68,57 +95,76 @@ export async function POST(req: NextRequest) {
     }
 
     await dbConnect();
+
     const body = await req.json();
-    //zod validations
-    const parsed = createMarketplaceItemSchema.safeParse(body);
-    if (!parsed.success) {
+    const { title, description, price, category, meetupLocation, imageUrl } = body;
+
+    // Validate required fields
+    if (!title || price === undefined) {
       return NextResponse.json(
-        { error: "Invalid input", details: parsed.error.flatten() },
+        { error: "Title and price are required" },
         { status: 400 }
       );
     }
-    const { title, description, price, category, meetupLocation, imageUrl } =
-      parsed.data;
 
-    //set default categ.
-    const finalCategory = category ?? "Other";
-    //get sellerid
-    const sellerId = user.userId;
-if (!sellerId || !mongoose.Types.ObjectId.isValid(sellerId)) {
-  return NextResponse.json(
-    { error: "Invalid auth token: invalid user id" },
-    { status: 401 }
-  );
-}
+    // Validate price
+    if (typeof price !== 'number' || price < 0) {
+      return NextResponse.json(
+        { error: "Price must be a non-negative number" },
+        { status: 400 }
+      );
+    }
 
-    //make item in mongodb
-    const created = await Item.create({
+    // Validate category if provided
+    if (category) {
+      const validCategories = [
+        "Electronics", "Books & Academic", "Furniture & Home", "Clothing & Fashion",
+        "Sports & Recreation", "Beauty & Personal Care", "Transportation", "Musical Instruments",
+        "Art & Crafts", "Food & Beverages", "Health & Wellness", "Baby & Kids",
+        "Pets & Animals", "Garden & Outdoor", "Office & Business", "Free Items", "Other"
+      ];
+      
+      if (!validCategories.includes(category)) {
+        return NextResponse.json(
+          { error: "Invalid category" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Create new item
+    const newItem = new Item({
       title,
       description,
       price,
-      category: finalCategory,
+      seller: user.userId,
+      status: 'available',
+      category: category || 'Other',
       meetupLocation,
-      imageUrl,
-      seller: sellerId,
-      status: "available",
+      imageUrl
     });
-    //return minim informa.
-    return NextResponse.json(
-      {
-        message: "Marketplace item created",
-        item: {
-          id: created._id,
-          title: created.title,
-          price: created.price,
-          category: created.category,
-          status: created.status,
-          meetupLocation: created.meetupLocation,
-          imageUrl: created.imageUrl,
-          createdAt: created.createdAt,
-        },
-      },
-      { status: 201 }
-    );
+
+    await newItem.save();
+
+    // Populate seller information
+    await newItem.populate('seller', 'name telegram phoneNumber');
+
+    return NextResponse.json({
+      message: "Item created successfully",
+      item: {
+        id: newItem._id,
+        title: newItem.title,
+        description: newItem.description,
+        price: newItem.price,
+        seller: newItem.seller,
+        status: newItem.status,
+        category: newItem.category,
+        meetupLocation: newItem.meetupLocation,
+        imageUrl: newItem.imageUrl,
+        createdAt: newItem.createdAt,
+        updatedAt: newItem.updatedAt
+      }
+    }, { status: 201 });
   } catch (error) {
     console.error("Error creating marketplace item:", error);
     return NextResponse.json(
@@ -127,4 +173,3 @@ if (!sellerId || !mongoose.Types.ObjectId.isValid(sellerId)) {
     );
   }
 }
-
