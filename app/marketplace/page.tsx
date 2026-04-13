@@ -5,6 +5,8 @@ import { useAuth } from "@/lib/contexts/AuthContext";
 import Link from "next/link";
 import { MARKETPLACE_CATEGORIES } from "@/lib/constants/marketplace-categories";
 import { descriptionCardPreview } from "@/lib/description-preview";
+import { primaryMarketplaceImageUrl } from "@/lib/marketplace-images";
+import { MARKETPLACE_CONDITION_OPTIONS } from "@/lib/constants/marketplace-conditions";
 
 interface MarketplaceItem {
   id: string;
@@ -17,13 +19,18 @@ interface MarketplaceItem {
     telegram?: string;
     phoneNumber?: string;
   };
-  status: "available" | "sold";
+  status: "available" | "reserved" | "sold";
   category?: string;
+  condition?: string;
   meetupLocation?: string;
   imageUrl?: string;
+  imageUrls?: string[];
   createdAt: string;
   updatedAt: string;
 }
+
+type SortOrder = "newest" | "oldest" | "price_asc" | "price_desc";
+type ListingStatusFilter = "active" | "available" | "reserved";
 
 export default function MarketplacePage() {
   const [loading, setLoading] = useState(true);
@@ -38,6 +45,10 @@ export default function MarketplacePage() {
     null
   );
   const [filtersVisible, setFiltersVisible] = useState(false);
+  const [sortOrder, setSortOrder] = useState<SortOrder>("newest");
+  const [listingStatusFilter, setListingStatusFilter] =
+    useState<ListingStatusFilter>("active");
+  const [conditionFilter, setConditionFilter] = useState<string>("all");
 
   const { user, loading: authLoading } = useAuth();
 
@@ -84,19 +95,36 @@ export default function MarketplacePage() {
     window.location.reload();
   }, [error]);
 
-  const fetchItems = async () => {
+  const fetchItems = async (override?: {
+    sortOrder?: SortOrder;
+    listingStatusFilter?: ListingStatusFilter;
+    conditionFilter?: string;
+    searchTerm?: string;
+    selectedCategory?: string;
+    minPrice?: string;
+    maxPrice?: string;
+  }) => {
     try {
       setLoading(true);
       setError(null);
 
+      const sort = override?.sortOrder ?? sortOrder;
+      const listStatus = override?.listingStatusFilter ?? listingStatusFilter;
+      const cond = override?.conditionFilter ?? conditionFilter;
+      const search = override?.searchTerm ?? searchTerm;
+      const cat = override?.selectedCategory ?? selectedCategory;
+      const minP = override?.minPrice ?? minPrice;
+      const maxP = override?.maxPrice ?? maxPrice;
+
       // Build query parameters
       const params = new URLSearchParams();
-      if (selectedCategory !== "all")
-        params.append("category", selectedCategory);
-      if (searchTerm.trim()) params.append("search", searchTerm.trim());
-      if (minPrice && minPrice !== "") params.append("minPrice", minPrice);
-      if (maxPrice && maxPrice !== "") params.append("maxPrice", maxPrice);
-      params.append("status", "available");
+      if (cat !== "all") params.append("category", cat);
+      if (search.trim()) params.append("search", search.trim());
+      if (minP && minP !== "") params.append("minPrice", minP);
+      if (maxP && maxP !== "") params.append("maxPrice", maxP);
+      params.append("status", listStatus);
+      params.append("sort", sort);
+      if (cond && cond !== "all") params.append("condition", cond);
 
       console.log("Fetching items with params:", params.toString());
 
@@ -166,6 +194,9 @@ export default function MarketplacePage() {
     return cat ? cat.label : category;
   };
 
+  const getConditionLabel = (c?: string) =>
+    MARKETPLACE_CONDITION_OPTIONS.find((o) => o.value === c)?.label ?? c ?? "—";
+
   const handleContact = (item: MarketplaceItem) => {
     setSelectedItem(item);
     setContactModalOpen(true);
@@ -212,14 +243,14 @@ export default function MarketplacePage() {
         )}
 
         {/* Quick Search Bar */}
-        <div className="bg-white p-4 rounded-lg shadow mb-4">
-          <form onSubmit={handleSearchSubmit} className="flex space-x-2">
+        <div className="bg-white p-4 rounded-lg shadow mb-4 space-y-3">
+          <form onSubmit={handleSearchSubmit} className="flex flex-wrap gap-2">
             <input
               type="text"
               value={searchTerm}
               onChange={handleSearchInput}
               placeholder="Search items by title or description..."
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="min-w-[200px] flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <button
               type="submit"
@@ -232,13 +263,30 @@ export default function MarketplacePage() {
                 type="button"
                 onClick={() => {
                   setSearchTerm("");
-                  fetchItems();
+                  void fetchItems({ searchTerm: "" });
                 }}
                 className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
               >
                 Clear
               </button>
             )}
+            <label className="flex items-center gap-2 text-sm text-gray-700 whitespace-nowrap">
+              <span className="font-medium">Sort</span>
+              <select
+                value={sortOrder}
+                onChange={(e) => {
+                  const v = e.target.value as SortOrder;
+                  setSortOrder(v);
+                  void fetchItems({ sortOrder: v });
+                }}
+                className="rounded-md border border-gray-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+                <option value="price_asc">Price: low to high</option>
+                <option value="price_desc">Price: high to low</option>
+              </select>
+            </label>
           </form>
         </div>
 
@@ -273,7 +321,7 @@ export default function MarketplacePage() {
 
           {filtersVisible && (
             <form onSubmit={handleSearch} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Category
@@ -287,6 +335,47 @@ export default function MarketplacePage() {
                     {MARKETPLACE_CATEGORIES.map((category) => (
                       <option key={category.value} value={category.value}>
                         {category.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Listing status
+                  </label>
+                  <select
+                    value={listingStatusFilter}
+                    onChange={(e) => {
+                      const v = e.target.value as ListingStatusFilter;
+                      setListingStatusFilter(v);
+                      void fetchItems({ listingStatusFilter: v });
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="active">Available &amp; reserved</option>
+                    <option value="available">Available only</option>
+                    <option value="reserved">Reserved only</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Condition
+                  </label>
+                  <select
+                    value={conditionFilter}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setConditionFilter(v);
+                      void fetchItems({ conditionFilter: v });
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="all">All conditions</option>
+                    {MARKETPLACE_CONDITION_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
                       </option>
                     ))}
                   </select>
@@ -333,7 +422,18 @@ export default function MarketplacePage() {
                     setSelectedCategory("all");
                     setMinPrice("");
                     setMaxPrice("");
-                    fetchItems();
+                    setSortOrder("newest");
+                    setListingStatusFilter("active");
+                    setConditionFilter("all");
+                    void fetchItems({
+                      searchTerm: "",
+                      selectedCategory: "all",
+                      minPrice: "",
+                      maxPrice: "",
+                      sortOrder: "newest",
+                      listingStatusFilter: "active",
+                      conditionFilter: "all",
+                    });
                   }}
                   className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
                 >
@@ -347,10 +447,13 @@ export default function MarketplacePage() {
           {(searchTerm ||
             selectedCategory !== "all" ||
             minPrice ||
-            maxPrice) && (
+            maxPrice ||
+            sortOrder !== "newest" ||
+            listingStatusFilter !== "active" ||
+            conditionFilter !== "all") && (
             <div className="mt-4 pt-4 border-t border-gray-200">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
                   <span className="font-medium">Active filters:</span>
                   {searchTerm && (
                     <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
@@ -372,6 +475,31 @@ export default function MarketplacePage() {
                       Max: ${maxPrice}
                     </span>
                   )}
+                  {sortOrder !== "newest" && (
+                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                      Sort:{" "}
+                      {sortOrder === "oldest"
+                        ? "Oldest first"
+                        : sortOrder === "price_asc"
+                          ? "Price low → high"
+                          : "Price high → low"}
+                    </span>
+                  )}
+                  {listingStatusFilter !== "active" && (
+                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                      {listingStatusFilter === "available"
+                        ? "Available only"
+                        : "Reserved only"}
+                    </span>
+                  )}
+                  {conditionFilter !== "all" && (
+                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                      Condition:{" "}
+                      {MARKETPLACE_CONDITION_OPTIONS.find(
+                        (o) => o.value === conditionFilter
+                      )?.label ?? conditionFilter}
+                    </span>
+                  )}
                 </div>
                 <button
                   onClick={() => {
@@ -379,7 +507,18 @@ export default function MarketplacePage() {
                     setSelectedCategory("all");
                     setMinPrice("");
                     setMaxPrice("");
-                    fetchItems();
+                    setSortOrder("newest");
+                    setListingStatusFilter("active");
+                    setConditionFilter("all");
+                    void fetchItems({
+                      searchTerm: "",
+                      selectedCategory: "all",
+                      minPrice: "",
+                      maxPrice: "",
+                      sortOrder: "newest",
+                      listingStatusFilter: "active",
+                      conditionFilter: "all",
+                    });
                   }}
                   className="text-red-600 hover:text-red-800 text-sm font-medium"
                 >
@@ -401,7 +540,13 @@ export default function MarketplacePage() {
               No items found
             </h3>
             <p className="text-gray-600 mb-4">
-              {searchTerm || selectedCategory !== "all" || minPrice || maxPrice
+              {searchTerm ||
+              selectedCategory !== "all" ||
+              minPrice ||
+              maxPrice ||
+              sortOrder !== "newest" ||
+              listingStatusFilter !== "active" ||
+              conditionFilter !== "all"
                 ? "Try adjusting your search criteria."
                 : "No items are currently available in the marketplace."}
             </p>
@@ -416,26 +561,52 @@ export default function MarketplacePage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {items.map((item) => (
+            {items.map((item) => {
+              const thumb = primaryMarketplaceImageUrl(item);
+              return (
               <div
                 key={item.id}
                 className="bg-white rounded-lg shadow overflow-hidden"
               >
-                {item.imageUrl && (
+                {thumb && (
                   <div className="aspect-w-16 aspect-h-9 bg-gray-200">
                     <img
-                      src={item.imageUrl}
+                      src={thumb}
                       alt={item.title}
                       className="w-full h-48 object-cover"
                     />
                   </div>
                 )}
                 <div className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
-                      {item.title}
-                    </h3>
-                    <span className="text-lg font-bold text-blue-600">
+                  <div className="flex justify-between items-start mb-2 gap-2">
+                    <div className="min-w-0">
+                      <h3 className="text-lg font-semibold text-gray-900 line-clamp-2">
+                        {item.title}
+                      </h3>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
+                            item.status === "available"
+                              ? "bg-green-100 text-green-800"
+                              : item.status === "reserved"
+                                ? "bg-amber-100 text-amber-900"
+                                : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {item.status === "available"
+                            ? "Available"
+                            : item.status === "reserved"
+                              ? "Reserved"
+                              : "Sold"}
+                        </span>
+                        {item.condition && (
+                          <span className="inline-block rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+                            {getConditionLabel(item.condition)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <span className="shrink-0 text-lg font-bold text-blue-600">
                       {formatPrice(item.price)}
                     </span>
                   </div>
@@ -482,7 +653,8 @@ export default function MarketplacePage() {
                       View Details
                     </Link>
                     {user &&
-                      (item.seller.telegram || item.seller.phoneNumber) && (
+                      (item.seller.telegram || item.seller.phoneNumber) &&
+                      item.status === "available" && (
                         <button
                           onClick={() => handleContact(item)}
                           className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors"
@@ -493,7 +665,8 @@ export default function MarketplacePage() {
                   </div>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>

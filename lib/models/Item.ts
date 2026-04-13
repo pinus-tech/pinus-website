@@ -1,4 +1,6 @@
 import mongoose from "mongoose";
+import { MARKETPLACE_CONDITION_VALUES } from "@/lib/constants/marketplace-conditions";
+import type { MarketplaceCondition } from "@/lib/constants/marketplace-conditions";
 
 // Marketplace categories
 export const MARKETPLACE_CATEGORIES = [
@@ -30,9 +32,14 @@ export interface IItem extends mongoose.Document {
   descriptionMarkdown?: boolean;
   price: number;
   seller: mongoose.Types.ObjectId;
-  status: "available" | "sold";
+  status: "available" | "reserved" | "sold";
   soldAt?: Date;
+  /** Physical / wear condition of the item. */
+  condition?: MarketplaceCondition;
+  /** @deprecated Use imageUrls; kept for legacy documents. */
   imageUrl?: string;
+  /** Up to 5 Firebase download URLs. */
+  imageUrls?: string[];
   category?: MarketplaceCategory;
   meetupLocation?: string;
   createdAt: Date;
@@ -52,16 +59,22 @@ const itemSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["available", "sold"],
+      enum: ["available", "reserved", "sold"],
       default: "available",
     },
     meetupLocation: { type: String },
     soldAt: { type: Date },
     imageUrl: { type: String },
+    imageUrls: [{ type: String }],
     category: { 
       type: String, 
       enum: MARKETPLACE_CATEGORIES,
       default: "Other"
+    },
+    condition: {
+      type: String,
+      enum: [...MARKETPLACE_CONDITION_VALUES],
+      default: "Other",
     },
   },
   {

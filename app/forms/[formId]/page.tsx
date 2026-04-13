@@ -32,6 +32,16 @@ import { uploadFormAttachment } from "@/lib/firebase/upload-form-attachment";
 import { FormAttachmentViewer } from "@/app/components/forms/FormAttachmentViewer";
 import { FormFilePendingPreview } from "@/app/components/forms/FormFilePendingPreview";
 import { ImageCropModal } from "@/app/components/ImageCropModal";
+import type { FormPageDefinition, FormTheme } from "@/lib/forms/form-pages";
+import {
+  createDefaultPage,
+  fieldsOnPage,
+  resolveNextPageIndex,
+  FORM_THEMES,
+} from "@/lib/forms/form-pages";
+import { formThemeClass } from "@/lib/forms/form-theme-styles";
+import { FormPagesManager } from "@/app/components/forms/FormPagesManager";
+import { uploadFormHeaderImage } from "@/lib/firebase/upload-form-header";
 
 type FormField = FormFieldDefinition;
 
@@ -51,6 +61,9 @@ interface Form {
     email: string;
   }>;
   fields: FormField[];
+  pages?: FormPageDefinition[];
+  theme?: FormTheme;
+  headerImageUrl?: string | null;
   responseCount: number;
   isActive: boolean;
   isShared?: boolean;
@@ -132,11 +145,16 @@ export default function FormDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [fillStep, setFillStep] = useState(0);
+  const [headerUploading, setHeaderUploading] = useState(false);
   const [editData, setEditData] = useState<{
     title?: string;
     description?: string;
     descriptionMarkdown?: boolean;
     fields?: FormField[];
+    pages?: FormPageDefinition[];
+    theme?: FormTheme;
+    headerImageUrl?: string;
     isActive?: boolean;
     shortLink?: string;
   }>({});
@@ -225,6 +243,7 @@ export default function FormDetailPage() {
       if (response.ok) {
         const data = await response.json();
         setForm(data.form);
+        setFillStep(0);
 
         const map = new Map<string, unknown>();
         if (data.form.mySubmission?.responses?.length) {
@@ -328,111 +347,6 @@ export default function FormDetailPage() {
     );
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!form) return;
-
-    for (const field of form.fields) {
-      if (!isDataField(field) || !field.required) continue;
-      const response = responses.find((r) => r.fieldLabel === field.label);
-      if (field.type === "file_upload") {
-        const hasUrl =
-          typeof response?.value === "string" &&
-          response.value.trim().length > 0;
-        const hasPending = !!pendingFiles[field.label];
-        if (!hasUrl && !hasPending) {
-          setError(`Field "${field.label}" is required`);
-          return;
-        }
-        continue;
-      }
-      if (!response || isEmptyValue(field, response.value)) {
-        setError(`Field "${field.label}" is required`);
-        return;
-      }
-    }
-
-    for (const field of form.fields) {
-      if (!isDataField(field)) continue;
-      const response = responses.find((r) => r.fieldLabel === field.label);
-      if (field.type === "file_upload" && pendingFiles[field.label]) {
-        continue;
-      }
-      const err = validateFieldValue(field, response?.value);
-      if (err) {
-        setError(`${field.label}: ${err}`);
-        return;
-      }
-    }
-
-    setSubmitting(true);
-    setError(null);
-
-    try {
-      if (!user?.id) {
-        setError("You must be signed in to submit.");
-        setSubmitting(false);
-        return;
-      }
-
-      let responsesPayload = responses.map((r) => ({ ...r }));
-
-      for (const field of form.fields) {
-        if (field.type !== "file_upload") continue;
-        const file = pendingFiles[field.label];
-        if (!file) continue;
-        const prepared = await prepareFormFileForUpload(file, {
-          acceptedTypes: field.acceptedFileTypes,
-        });
-        const url = await uploadFormAttachment(
-          prepared.blob,
-          prepared.filename,
-          prepared.contentType,
-          formId,
-          user.id
-        );
-        responsesPayload = responsesPayload.map((r) =>
-          r.fieldLabel === field.label ? { ...r, value: url } : r
-        );
-      }
-
-      for (const field of form.fields) {
-        if (!isDataField(field)) continue;
-        const payload = responsesPayload.find(
-          (r) => r.fieldLabel === field.label
-        );
-        const err = validateFieldValue(field, payload?.value);
-        if (err) {
-          setError(`${field.label}: ${err}`);
-          setSubmitting(false);
-          return;
-        }
-      }
-
-      const response = await fetch(`/api/forms/${formId}/responses`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ responses: responsesPayload }),
-      });
-
-      if (response.ok) {
-        router.push(`/forms/${formId}/thank-you`);
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || "Failed to submit form");
-      }
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Network error occurred"
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const startEditing = () => {
     if (!form) return;
     setEditData({
@@ -440,6 +354,11 @@ export default function FormDetailPage() {
       description: form.description ?? "",
       descriptionMarkdown: form.descriptionMarkdown ?? false,
       fields: JSON.parse(JSON.stringify(form.fields)) as FormField[],
+      pages: form.pages?.length
+        ? (JSON.parse(JSON.stringify(form.pages)) as FormPageDefinition[])
+        : [createDefaultPage()],
+      theme: form.theme ?? "blue",
+      headerImageUrl: form.headerImageUrl ?? "",
       isActive: form.isActive,
       shortLink: form.slug ?? "",
     });
@@ -480,6 +399,12 @@ export default function FormDetailPage() {
           descriptionMarkdown:
             editData.descriptionMarkdown ?? form.descriptionMarkdown ?? false,
           fields,
+          pages: editData.pages ?? form.pages,
+          theme: editData.theme ?? form.theme ?? "blue",
+          headerImageUrl:
+            (editData.headerImageUrl ?? "").trim() === ""
+              ? null
+              : editData.headerImageUrl?.trim(),
           isActive: editData.isActive ?? form.isActive,
           managers: selectedManagers,
           slug:
@@ -628,6 +553,181 @@ export default function FormDetailPage() {
       </div>
     );
   }
+
+  const pagesList: FormPageDefinition[] =
+    form.pages && form.pages.length > 0
+      ? form.pages
+      : [{ id: "_default", title: "", description: "", order: 0 }];
+  const multiPageFill = pagesList.length > 1;
+  const activeFillPageId = pagesList[fillStep]?.id ?? pagesList[0]!.id;
+  const fieldsForFillStep = multiPageFill
+    ? form.fields.filter((f) => (f.pageId ?? pagesList[0]!.id) === activeFillPageId)
+    : form.fields;
+  const atLastFillStep =
+    !multiPageFill || fillStep >= pagesList.length - 1;
+
+  const validateFillStepFields = (): string | null => {
+    for (const field of fieldsForFillStep) {
+      if (!isDataField(field) || !field.required) continue;
+      const response = responses.find((r) => r.fieldLabel === field.label);
+      if (field.type === "file_upload") {
+        const hasUrl =
+          typeof response?.value === "string" &&
+          response.value.trim().length > 0;
+        const hasPending = !!pendingFiles[field.label];
+        if (!hasUrl && !hasPending) {
+          return `Field "${field.label}" is required`;
+        }
+        continue;
+      }
+      if (!response || isEmptyValue(field, response.value)) {
+        return `Field "${field.label}" is required`;
+      }
+    }
+    return null;
+  };
+
+  const handleFillNext = () => {
+    const err = validateFillStepFields();
+    if (err) {
+      setError(err);
+      return;
+    }
+    setError(null);
+    const map = new Map(responses.map((r) => [r.fieldLabel, r.value]));
+    const nextIdx = resolveNextPageIndex(
+      pagesList,
+      fillStep,
+      fieldsOnPage(form.fields, activeFillPageId),
+      map
+    );
+    setFillStep(nextIdx);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!form) return;
+
+    if (multiPageFill && !atLastFillStep) {
+      const err = validateFillStepFields();
+      if (err) {
+        setError(err);
+        return;
+      }
+      setError(null);
+      const map = new Map(responses.map((r) => [r.fieldLabel, r.value]));
+      const nextIdx = resolveNextPageIndex(
+        pagesList,
+        fillStep,
+        fieldsOnPage(form.fields, activeFillPageId),
+        map
+      );
+      setFillStep(nextIdx);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    for (const field of form.fields) {
+      if (!isDataField(field) || !field.required) continue;
+      const response = responses.find((r) => r.fieldLabel === field.label);
+      if (field.type === "file_upload") {
+        const hasUrl =
+          typeof response?.value === "string" &&
+          response.value.trim().length > 0;
+        const hasPending = !!pendingFiles[field.label];
+        if (!hasUrl && !hasPending) {
+          setError(`Field "${field.label}" is required`);
+          return;
+        }
+        continue;
+      }
+      if (!response || isEmptyValue(field, response.value)) {
+        setError(`Field "${field.label}" is required`);
+        return;
+      }
+    }
+
+    for (const field of form.fields) {
+      if (!isDataField(field)) continue;
+      const response = responses.find((r) => r.fieldLabel === field.label);
+      if (field.type === "file_upload" && pendingFiles[field.label]) {
+        continue;
+      }
+      const err = validateFieldValue(field, response?.value);
+      if (err) {
+        setError(`${field.label}: ${err}`);
+        return;
+      }
+    }
+
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      if (!user?.id) {
+        setError("You must be signed in to submit.");
+        setSubmitting(false);
+        return;
+      }
+
+      let responsesPayload = responses.map((r) => ({ ...r }));
+
+      for (const field of form.fields) {
+        if (field.type !== "file_upload") continue;
+        const file = pendingFiles[field.label];
+        if (!file) continue;
+        const prepared = await prepareFormFileForUpload(file, {
+          acceptedTypes: field.acceptedFileTypes,
+        });
+        const url = await uploadFormAttachment(
+          prepared.blob,
+          prepared.filename,
+          prepared.contentType,
+          formId,
+          user.id
+        );
+        responsesPayload = responsesPayload.map((r) =>
+          r.fieldLabel === field.label ? { ...r, value: url } : r
+        );
+      }
+
+      for (const field of form.fields) {
+        if (!isDataField(field)) continue;
+        const payload = responsesPayload.find(
+          (r) => r.fieldLabel === field.label
+        );
+        const err = validateFieldValue(field, payload?.value);
+        if (err) {
+          setError(`${field.label}: ${err}`);
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      const response = await fetch(`/api/forms/${formId}/responses`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ responses: responsesPayload }),
+      });
+
+      if (response.ok) {
+        router.push(`/forms/${formId}/thank-you`);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || "Failed to submit form");
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Network error occurred"
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -863,6 +963,85 @@ export default function FormDetailPage() {
                   URL always works.
                 </p>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Colour theme
+                </label>
+                <p className="text-xs text-gray-500 mb-2">
+                  Accent for participants (PINUS logo palette).
+                </p>
+                <FormSelect
+                  value={editData.theme ?? form.theme ?? "blue"}
+                  onValueChange={(v) =>
+                    setEditData((prev) => ({
+                      ...prev,
+                      theme: v as FormTheme,
+                    }))
+                  }
+                  options={FORM_THEMES}
+                  placeholder="Theme"
+                  className="max-w-xs"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Header image (optional)
+                </label>
+                <p className="text-xs text-gray-500 mb-2">
+                  Paste an HTTPS image URL, or upload (stored securely).
+                </p>
+                <Input
+                  type="url"
+                  value={editData.headerImageUrl ?? form.headerImageUrl ?? ""}
+                  onChange={(e) =>
+                    setEditData((prev) => ({
+                      ...prev,
+                      headerImageUrl: e.target.value,
+                    }))
+                  }
+                  placeholder="https://…"
+                  className="mb-2"
+                />
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  className="text-sm text-gray-600"
+                  disabled={headerUploading || !user}
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (!f || !user || !formId) return;
+                    if (f.size > FORM_FILE_MAX_SOURCE_BYTES) {
+                      setError("Image must be 3 MB or smaller.");
+                      return;
+                    }
+                    setHeaderUploading(true);
+                    setError(null);
+                    try {
+                      const prepared = await prepareFormFileForUpload(f, {
+                        acceptedTypes: ["jpeg", "png", "gif", "webp"],
+                      });
+                      const url = await uploadFormHeaderImage(
+                        prepared.blob,
+                        prepared.filename,
+                        prepared.contentType,
+                        formId,
+                        user.id
+                      );
+                      setEditData((prev) => ({ ...prev, headerImageUrl: url }));
+                    } catch (err) {
+                      setError(
+                        err instanceof Error ? err.message : "Upload failed"
+                      );
+                    } finally {
+                      setHeaderUploading(false);
+                    }
+                  }}
+                />
+                {headerUploading && (
+                  <p className="text-xs text-gray-500 mt-1">Uploading…</p>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="edit-form-active"
@@ -921,9 +1100,38 @@ export default function FormDetailPage() {
                 </p>
               </div>
 
-              <div className="border-t border-gray-200 pt-4">
+              <div className="border-t border-gray-200 pt-4 space-y-6">
+                <FormPagesManager
+                  pages={
+                    editData.pages ??
+                    (form.pages?.length
+                      ? form.pages
+                      : [createDefaultPage()])
+                  }
+                  onChange={(pages) =>
+                    setEditData((prev) => ({ ...prev, pages }))
+                  }
+                  onRemovePage={(removedId, remaining) => {
+                    const target = remaining[0]?.id;
+                    if (!target) return;
+                    setEditData((prev) => ({
+                      ...prev,
+                      fields: (prev.fields ?? form.fields).map((field) =>
+                        field.pageId === removedId
+                          ? { ...field, pageId: target }
+                          : field
+                      ),
+                    }));
+                  }}
+                />
                 <FormFieldsEditor
                   fields={editData.fields ?? form.fields}
+                  pages={
+                    editData.pages ??
+                    (form.pages?.length
+                      ? form.pages
+                      : [createDefaultPage()])
+                  }
                   onChange={(fields) =>
                     setEditData((prev) => ({ ...prev, fields }))
                   }
@@ -1038,13 +1246,62 @@ export default function FormDetailPage() {
         )}
 
         {form.isActive && canFillForm && !isEditing ? (
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">
-              {isFormFiller ? "Fill form" : "Your responses"}
-            </h2>
+          <div
+            className={`overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm ${formThemeClass(
+              form.theme ?? "blue"
+            )}`}
+          >
+            {form.headerImageUrl && (
+              <img
+                src={form.headerImageUrl}
+                alt=""
+                className="h-44 w-full object-cover"
+              />
+            )}
+            <div
+              className="border-b px-8 py-8"
+              style={{
+                borderColor: "rgba(0,0,0,0.06)",
+                background:
+                  "linear-gradient(180deg, var(--pf-accent-soft) 0%, #fff 100%)",
+              }}
+            >
+              <h2 className="text-[1.65rem] font-normal leading-tight tracking-tight text-gray-900">
+                {form.title}
+              </h2>
+              {form.description?.trim() && (
+                <div className="mt-3 max-w-2xl text-base text-gray-600">
+                  <DescriptionContent
+                    text={form.description}
+                    asMarkdown={!!form.descriptionMarkdown}
+                  />
+                </div>
+              )}
+              {multiPageFill && (
+                <div className="mt-4 space-y-1">
+                  <p className="text-sm text-gray-500">
+                    Page {fillStep + 1} of {pagesList.length}
+                    {pagesList[fillStep]?.title?.trim()
+                      ? ` — ${pagesList[fillStep]!.title}`
+                      : ""}
+                  </p>
+                  {pagesList[fillStep]?.description?.trim() && (
+                    <p className="text-sm text-gray-600 max-w-2xl whitespace-pre-wrap">
+                      {pagesList[fillStep]!.description}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="p-6 sm:p-8">
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">
+              {isFormFiller ? "Your answers" : "Your responses"}
+            </h3>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {form.fields.map((field, index) => (
-                <div key={index} className="space-y-2">
+              {fieldsForFillStep.map((field) => {
+                const fi = form.fields.findIndex((x) => x.label === field.label);
+                return (
+                <div key={`${field.label}-${fi}`} className="space-y-2">
                   {field.type === "section" ? (
                     <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
                       {(field.sectionDisplay ?? "both") !== "description_only" &&
@@ -1201,7 +1458,7 @@ export default function FormDetailPage() {
                       {field.type === "checkbox" && (
                         <div className="flex items-center gap-2">
                           <Checkbox
-                            id={`fill-checkbox-${index}`}
+                            id={`fill-checkbox-${fi}`}
                             checked={
                               (responses.find(
                                 (r) => r.fieldLabel === field.label
@@ -1212,7 +1469,7 @@ export default function FormDetailPage() {
                             }
                           />
                           <label
-                            htmlFor={`fill-checkbox-${index}`}
+                            htmlFor={`fill-checkbox-${fi}`}
                             className="text-sm text-gray-700 cursor-pointer"
                           >
                             Yes
@@ -1247,7 +1504,7 @@ export default function FormDetailPage() {
                                 (r) => r.fieldLabel === field.label)
                                 ?.value as string[]) || []
                             ).includes(option);
-                            const optId = `mc-${index}-${optionIndex}`;
+                            const optId = `mc-${fi}-${optionIndex}`;
                             return (
                               <div
                                 key={optionIndex}
@@ -1279,9 +1536,9 @@ export default function FormDetailPage() {
                       {field.type === "file_upload" && (
                         <div className="space-y-3 rounded-xl border border-gray-100 bg-gray-50/80 p-4">
                           <input
-                            id={`form-file-upload-${index}`}
+                            id={`form-file-upload-${fi}`}
                             ref={(el) => {
-                              fileInputRefs.current[index] = el;
+                              fileInputRefs.current[fi] = el;
                             }}
                             type="file"
                             accept={buildAcceptHtmlAttribute(
@@ -1347,7 +1604,7 @@ export default function FormDetailPage() {
                                 variant="blue"
                                 outline
                                 onClick={() =>
-                                  fileInputRefs.current[index]?.click()
+                                  fileInputRefs.current[fi]?.click()
                                 }
                               >
                                 Choose file
@@ -1372,7 +1629,7 @@ export default function FormDetailPage() {
                                   variant="blue"
                                   outline
                                   onClick={() =>
-                                    fileInputRefs.current[index]?.click()
+                                    fileInputRefs.current[fi]?.click()
                                   }
                                 >
                                   {isPdfFile(pendingFiles[field.label]!)
@@ -1389,7 +1646,7 @@ export default function FormDetailPage() {
                                       [field.label]: null,
                                     }));
                                     handleResponseChange(field.label, "");
-                                    const el = fileInputRefs.current[index];
+                                    const el = fileInputRefs.current[fi];
                                     if (el) el.value = "";
                                   }}
                                 >
@@ -1420,14 +1677,37 @@ export default function FormDetailPage() {
                     </>
                   )}
                 </div>
-              ))}
+                );
+              })}
 
-              <div className="pt-4">
-                <Button type="submit" variant="blue" disabled={submitting}>
-                  {submitting ? "Submitting..." : "Submit Form"}
-                </Button>
+              <div className="flex flex-wrap gap-3 pt-4">
+                {multiPageFill && fillStep > 0 && (
+                  <Button
+                    type="button"
+                    variant="black"
+                    outline
+                    onClick={() => {
+                      setFillStep((s) => Math.max(0, s - 1));
+                      setError(null);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                  >
+                    Back
+                  </Button>
+                )}
+                {multiPageFill && !atLastFillStep && (
+                  <Button type="button" variant="blue" onClick={handleFillNext}>
+                    Next
+                  </Button>
+                )}
+                {atLastFillStep && (
+                  <Button type="submit" variant="blue" disabled={submitting}>
+                    {submitting ? "Submitting..." : "Submit"}
+                  </Button>
+                )}
               </div>
             </form>
+            </div>
           </div>
         ) : !form.isActive ? (
           <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg">

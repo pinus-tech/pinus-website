@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import Link from "next/link";
 import { Button } from "@/app/components/ui/button";
@@ -51,7 +52,9 @@ export default function FormsPage() {
   const [shareCopiedKind, setShareCopiedKind] = useState<
     "long" | "short" | null
   >(null);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
+  const router = useRouter();
   const { user, loading: authLoading } = useAuth();
 
   const isSiteAdmin = !!(user?.isSuperAdmin || user?.isAdmin);
@@ -111,6 +114,26 @@ export default function FormsPage() {
       setError("Network error occurred");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const duplicateForm = async (formId: string) => {
+    setDuplicatingId(formId);
+    setError(null);
+    try {
+      const response = await fetch(`/api/forms/${formId}/duplicate`, {
+        method: "POST",
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setError(data.error || "Failed to duplicate form");
+        return;
+      }
+      router.push(`/forms/${String(data.form.id)}`);
+    } catch {
+      setError("Network error occurred");
+    } finally {
+      setDuplicatingId(null);
     }
   };
 
@@ -341,12 +364,24 @@ export default function FormsPage() {
                       </Link>
                     )}
                     {form.userPermissions?.canEdit && (
-                      <Link
-                        href={`/forms/${form.id}`}
-                        className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
-                      >
-                        Edit form
-                      </Link>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => duplicateForm(form.id)}
+                          disabled={duplicatingId === form.id}
+                          className="bg-slate-600 hover:bg-slate-700 disabled:opacity-60 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+                        >
+                          {duplicatingId === form.id
+                            ? "Duplicating…"
+                            : "Duplicate"}
+                        </button>
+                        <Link
+                          href={`/forms/${form.id}`}
+                          className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+                        >
+                          Edit form
+                        </Link>
+                      </>
                     )}
                     {form.userPermissions?.canViewResponses && (
                       <Link

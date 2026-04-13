@@ -5,7 +5,20 @@ import { useRouter, usePathname } from "next/navigation";
 import { buildLoginUrl } from "@/lib/login-callback";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import type { FormFieldDefinition } from "@/lib/form-field-types";
+import {
+  createDefaultPage,
+  type FormPageDefinition,
+  type FormTheme,
+  FORM_THEMES,
+} from "@/lib/forms/form-pages";
 import { FormFieldsEditor } from "@/app/components/forms/FormFieldsEditor";
+import { FormPagesManager } from "@/app/components/forms/FormPagesManager";
+import { FormSelect } from "@/app/components/forms/FormSelect";
+import { uploadFormHeaderImage } from "@/lib/firebase/upload-form-header";
+import {
+  prepareFormFileForUpload,
+  FORM_FILE_MAX_SOURCE_BYTES,
+} from "@/lib/forms/form-file-prepare";
 import { Input } from "@/app/components/ui/input";
 import { Textarea } from "@/app/components/ui/textarea";
 import { Button } from "@/app/components/ui/button";
@@ -19,6 +32,9 @@ interface FormData {
   /** When true, description is rendered as Markdown on the form page. */
   descriptionMarkdown: boolean;
   fields: FormField[];
+  pages: FormPageDefinition[];
+  theme: FormTheme;
+  headerImageUrl: string;
   managers: string[];
   /** Optional short path segment for /f/{shortLink} */
   shortLink: string;
@@ -31,9 +47,13 @@ export default function CreateFormPage() {
     description: '',
     descriptionMarkdown: false,
     fields: [],
+    pages: [createDefaultPage()],
+    theme: "blue",
+    headerImageUrl: "",
     managers: [],
     shortLink: '',
   });
+  const [headerUploading, setHeaderUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [potentialManagers, setPotentialManagers] = useState<Array<{
     id: string;
@@ -143,6 +163,11 @@ export default function CreateFormPage() {
           description: formData.description,
           descriptionMarkdown: formData.descriptionMarkdown,
           fields: formData.fields,
+          pages: formData.pages,
+          theme: formData.theme,
+          ...(formData.headerImageUrl.trim()
+            ? { headerImageUrl: formData.headerImageUrl.trim() }
+            : {}),
           managers: formData.managers,
           ...(formData.shortLink.trim()
             ? { shortLink: formData.shortLink.trim() }
@@ -273,7 +298,111 @@ export default function CreateFormPage() {
                   className="font-mono"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Colour theme
+                </label>
+                <p className="text-xs text-gray-500 mb-2">
+                  Accent colour for the form participants see (PINUS logo
+                  palette).
+                </p>
+                <FormSelect
+                  value={formData.theme}
+                  onValueChange={(v) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      theme: v as FormTheme,
+                    }))
+                  }
+                  options={FORM_THEMES}
+                  placeholder="Theme"
+                  className="max-w-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Header image (optional)
+                </label>
+                <p className="text-xs text-gray-500 mb-2">
+                  Shown at the top of the form. Paste an HTTPS image URL, or
+                  upload (stored securely).
+                </p>
+                <Input
+                  type="url"
+                  value={formData.headerImageUrl}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      headerImageUrl: e.target.value,
+                    }))
+                  }
+                  placeholder="https://…"
+                  className="mb-2"
+                />
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  className="text-sm text-gray-600"
+                  disabled={headerUploading || !user}
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (!f || !user) return;
+                    if (f.size > FORM_FILE_MAX_SOURCE_BYTES) {
+                      setError("Image must be 3 MB or smaller.");
+                      return;
+                    }
+                    setHeaderUploading(true);
+                    setError(null);
+                    try {
+                      const prepared = await prepareFormFileForUpload(f, {
+                        acceptedTypes: ["jpeg", "png", "gif", "webp"],
+                      });
+                      const url = await uploadFormHeaderImage(
+                        prepared.blob,
+                        prepared.filename,
+                        prepared.contentType,
+                        "draft",
+                        user.id
+                      );
+                      setFormData((prev) => ({ ...prev, headerImageUrl: url }));
+                    } catch (err) {
+                      setError(
+                        err instanceof Error ? err.message : "Upload failed"
+                      );
+                    } finally {
+                      setHeaderUploading(false);
+                    }
+                  }}
+                />
+                {headerUploading && (
+                  <p className="text-xs text-gray-500 mt-1">Uploading…</p>
+                )}
+              </div>
             </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg shadow">
+            <FormPagesManager
+              pages={formData.pages}
+              onChange={(pages) =>
+                setFormData((prev) => ({ ...prev, pages }))
+              }
+              onRemovePage={(removedId, remaining) => {
+                const target = remaining[0]?.id;
+                if (!target) return;
+                setFormData((prev) => ({
+                  ...prev,
+                  fields: prev.fields.map((field) =>
+                    field.pageId === removedId
+                      ? { ...field, pageId: target }
+                      : field
+                  ),
+                }));
+              }}
+            />
           </div>
 
           <div className="bg-white p-6 rounded-lg shadow">
@@ -282,6 +411,7 @@ export default function CreateFormPage() {
               onChange={(fields) =>
                 setFormData((prev) => ({ ...prev, fields }))
               }
+              pages={formData.pages}
             />
           </div>
 

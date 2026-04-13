@@ -1,7 +1,14 @@
+import type { FilterQuery } from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
-import Item from "@/lib/models/Item";
+import Item, { type IItem } from "@/lib/models/Item";
 import { toMarketplaceSellerPayload } from "@/lib/marketplace-seller";
+import {
+  marketplaceImageApiFields,
+  parseIncomingImageUrls,
+} from "@/lib/marketplace-images";
+import { MARKETPLACE_CONDITION_VALUES } from "@/lib/constants/marketplace-conditions";
+import type { MarketplaceCondition } from "@/lib/constants/marketplace-conditions";
 import { verifyToken } from "@/lib/utils/auth";
 
 // Middleware to check if user is logged in
@@ -28,37 +35,49 @@ export async function GET(req: NextRequest) {
     const maxPrice = searchParams.get('maxPrice');
     const statusParam = searchParams.get("status");
     const seller = searchParams.get("seller");
+    const conditionParam = searchParams.get("condition");
+    const sortParam = searchParams.get("sort") ?? "newest";
 
-    // Public marketplace: default to available only.
-    // Seller "my listings": omit status unless explicitly filtered (available | sold) so sold items load after refresh.
-    const query: {
-      status?: string;
-      category?: string;
-      $or?: Array<
-        | { title: { $regex: string; $options: string } }
-        | { description: { $regex: string; $options: string } }
-      >;
-      price?: { $gte?: number; $lte?: number };
-      seller?: string;
-    } = {};
+    const query: FilterQuery<IItem> = {};
 
     if (seller) {
       query.seller = seller;
-      if (statusParam === "available" || statusParam === "sold") {
+      if (
+        statusParam === "available" ||
+        statusParam === "reserved" ||
+        statusParam === "sold"
+      ) {
         query.status = statusParam;
       }
     } else {
-      query.status = statusParam || "available";
+      // Public browse: show active listings (not sold) unless narrowed.
+      if (!statusParam || statusParam === "active") {
+        query.status = { $in: ["available", "reserved"] };
+      } else if (statusParam === "available" || statusParam === "reserved") {
+        query.status = statusParam;
+      } else {
+        query.status = { $in: ["available", "reserved"] };
+      }
     }
 
-    if (category && category !== 'all') {
+    if (category && category !== "all") {
       query.category = category;
+    }
+
+    if (
+      conditionParam &&
+      conditionParam !== "all" &&
+      (MARKETPLACE_CONDITION_VALUES as readonly string[]).includes(
+        conditionParam
+      )
+    ) {
+      query.condition = conditionParam as MarketplaceCondition;
     }
 
     if (search) {
       query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
+        { title: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
       ];
     }
 
@@ -68,31 +87,46 @@ export async function GET(req: NextRequest) {
       if (maxPrice) query.price.$lte = Number(maxPrice);
     }
 
-    // Filter by seller if provided
-    if (seller) {
-      query.seller = seller;
+    let sort: Record<string, 1 | -1> = { createdAt: -1 };
+    switch (sortParam) {
+      case "price_asc":
+        sort = { price: 1 };
+        break;
+      case "price_desc":
+        sort = { price: -1 };
+        break;
+      case "oldest":
+        sort = { createdAt: 1 };
+        break;
+      case "newest":
+      default:
+        sort = { createdAt: -1 };
     }
 
-    // Get items with seller information
     const items = await Item.find(query)
-      .populate('seller', 'name telegram phoneNumber')
-      .sort({ createdAt: -1 });
+      .populate("seller", "name telegram phoneNumber")
+      .sort(sort);
 
     return NextResponse.json({
-      items: items.map(item => ({
-        id: item._id,
-        title: item.title,
-        description: item.description,
-        descriptionMarkdown: !!item.descriptionMarkdown,
-        price: item.price,
-        seller: toMarketplaceSellerPayload(item.seller),
-        status: item.status,
-        category: item.category,
-        meetupLocation: item.meetupLocation,
-        imageUrl: item.imageUrl,
-        createdAt: item.createdAt,
-        updatedAt: item.updatedAt
-      })),
+      items: items.map((item) => {
+        const { imageUrls, imageUrl } = marketplaceImageApiFields(item);
+        return {
+          id: item._id,
+          title: item.title,
+          description: item.description,
+          descriptionMarkdown: !!item.descriptionMarkdown,
+          price: item.price,
+          seller: toMarketplaceSellerPayload(item.seller),
+          status: item.status,
+          category: item.category,
+          meetupLocation: item.meetupLocation,
+          condition: item.condition,
+          imageUrls,
+          imageUrl,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+        };
+      }),
       totalItems: items.length
     });
   } catch (error) {
@@ -124,9 +158,20 @@ export async function POST(req: NextRequest) {
       price,
       category,
       meetupLocation,
-      imageUrl,
       descriptionMarkdown,
+      condition,
     } = body;
+
+    const parsedImages = parseIncomingImageUrls({
+      imageUrls: body.imageUrls,
+      imageUrl: body.imageUrl,
+    });
+    if (!parsedImages.ok) {
+      return NextResponse.json(
+        { error: parsedImages.error },
+        { status: 400 }
+      );
+    }
 
     // Validate required fields
     if (!title || price === undefined) {
@@ -161,6 +206,20 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    let resolvedCondition: MarketplaceCondition = "Other";
+    if (condition !== undefined && condition !== null) {
+      if (
+        typeof condition !== "string" ||
+        !(MARKETPLACE_CONDITION_VALUES as readonly string[]).includes(condition)
+      ) {
+        return NextResponse.json(
+          { error: "Invalid condition" },
+          { status: 400 }
+        );
+      }
+      resolvedCondition = condition as MarketplaceCondition;
+    }
+
     // Create new item
     const newItem = new Item({
       title,
@@ -171,13 +230,17 @@ export async function POST(req: NextRequest) {
       status: 'available',
       category: category || 'Other',
       meetupLocation,
-      imageUrl
+      condition: resolvedCondition,
+      imageUrls: parsedImages.imageUrls,
+      imageUrl: parsedImages.imageUrl,
     });
 
     await newItem.save();
 
     // Populate seller information
     await newItem.populate('seller', 'name telegram phoneNumber');
+
+    const { imageUrls, imageUrl } = marketplaceImageApiFields(newItem);
 
     return NextResponse.json({
       message: "Item created successfully",
@@ -191,10 +254,12 @@ export async function POST(req: NextRequest) {
         status: newItem.status,
         category: newItem.category,
         meetupLocation: newItem.meetupLocation,
-        imageUrl: newItem.imageUrl,
+        condition: newItem.condition,
+        imageUrls,
+        imageUrl,
         createdAt: newItem.createdAt,
-        updatedAt: newItem.updatedAt
-      }
+        updatedAt: newItem.updatedAt,
+      },
     }, { status: 201 });
   } catch (error) {
     console.error("Error creating marketplace item:", error);

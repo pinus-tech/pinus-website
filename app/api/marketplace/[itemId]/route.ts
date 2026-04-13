@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Item from "@/lib/models/Item";
 import { toMarketplaceSellerPayload } from "@/lib/marketplace-seller";
+import {
+  marketplaceImageApiFields,
+  parseIncomingImageUrls,
+} from "@/lib/marketplace-images";
 import { verifyToken } from "@/lib/utils/auth";
+import { MARKETPLACE_CONDITION_VALUES } from "@/lib/constants/marketplace-conditions";
 
 // Middleware to check if user is logged in
 async function verifyLoggedInUser(req: NextRequest) {
@@ -52,6 +57,8 @@ export async function GET(
       sellerInfo = { name: sellerBase.name };
     }
 
+    const { imageUrls, imageUrl } = marketplaceImageApiFields(item);
+
     return NextResponse.json({
       item: {
         id: item._id,
@@ -63,11 +70,13 @@ export async function GET(
         status: item.status,
         category: item.category,
         meetupLocation: item.meetupLocation,
-        imageUrl: item.imageUrl,
+        condition: item.condition,
+        imageUrls,
+        imageUrl,
         createdAt: item.createdAt,
-        updatedAt: item.updatedAt
+        updatedAt: item.updatedAt,
       },
-      isLoggedIn
+      isLoggedIn,
     });
   } catch (error) {
     console.error("Error fetching item:", error);
@@ -95,7 +104,7 @@ export async function PATCH(
     await dbConnect();
 
     const { itemId } = await params;
-    const body = await req.json();
+    const body = await req.json() as Record<string, unknown>;
 
     // Find item by ID
     const item = await Item.findById(itemId);
@@ -137,8 +146,8 @@ export async function PATCH(
         "Art & Crafts", "Food & Beverages", "Health & Wellness", "Baby & Kids",
         "Pets & Animals", "Garden & Outdoor", "Office & Business", "Free Items", "Other"
       ];
-      
-      if (!validCategories.includes(body.category)) {
+      const cat = body.category;
+      if (typeof cat !== "string" || !validCategories.includes(cat)) {
         return NextResponse.json(
           { error: "Invalid category" },
           { status: 400 }
@@ -146,10 +155,59 @@ export async function PATCH(
       }
     }
 
+    if (body.status !== undefined) {
+      const allowedStatus = ["available", "reserved", "sold"];
+      if (
+        typeof body.status !== "string" ||
+        !allowedStatus.includes(body.status)
+      ) {
+        return NextResponse.json(
+          { error: "Invalid status" },
+          { status: 400 }
+        );
+      }
+    }
+
+    if (body.condition !== undefined) {
+      const c = body.condition;
+      if (
+        typeof c !== "string" ||
+        !(MARKETPLACE_CONDITION_VALUES as readonly string[]).includes(c)
+      ) {
+        return NextResponse.json(
+          { error: "Invalid condition" },
+          { status: 400 }
+        );
+      }
+    }
+
+    const updatePayload: Record<string, unknown> = { ...body };
+    delete updatePayload.imageUrls;
+    delete updatePayload.imageUrl;
+
+    if (
+      Object.prototype.hasOwnProperty.call(body, "imageUrls") ||
+      Object.prototype.hasOwnProperty.call(body, "imageUrl")
+    ) {
+      const parsed = parseIncomingImageUrls({
+        imageUrls: body.imageUrls,
+        imageUrl: body.imageUrl,
+      });
+      if (!parsed.ok) {
+        return NextResponse.json({ error: parsed.error }, { status: 400 });
+      }
+      updatePayload.imageUrls = parsed.imageUrls;
+      updatePayload.imageUrl = parsed.imageUrl;
+    }
+
+    if (typeof body.status === "string") {
+      updatePayload.soldAt = body.status === "sold" ? new Date() : null;
+    }
+
     // Update item
     const updatedItem = await Item.findByIdAndUpdate(
       itemId,
-      { ...body },
+      updatePayload,
       { new: true }
     ).populate('seller', 'name telegram phoneNumber');
 
@@ -159,6 +217,8 @@ export async function PATCH(
         { status: 404 }
       );
     }
+
+    const { imageUrls, imageUrl } = marketplaceImageApiFields(updatedItem);
 
     return NextResponse.json({
       message: "Item updated successfully",
@@ -172,10 +232,12 @@ export async function PATCH(
         status: updatedItem.status,
         category: updatedItem.category,
         meetupLocation: updatedItem.meetupLocation,
-        imageUrl: updatedItem.imageUrl,
+        condition: updatedItem.condition,
+        imageUrls,
+        imageUrl,
         createdAt: updatedItem.createdAt,
-        updatedAt: updatedItem.updatedAt
-      }
+        updatedAt: updatedItem.updatedAt,
+      },
     });
   } catch (error) {
     console.error("Error updating item:", error);

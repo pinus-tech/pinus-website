@@ -5,6 +5,7 @@ import type {
   FormFieldDefinition,
   FormFieldType,
 } from "@/lib/form-field-types";
+import type { FormPageDefinition } from "@/lib/forms/form-pages";
 import { Input } from "@/app/components/ui/input";
 import { Textarea } from "@/app/components/ui/textarea";
 import { Button } from "@/app/components/ui/button";
@@ -47,11 +48,14 @@ export function FormFieldsEditor({
   fields,
   onChange,
   addFieldFabClassName = "fixed bottom-6 right-6 z-40 shadow-lg",
+  pages = [],
 }: {
   fields: FormField[];
   onChange: (fields: FormField[]) => void;
   /** Override for fixed "Add Field" position (e.g. clear a bottom save bar on form edit). */
   addFieldFabClassName?: string;
+  /** Multi-page forms: assign each field to a page; branching uses these ids. */
+  pages?: FormPageDefinition[];
 }) {
   const updateField = (index: number, patch: Partial<FormField>) => {
     onChange(
@@ -68,8 +72,27 @@ export function FormFieldsEditor({
         required: false,
         description: "",
         options: [],
+        ...(pages[0]?.id ? { pageId: pages[0].id } : {}),
       },
     ]);
+  };
+
+  const setOptionBranch = (
+    fieldIndex: number,
+    optionLabel: string,
+    targetPageId: string
+  ) => {
+    const field = fields[fieldIndex];
+    if (!field) return;
+    const next = { ...(field.optionGoToPageId ?? {}) };
+    if (targetPageId === "_next") {
+      delete next[optionLabel];
+    } else {
+      next[optionLabel] = targetPageId;
+    }
+    updateField(fieldIndex, {
+      optionGoToPageId: Object.keys(next).length ? next : undefined,
+    });
   };
 
   const removeField = (index: number) => {
@@ -161,6 +184,23 @@ export function FormFieldsEditor({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {pages.length > 0 && field.type !== "section" && (
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Page
+                    </label>
+                    <FormSelect
+                      value={field.pageId ?? pages[0]!.id}
+                      onValueChange={(v) => updateField(index, { pageId: v })}
+                      options={pages.map((p, i) => ({
+                        value: p.id,
+                        label: (p.title?.trim() || `Page ${i + 1}`).slice(0, 80),
+                      }))}
+                      placeholder="Choose page"
+                      className="max-w-md"
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Field Label *
@@ -446,31 +486,73 @@ export function FormFieldsEditor({
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Options *
                   </label>
+                  {pages.length > 1 &&
+                    (field.type === "dropdown" ||
+                      (field.type === "multiple_choice" &&
+                        (field.maxSelections ?? 999) <= 1)) && (
+                      <p className="text-xs text-gray-600 mb-2">
+                        After each option, choose which page comes next (like
+                        Google Forms). “Next in order” follows your page list.
+                      </p>
+                    )}
                   <div className="space-y-2">
                     {field.options?.map((option, optionIndex) => (
                       <div
                         key={optionIndex}
-                        className="flex items-center gap-2"
+                        className="flex flex-col gap-2 sm:flex-row sm:items-start"
                       >
-                        <Input
-                          type="text"
-                          value={option}
-                          onChange={(e) =>
-                            updateOption(index, optionIndex, e.target.value)
-                          }
-                          className="flex-1"
-                          placeholder={`Option ${optionIndex + 1}`}
-                          required
-                        />
-                        <Button
-                          type="button"
-                          variant="red"
-                          outline
-                          size="sm"
-                          onClick={() => removeOption(index, optionIndex)}
-                        >
-                          Remove
-                        </Button>
+                        <div className="flex flex-1 items-center gap-2 min-w-0">
+                          <Input
+                            type="text"
+                            value={option}
+                            onChange={(e) =>
+                              updateOption(index, optionIndex, e.target.value)
+                            }
+                            className="flex-1 min-w-0"
+                            placeholder={`Option ${optionIndex + 1}`}
+                            required
+                          />
+                          <Button
+                            type="button"
+                            variant="red"
+                            outline
+                            size="sm"
+                            onClick={() => removeOption(index, optionIndex)}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                        {pages.length > 1 &&
+                          (field.type === "dropdown" ||
+                            (field.type === "multiple_choice" &&
+                              (field.maxSelections ?? 999) <= 1)) &&
+                          option.trim().length > 0 && (
+                            <div className="w-full sm:w-64 shrink-0">
+                              <label className="sr-only">
+                                Branch for {option}
+                              </label>
+                              <FormSelect
+                                value={
+                                  field.optionGoToPageId?.[option] ?? "_next"
+                                }
+                                onValueChange={(v) =>
+                                  setOptionBranch(index, option, v)
+                                }
+                                options={[
+                                  {
+                                    value: "_next",
+                                    label: "Next page (in order)",
+                                  },
+                                  ...pages.map((p, pi) => ({
+                                    value: p.id,
+                                    label: `→ ${(p.title?.trim() || `Page ${pi + 1}`).slice(0, 40)}`,
+                                  })),
+                                ]}
+                                placeholder="Then go to"
+                                className="text-sm"
+                              />
+                            </div>
+                          )}
                       </div>
                     ))}
                     <Button

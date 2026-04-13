@@ -35,6 +35,8 @@ export interface IForm extends mongoose.Document {
     minLength?: number;
     maxLength?: number;
     acceptedFileTypes?: string[];
+    pageId?: string;
+    optionGoToPageId?: Record<string, string>;
   }[];
   responses: mongoose.Types.ObjectId[];
   isActive: boolean;
@@ -42,6 +44,17 @@ export interface IForm extends mongoose.Document {
   isShared: boolean;
   /** Optional short path: /f/{slug} → /forms/{id} */
   slug?: string;
+  /** PINUS logo-inspired accent for the respondent UI. */
+  theme?: "blue" | "red" | "yellow";
+  /** Banner image (HTTPS URL, e.g. Firebase). */
+  headerImageUrl?: string;
+  /** Multi-page form sections (order matters). */
+  pages?: Array<{
+    id: string;
+    title?: string;
+    description?: string;
+    order: number;
+  }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -79,7 +92,23 @@ const formSchema = new mongoose.Schema({
     minLength: { type: Number },
     maxLength: { type: Number },
     acceptedFileTypes: [{ type: String }],
+    pageId: { type: String },
+    optionGoToPageId: { type: mongoose.Schema.Types.Mixed },
   }],
+  pages: [
+    {
+      id: { type: String, required: true },
+      title: { type: String },
+      description: { type: String },
+      order: { type: Number, default: 0 },
+    },
+  ],
+  theme: {
+    type: String,
+    enum: ["blue", "red", "yellow"],
+    default: "blue",
+  },
+  headerImageUrl: { type: String },
   responses: [{ 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Response' 
