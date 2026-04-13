@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import { buildLoginUrl } from "@/lib/login-callback";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
@@ -38,12 +39,13 @@ export default function ProfilePage() {
 
   const { user, refreshUser, loading: authLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     // Wait for /api/auth/me - on refresh `user` is null until the session is loaded
     if (authLoading) return;
     if (!user) {
-      router.push("/login");
+      router.push(buildLoginUrl(pathname));
       return;
     }
 
@@ -64,7 +66,7 @@ export default function ProfilePage() {
           ? String(user.yearOfStudy)
           : "",
     });
-  }, [user, router, authLoading]);
+  }, [user, router, authLoading, pathname]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

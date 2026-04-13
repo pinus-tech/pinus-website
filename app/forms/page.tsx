@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import Link from "next/link";
 import { Button } from "@/app/components/ui/button";
+import { buildLoginUrl, pathAndQueryFromWindow } from "@/lib/login-callback";
 
 interface Form {
   id: string;
@@ -72,7 +73,7 @@ export default function FormsPage() {
     if (authLoading) return;
 
     if (!user) {
-      window.location.href = "/login";
+      window.location.href = buildLoginUrl(pathAndQueryFromWindow());
       return;
     }
 

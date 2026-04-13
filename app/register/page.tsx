@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import { getSafeRedirectPath } from "@/lib/login-callback";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { PhoneInput } from "@/app/components/ui/phone-input";
@@ -22,7 +23,7 @@ import {
   CardTitle,
 } from "@/app/components/ui/card";
 
-export default function RegisterPage() {
+function RegisterPageInner() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -43,16 +44,25 @@ export default function RegisterPage() {
 
   const { register, user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = getSafeRedirectPath(searchParams.get("callbackUrl"));
+  const loginHref =
+    returnTo != null
+      ? `/login?callbackUrl=${encodeURIComponent(returnTo)}`
+      : "/login";
 
   useEffect(() => {
-    if (user) {
-      if (user.isAdmin) {
-        router.push("/admin/dashboard");
-      } else {
-        router.push("/");
-      }
+    if (!user) return;
+    if (returnTo) {
+      router.replace(returnTo);
+      return;
     }
-  }, [user, router]);
+    if (user.isAdmin) {
+      router.replace("/admin/dashboard");
+    } else {
+      router.replace("/");
+    }
+  }, [user, router, returnTo]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -197,7 +207,7 @@ export default function RegisterPage() {
                 will receive an email notification once your account is
                 approved.
               </p>
-              <Link href="/login">
+              <Link href={loginHref}>
                 <Button variant="blue">Go to Login</Button>
               </Link>
             </CardContent>
@@ -216,7 +226,7 @@ export default function RegisterPage() {
         <p className="mt-2 text-center text-sm text-gray-600">
           Or{" "}
           <Link
-            href="/login"
+            href={loginHref}
             className="font-medium text-blue-main hover:text-blue-main/90"
           >
             sign in to your existing account
@@ -380,5 +390,19 @@ export default function RegisterPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="bg-gray-50 flex flex-col justify-center py-24 min-h-[40vh] items-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-main" />
+        </div>
+      }
+    >
+      <RegisterPageInner />
+    </Suspense>
   );
 }

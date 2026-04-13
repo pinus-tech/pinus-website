@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import { getSafeRedirectPath } from "@/lib/login-callback";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
 import { Form } from "@/app/components/ui/form";
@@ -24,16 +25,20 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const justRegistered = searchParams.get("registered") === "1";
+  const returnTo = getSafeRedirectPath(searchParams.get("callbackUrl"));
 
   useEffect(() => {
-    if (user) {
-      if (user.isAdmin) {
-        router.push("/admin/dashboard");
-      } else {
-        router.push("/");
-      }
+    if (!user) return;
+    if (returnTo) {
+      router.replace(returnTo);
+      return;
     }
-  }, [user, router]);
+    if (user.isAdmin) {
+      router.replace("/admin/dashboard");
+    } else {
+      router.replace("/");
+    }
+  }, [user, router, returnTo]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +65,11 @@ function LoginForm() {
         <p className="mt-2 text-center text-sm text-gray-600">
           Or{" "}
           <Link
-            href="/register"
+            href={
+              returnTo
+                ? `/register?callbackUrl=${encodeURIComponent(returnTo)}`
+                : "/register"
+            }
             className="font-medium text-blue-main hover:text-blue-main/90"
           >
             create a new account

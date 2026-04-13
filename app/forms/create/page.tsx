@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import { buildLoginUrl } from "@/lib/login-callback";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import type { FormFieldDefinition } from "@/lib/form-field-types";
 import { FormFieldsEditor } from "@/app/components/forms/FormFieldsEditor";
@@ -39,12 +40,13 @@ export default function CreateFormPage() {
 
   const { user, canCreateForms, loading: authLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (authLoading) return;
     // Redirect if not authenticated
     if (!user) {
-      router.push("/login");
+      router.push(buildLoginUrl(pathname));
       return;
     }
 
@@ -56,7 +58,7 @@ export default function CreateFormPage() {
 
     // Fetch potential managers
     fetchPotentialManagers();
-  }, [user, canCreateForms, router]);
+  }, [user, canCreateForms, router, pathname]);
 
   const fetchPotentialManagers = async () => {
     try {

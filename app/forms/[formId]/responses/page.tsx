@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, Suspense } from "react";
 import { useRouter, useParams, useSearchParams, usePathname } from "next/navigation";
+import { loginUrlFromPathnameAndSearch } from "@/lib/login-callback";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
@@ -122,12 +123,12 @@ function FormResponsesPageContent() {
     if (authLoading) return;
 
     if (!user) {
-      router.push("/login");
+      router.push(loginUrlFromPathnameAndSearch(pathname, searchParams));
       return;
     }
 
     fetchFormAndResponses();
-  }, [user, authLoading, router, formId]);
+  }, [user, authLoading, router, formId, pathname, searchParams]);
 
   useEffect(() => {
     const msg = error?.trim().toLowerCase() ?? "";

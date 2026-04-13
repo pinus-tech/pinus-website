@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { buildLoginUrl } from "@/lib/login-callback";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { Button } from "./button";
 import { NavDropdown } from "./nav-dropdown";
@@ -20,6 +22,8 @@ const PARTICIPATE_ITEMS = [
 const Header = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const { user, logout, loading } = useAuth();
+  const pathname = usePathname();
+  const loginHref = buildLoginUrl(pathname);
 
   const toggleMenu = () => {
     setMenuOpen(!menuOpen);
@@ -108,7 +112,7 @@ const Header = () => {
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <Link href="/login">
+                <Link href={loginHref}>
                   <Button variant="blue" size="sm">
                     Sign In
                   </Button>
@@ -241,7 +245,7 @@ const Header = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <Link href="/login" onClick={toggleMenu}>
+                  <Link href={loginHref} onClick={toggleMenu}>
                     <Button variant="blue" className="w-full">
                       Sign In
                     </Button>
