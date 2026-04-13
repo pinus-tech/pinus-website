@@ -39,9 +39,12 @@ const SECTION_DISPLAY_OPTIONS = [
 export function FormFieldsEditor({
   fields,
   onChange,
+  addFieldFabClassName = "fixed bottom-6 right-6 z-40 shadow-lg",
 }: {
   fields: FormField[];
   onChange: (fields: FormField[]) => void;
+  /** Override for fixed "Add Field" position (e.g. clear a bottom save bar on form edit). */
+  addFieldFabClassName?: string;
 }) {
   const updateField = (index: number, patch: Partial<FormField>) => {
     onChange(
@@ -122,7 +125,7 @@ export function FormFieldsEditor({
         type="button"
         variant="blue"
         onClick={addField}
-        className="fixed bottom-6 right-6 z-40 shadow-lg"
+        className={addFieldFabClassName}
       >
         Add Field
       </Button>

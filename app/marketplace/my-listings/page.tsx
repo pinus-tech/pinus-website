@@ -48,12 +48,10 @@ export default function MyListingsPage() {
     try {
       setLoading(true);
       
-      // Build query parameters
+      // Always load all statuses for this seller; tabs filter client-side.
+      // (Sending no status for seller returns available + sold — see API.)
       const params = new URLSearchParams();
-      if (filterStatus !== 'all') {
-        params.append('status', filterStatus);
-      }
-      params.append('seller', user!.id);
+      params.append("seller", user!.id);
 
       const response = await fetch(`/api/marketplace?${params.toString()}`);
       

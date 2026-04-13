@@ -119,6 +119,10 @@ export default function FormDetailPage() {
   }>>([]);
   const [selectedManagers, setSelectedManagers] = useState<string[]>([]);
   const [shareBusy, setShareBusy] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [shareCopiedKind, setShareCopiedKind] = useState<"long" | "short" | null>(
+    null
+  );
 
   const { user, loading: authLoading, canCreateForms } = useAuth();
   const router = useRouter();
@@ -139,6 +143,20 @@ export default function FormDetailPage() {
     fetchForm();
     fetchPotentialManagers();
   }, [user, authLoading, router, formId]);
+
+  useEffect(() => {
+    if (!shareModalOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShareModalOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [shareModalOpen]);
 
   const fetchForm = async () => {
     try {
@@ -415,9 +433,10 @@ export default function FormDetailPage() {
   /** Creators, managers, and admins can open sharing / copy the participant link */
   const canShareLink = !!canEditForm;
 
-  const copyParticipantLink = async () => {
+  const openShareModal = async () => {
     if (!formId) return;
     setShareBusy(true);
+    setError(null);
     try {
       const patch = await fetch(`/api/forms/${formId}`, {
         method: "PATCH",
@@ -431,15 +450,31 @@ export default function FormDetailPage() {
       }
       const data = await patch.json();
       setForm(data.form);
-      const path = data.form.slug
-        ? `/f/${data.form.slug}`
-        : `/forms/${formId}`;
-      await navigator.clipboard.writeText(`${window.location.origin}${path}`);
-      setSuccess("Participant link copied. The form is open for submissions.");
+      setShareCopiedKind(null);
+      setShareModalOpen(true);
+      setSuccess(
+        "This form is open for submissions. Copy a link below to share."
+      );
     } catch {
-      setError("Could not copy link");
+      setError("Could not enable sharing");
     } finally {
       setShareBusy(false);
+    }
+  };
+
+  const copyShareUrl = async (kind: "long" | "short") => {
+    if (!formId || !form) return;
+    const origin = window.location.origin;
+    const longUrl = `${origin}/forms/${formId}`;
+    const shortUrl = form.slug ? `${origin}/f/${form.slug}` : null;
+    const text = kind === "long" ? longUrl : shortUrl;
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setShareCopiedKind(kind);
+      window.setTimeout(() => setShareCopiedKind(null), 2500);
+    } catch {
+      setError("Could not copy to clipboard");
     }
   };
 
@@ -515,10 +550,10 @@ export default function FormDetailPage() {
               <Button
                 type="button"
                 variant="blue"
-                onClick={copyParticipantLink}
+                onClick={openShareModal}
                 disabled={shareBusy}
               >
-                {shareBusy ? "…" : "Share form (copy link)"}
+                {shareBusy ? "…" : "Share form"}
               </Button>
             )}
             {canEditForm && (
@@ -624,11 +659,11 @@ export default function FormDetailPage() {
         )}
 
         {isEditing && canEditForm && (
-          <div className="bg-white p-6 rounded-lg shadow mb-6">
+          <div className="bg-white p-6 rounded-lg shadow mb-6 pb-28">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
               Edit form
             </h2>
-            <form onSubmit={handleEditSubmit} className="space-y-6">
+            <form id="form-edit-form" onSubmit={handleEditSubmit} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Form title
@@ -751,17 +786,20 @@ export default function FormDetailPage() {
                   onChange={(fields) =>
                     setEditData((prev) => ({ ...prev, fields }))
                   }
+                  addFieldFabClassName="fixed bottom-24 right-6 z-40 shadow-lg"
                 />
               </div>
+            </form>
+          </div>
+        )}
 
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  type="submit"
-                  variant="blue"
-                  disabled={submitting}
-                >
-                  {submitting ? "Saving..." : "Save all changes"}
-                </Button>
+        {isEditing && canEditForm && (
+          <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/90 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] px-4 py-3">
+            <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-gray-600 hidden sm:block">
+                Save changes to title, fields, managers, and short link.
+              </p>
+              <div className="flex flex-wrap gap-3 justify-end ml-auto">
                 <Button
                   type="button"
                   variant="black"
@@ -773,8 +811,16 @@ export default function FormDetailPage() {
                 >
                   Cancel
                 </Button>
+                <Button
+                  type="submit"
+                  form="form-edit-form"
+                  variant="blue"
+                  disabled={submitting}
+                >
+                  {submitting ? "Saving..." : "Save all changes"}
+                </Button>
               </div>
-            </form>
+            </div>
           </div>
         )}
 
@@ -1119,6 +1165,107 @@ export default function FormDetailPage() {
           </div>
         )}
       </div>
+
+      {shareModalOpen && form && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/40"
+            aria-label="Close share dialog"
+            onClick={() => setShareModalOpen(false)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="share-form-dialog-title"
+            className="relative z-10 w-full max-w-lg rounded-xl border border-gray-200 bg-white p-6 shadow-xl"
+          >
+            <h2
+              id="share-form-dialog-title"
+              className="text-lg font-semibold text-gray-900"
+            >
+              Share this form
+            </h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Participants can use either link. The short link redirects to the
+              same form.
+            </p>
+
+            <div className="mt-5 space-y-4">
+              <div>
+                <label className="block text-xs font-medium uppercase tracking-wide text-gray-500 mb-1.5">
+                  Long link
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    readOnly
+                    className="flex-1 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 font-mono"
+                    value={
+                      typeof window !== "undefined"
+                        ? `${window.location.origin}/forms/${formId}`
+                        : `/forms/${formId}`
+                    }
+                    onFocus={(e) => e.target.select()}
+                  />
+                  <Button
+                    type="button"
+                    variant="blue"
+                    onClick={() => copyShareUrl("long")}
+                  >
+                    {shareCopiedKind === "long" ? "Copied!" : "Copy"}
+                  </Button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium uppercase tracking-wide text-gray-500 mb-1.5">
+                  Short link
+                </label>
+                {form.slug ? (
+                  <div className="flex gap-2">
+                    <input
+                      readOnly
+                      className="flex-1 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 font-mono"
+                      value={
+                        typeof window !== "undefined"
+                          ? `${window.location.origin}/f/${form.slug}`
+                          : `/f/${form.slug}`
+                      }
+                      onFocus={(e) => e.target.select()}
+                    />
+                    <Button
+                      type="button"
+                      variant="blue"
+                      onClick={() => copyShareUrl("short")}
+                    >
+                      {shareCopiedKind === "short" ? "Copied!" : "Copy"}
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-600 rounded-md border border-dashed border-gray-200 bg-gray-50 px-3 py-2">
+                    No short link yet. Use{" "}
+                    <span className="font-medium">Edit Form</span> to set an
+                    optional short path (e.g.{" "}
+                    <code className="rounded bg-gray-100 px-1">/f/my-form</code>
+                    ).
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <Button
+                type="button"
+                variant="black"
+                outline
+                onClick={() => setShareModalOpen(false)}
+              >
+                Done
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

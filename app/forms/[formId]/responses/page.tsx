@@ -55,12 +55,13 @@ interface Form {
 
 interface FormResponse {
   id: string;
-  respondent: {
+  /** Present for normal submissions; may be missing in edge cases. */
+  respondent?: {
     name: string;
     email: string;
     telegram?: string;
     phoneNumber?: string;
-  };
+  } | null;
   responses: Array<{
     fieldLabel: string;
     value: string | number | boolean | string[];
@@ -271,10 +272,10 @@ export default function FormResponsesPage() {
 
       for (const response of responses) {
         const row: string[] = [
-          escapeCell(response.respondent.name),
-          escapeCell(response.respondent.email),
-          escapeCell(response.respondent.phoneNumber ?? ""),
-          escapeCell(response.respondent.telegram ?? ""),
+          escapeCell(response.respondent?.name ?? ""),
+          escapeCell(response.respondent?.email ?? ""),
+          escapeCell(response.respondent?.phoneNumber ?? ""),
+          escapeCell(response.respondent?.telegram ?? ""),
           escapeCell(new Date(response.submittedAt).toLocaleString()),
         ];
 
@@ -499,7 +500,7 @@ export default function FormResponsesPage() {
             {isSiteAdmin && (
               <div>
                 <span className="font-medium">Created by:</span>{" "}
-                {form.createdBy.name}
+                {form.createdBy?.name ?? "—"}
               </div>
             )}
             <div>
@@ -515,7 +516,7 @@ export default function FormResponsesPage() {
               <div className="flex flex-wrap gap-2 mt-1">
                 {form.managers.map((manager, index) => (
                   <span key={index} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
-                    {manager.name}
+                    {manager?.name ?? "—"}
                   </span>
                 ))}
               </div>
@@ -574,16 +575,16 @@ export default function FormResponsesPage() {
                       {index + 1}
                     </td>
                     <td className="px-3 py-2 text-gray-900 whitespace-nowrap">
-                      {response.respondent.name}
+                      {response.respondent?.name ?? "—"}
                     </td>
                     <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
-                      {response.respondent.email}
+                      {response.respondent?.email ?? "—"}
                     </td>
                     <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
-                      {response.respondent.phoneNumber?.trim() || "—"}
+                      {response.respondent?.phoneNumber?.trim() || "—"}
                     </td>
                     <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
-                      {response.respondent.telegram?.trim() || "—"}
+                      {response.respondent?.telegram?.trim() || "—"}
                     </td>
                     <td className="px-3 py-2 text-gray-600 whitespace-nowrap">
                       {new Date(response.submittedAt).toLocaleString()}
@@ -635,13 +636,14 @@ export default function FormResponsesPage() {
                       Response #{index + 1}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      Submitted by {response.respondent.name} ({response.respondent.email})
+                      Submitted by {response.respondent?.name ?? "—"} (
+                      {response.respondent?.email ?? "—"})
                     </p>
                     <p className="text-sm text-gray-600">
-                      Phone: {response.respondent.phoneNumber?.trim() || "—"}
+                      Phone: {response.respondent?.phoneNumber?.trim() || "—"}
                     </p>
                     <p className="text-sm text-gray-600">
-                      Telegram: {response.respondent.telegram?.trim() || "—"}
+                      Telegram: {response.respondent?.telegram?.trim() || "—"}
                     </p>
                     <p className="text-sm text-gray-500">
                       {new Date(response.submittedAt).toLocaleString()}
