@@ -17,6 +17,31 @@ import Image from 'next/image'
 
 const BLUR_FADE_DELAY = 0.02;
 
+/** Notion guide descriptions use "Title—blockId" (em dash). `split("-")` fails on em dashes and breaks UUIDs. */
+function splitGuideDescriptionLine(line: string): { label: string; blockId: string } {
+  const trimmed = line.trim();
+  if (!trimmed) return { label: "", blockId: "" };
+
+  for (const sep of ["\u2014", "\u2013"]) {
+    const idx = trimmed.indexOf(sep);
+    if (idx !== -1) {
+      const label = trimmed.slice(0, idx).trim();
+      const rest = trimmed.slice(idx + sep.length).trim();
+      return { label: label || trimmed, blockId: rest };
+    }
+  }
+
+  const hyphenIdx = trimmed.indexOf("-");
+  if (hyphenIdx > 0 && !trimmed.slice(hyphenIdx + 1).includes("-")) {
+    return {
+      label: trimmed.slice(0, hyphenIdx).trim(),
+      blockId: trimmed.slice(hyphenIdx + 1).trim(),
+    };
+  }
+
+  return { label: trimmed, blockId: "" };
+}
+
 interface NotionPage {
   object: "page";
   id: string;
@@ -306,14 +331,14 @@ function GuideContent({
             guide.properties.Description.rich_text[0].plain_text
               .split("\n")
               .map((line, i) => {
-                const [content, id] = line.split("-");
+                const { label, blockId } = splitGuideDescriptionLine(line);
                 return (
                   <div
                     key={i}
                     className="italic cursor-pointer hover:underline"
-                    onClick={() => onClick(id ? id.trim() : "")}
+                    onClick={() => onClick(blockId)}
                   >
-                    {content}
+                    {label}
                   </div>
                 );
               })
