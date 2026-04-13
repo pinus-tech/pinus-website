@@ -9,6 +9,7 @@ interface Form {
   title: string;
   description?: string;
   createdBy: {
+    _id: string;
     name: string;
     email: string;
   };
@@ -23,6 +24,7 @@ interface Form {
   createdAt: string;
   updatedAt: string;
   managers?: Array<{
+    _id: string;
     name: string;
     email: string;
   }>;
@@ -164,9 +166,14 @@ export default function FormsPage() {
                       <p className="text-gray-600 mb-2">{form.description}</p>
                     )}
                     <div className="text-sm text-gray-500 space-y-1">
-                      <p>Created by: {form.createdBy.name}</p>
+                      <p>Created by: {form.createdBy?.name ?? "Unknown"}</p>
                       {form.managers && form.managers.length > 0 && (
-                        <p>Managers: {form.managers.map(m => m.name).join(', ')}</p>
+                        <p>
+                          Managers:{" "}
+                          {form.managers
+                            .map((m) => m?.name ?? "Unknown")
+                            .join(", ")}
+                        </p>
                       )}
                       <p>Fields: {form.fields.length}</p>
                       <p>Responses: {form.responseCount}</p>
@@ -199,7 +206,8 @@ export default function FormsPage() {
                         View Responses ({form.responseCount})
                       </Link>
                     )}
-                    {(user.isSuperAdmin || form.createdBy.email === user.email) && (
+                    {(user.isSuperAdmin ||
+                      form.createdBy?.email === user.email) && (
                       <button
                         onClick={() => deleteForm(form.id)}
                         className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
@@ -229,18 +237,6 @@ export default function FormsPage() {
             ))}
           </div>
         )}
-
-        {/* Permission info */}
-        <div className="mt-8 bg-white p-4 rounded-lg shadow">
-          <h3 className="text-lg font-medium text-gray-900 mb-3">Your Permissions</h3>
-          <div className="text-sm text-gray-600 space-y-1">
-            <p>• Current user: {user.name} ({user.email})</p>
-            <p>• Is Admin: {user.isAdmin ? "Yes" : "No"}</p>
-            <p>• Is Super Admin: {user.isSuperAdmin ? "Yes" : "No"}</p>
-            <p>• Can Create Forms: {user.isSuperAdmin || canCreateForms() ? "Yes" : "No"}</p>
-            <p>• Can Manage Forms: {user.isSuperAdmin || user.isAdmin ? "All forms" : "Your forms only"}</p>
-          </div>
-        </div>
       </div>
     </div>
   );

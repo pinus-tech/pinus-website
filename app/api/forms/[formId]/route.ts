@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Form from "@/lib/models/Form";
-import { verifyToken, canCreateForms } from "@/lib/utils/auth";
+import { serializeFormUser } from "@/lib/serialize-form-users";
+import { verifyToken } from "@/lib/utils/auth";
 
 // Middleware to check if user is logged in
 async function verifyLoggedInUser(req: NextRequest) {
@@ -45,26 +46,32 @@ export async function GET(
       );
     }
 
-    const managers = (form.managers ?? []).filter(
-      (m: unknown): m is { _id: { toString: () => string } } => m != null
+    const createdBy = serializeFormUser(form.createdBy);
+    const managers = (form.managers ?? []).map((m: unknown) =>
+      serializeFormUser(m)
     );
-    // Determine user permissions for this form
-    const canEdit = user.isSuperAdmin || 
-                   user.isAdmin || 
-                   form.createdBy._id.toString() === user.userId ||
-                   managers.some((manager: { _id: { toString: () => string } }) => manager._id.toString() === user.userId);
-    
-    const canViewResponses = user.isSuperAdmin || 
-                           user.isAdmin || 
-                           form.createdBy._id.toString() === user.userId ||
-                           managers.some((manager: { _id: { toString: () => string } }) => manager._id.toString() === user.userId);
+    const canEdit =
+      user.isSuperAdmin ||
+      user.isAdmin ||
+      createdBy._id === user.userId ||
+      managers.some(
+        (manager: { _id: string }) => manager._id === user.userId
+      );
+
+    const canViewResponses =
+      user.isSuperAdmin ||
+      user.isAdmin ||
+      createdBy._id === user.userId ||
+      managers.some(
+        (manager: { _id: string }) => manager._id === user.userId
+      );
 
     return NextResponse.json({
       form: {
         id: form._id,
         title: form.title,
         description: form.description,
-        createdBy: form.createdBy,
+        createdBy,
         managers,
         fields: form.fields,
         responses: form.responses,
@@ -167,9 +174,12 @@ export async function PATCH(
       { new: true }
     ).populate('createdBy', 'name email').populate('managers', 'name email');
 
-    const updatedManagers = (updatedForm.managers ?? []).filter(
-      (m: unknown): m is { _id: { toString: () => string } } => m != null
-    );
+    if (!updatedForm) {
+      return NextResponse.json(
+        { error: "Form not found" },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json({
       message: "Form updated successfully",
@@ -177,8 +187,10 @@ export async function PATCH(
         id: updatedForm._id,
         title: updatedForm.title,
         description: updatedForm.description,
-        createdBy: updatedForm.createdBy,
-        managers: updatedManagers,
+        createdBy: serializeFormUser(updatedForm.createdBy),
+        managers: (updatedForm.managers ?? []).map((m: unknown) =>
+          serializeFormUser(m)
+        ),
         fields: updatedForm.fields,
         responses: updatedForm.responses,
         isActive: updatedForm.isActive,

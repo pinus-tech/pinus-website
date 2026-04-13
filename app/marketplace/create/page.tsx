@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { MARKETPLACE_CATEGORIES } from "@/lib/constants/marketplace-categories";
+import { uploadMarketplaceImage } from "@/lib/firebase/upload-marketplace-image";
 
 interface ItemData {
   title: string;
@@ -16,6 +17,10 @@ interface ItemData {
 
 export default function CreateMarketplaceItemPage() {
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
   const [itemData, setItemData] = useState<ItemData>({
     title: '',
     description: '',
@@ -28,6 +33,14 @@ export default function CreateMarketplaceItemPage() {
 
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    return () => {
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     // Wait for auth to complete before checking user
@@ -57,12 +70,35 @@ export default function CreateMarketplaceItemPage() {
     setError(null);
 
     try {
+      let imageUrl = itemData.imageUrl.trim();
+
+      if (imageFile && user) {
+        setUploadingImage(true);
+        try {
+          imageUrl = await uploadMarketplaceImage(imageFile, user.id);
+        } catch (uploadErr) {
+          setError(
+            uploadErr instanceof Error
+              ? uploadErr.message
+              : "Failed to upload image"
+          );
+          setUploadingImage(false);
+          setLoading(false);
+          return;
+        } finally {
+          setUploadingImage(false);
+        }
+      }
+
       const response = await fetch('/api/marketplace', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(itemData),
+        body: JSON.stringify({
+          ...itemData,
+          imageUrl,
+        }),
       });
 
       if (response.ok) {
@@ -197,17 +233,57 @@ export default function CreateMarketplaceItemPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Image URL (Optional)
+                  Photo (optional)
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    setImageFile(f);
+                    if (previewUrlRef.current) {
+                      URL.revokeObjectURL(previewUrlRef.current);
+                      previewUrlRef.current = null;
+                    }
+                    if (f) {
+                      const url = URL.createObjectURL(f);
+                      previewUrlRef.current = url;
+                      setImagePreview(url);
+                    } else {
+                      setImagePreview(null);
+                    }
+                  }}
+                  className="w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-50 file:text-blue-700"
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  Uploads to Firebase Storage (max 8 MB). Ensure Storage rules allow writes for your project.
+                </p>
+                {imagePreview && (
+                  <div className="mt-3">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="max-h-48 rounded-lg border border-gray-200 object-contain"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Or image URL (optional)
                 </label>
                 <input
                   type="url"
                   value={itemData.imageUrl}
-                  onChange={(e) => setItemData(prev => ({ ...prev, imageUrl: e.target.value }))}
+                  onChange={(e) =>
+                    setItemData((prev) => ({ ...prev, imageUrl: e.target.value }))
+                  }
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="https://example.com/image.jpg"
                 />
                 <p className="text-sm text-gray-500 mt-1">
-                  Provide a direct link to an image (optional)
+                  Used only if you do not upload a file above.
                 </p>
               </div>
             </div>
@@ -249,10 +325,14 @@ export default function CreateMarketplaceItemPage() {
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || uploadingImage}
               className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-2 rounded-lg font-medium transition-colors"
             >
-              {loading ? 'Posting...' : 'Post Item'}
+              {uploadingImage
+                ? "Uploading image..."
+                : loading
+                  ? "Posting..."
+                  : "Post Item"}
             </button>
           </div>
         </form>
