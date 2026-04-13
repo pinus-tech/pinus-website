@@ -10,6 +10,12 @@ import { Textarea } from "@/app/components/ui/textarea";
 import { Button } from "@/app/components/ui/button";
 import { Checkbox } from "@/app/components/ui/checkbox";
 import { FormSelect } from "@/app/components/forms/FormSelect";
+import {
+  ACCEPTED_FILE_LABELS,
+  DEFAULT_ACCEPTED_FILE_TOKENS,
+  normalizeAcceptedFileTypes,
+} from "@/lib/forms/file-accepted";
+import type { AcceptedFileToken } from "@/lib/forms/file-accepted";
 
 type FormField = FormFieldDefinition;
 
@@ -21,6 +27,7 @@ const FIELD_TYPE_OPTIONS: { value: FormFieldType; label: string }[] = [
   { value: "dropdown", label: "Drop-down (choose one)" },
   { value: "multiple_choice", label: "Checkboxes (choose several)" },
   { value: "segmented_text", label: "Path / structured text" },
+  { value: "file_upload", label: "File upload (image or PDF)" },
   { value: "section", label: "Section (title / description only)" },
 ];
 
@@ -112,7 +119,7 @@ export function FormFieldsEditor({
   };
 
   return (
-    <div className="relative space-y-4 pb-24">
+    <div className="relative space-y-4 pb-8">
       <div className="mb-4">
         <h2 className="text-xl font-semibold text-gray-900">Form Fields</h2>
         <p className="text-sm text-gray-500 mt-1">
@@ -123,7 +130,7 @@ export function FormFieldsEditor({
 
       <Button
         type="button"
-        variant="blue"
+        variant="red"
         onClick={addField}
         className={addFieldFabClassName}
       >
@@ -193,6 +200,10 @@ export function FormFieldsEditor({
                       }
                       if (t === "segmented_text") {
                         patch.segmentDelimiter = field.segmentDelimiter ?? "/";
+                      }
+                      if (t === "file_upload") {
+                        patch.options = undefined;
+                        patch.acceptedFileTypes = [...DEFAULT_ACCEPTED_FILE_TOKENS];
                       }
                       updateField(index, patch);
                     }}
@@ -350,6 +361,57 @@ export function FormFieldsEditor({
                       }}
                       placeholder="No maximum"
                     />
+                  </div>
+                </div>
+              )}
+
+              {field.type === "file_upload" && (
+                <div className="mt-4 rounded-lg border border-dashed border-slate-200 bg-slate-50/90 p-4">
+                  <label className="block text-sm font-medium text-gray-800 mb-1">
+                    Accepted file types
+                  </label>
+                  <p className="text-xs text-gray-500 mb-3">
+                    At least one type must stay selected. Same upload rules as
+                    elsewhere: max 3 MB pick, images over 1 MB are compressed to
+                    1 MB; PDFs must be ≤ 1 MB.
+                  </p>
+                  <div className="flex flex-wrap gap-x-4 gap-y-2">
+                    {(DEFAULT_ACCEPTED_FILE_TOKENS as readonly AcceptedFileToken[]).map(
+                      (tok) => {
+                        const cur = normalizeAcceptedFileTypes(
+                          field.acceptedFileTypes
+                        );
+                        const checked = cur.includes(tok);
+                        return (
+                          <label
+                            key={tok}
+                            className="flex cursor-pointer items-center gap-2 text-sm text-gray-800"
+                          >
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(c) => {
+                                const nextChecked = c === true;
+                                let next = normalizeAcceptedFileTypes(
+                                  field.acceptedFileTypes
+                                );
+                                if (nextChecked) {
+                                  if (!next.includes(tok)) {
+                                    next = [...next, tok];
+                                  }
+                                } else {
+                                  next = next.filter((t) => t !== tok);
+                                  if (next.length === 0) next = [tok];
+                                }
+                                updateField(index, {
+                                  acceptedFileTypes: next,
+                                });
+                              }}
+                            />
+                            {ACCEPTED_FILE_LABELS[tok]}
+                          </label>
+                        );
+                      }
+                    )}
                   </div>
                 </div>
               )}

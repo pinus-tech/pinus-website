@@ -9,6 +9,7 @@ import { format, parseISO } from "date-fns";
 import type { FormFieldDefinition } from "@/lib/form-field-types";
 import { isDataField } from "@/lib/form-field-types";
 import { maxSegmentCount, splitSegments } from "@/lib/segmented-text";
+import { FormAttachmentViewer } from "@/app/components/forms/FormAttachmentViewer";
 
 type FormField = FormFieldDefinition;
 
@@ -17,6 +18,9 @@ function formatCellForCsv(
   field: FormField
 ): string {
   if (value === null || value === undefined) return "";
+  if (field.type === "file_upload") {
+    return String(value ?? "").trim();
+  }
   if (field.type === "multiple_choice" && Array.isArray(value)) {
     return (value as string[]).join("; ");
   }
@@ -75,6 +79,9 @@ function formatPlainCell(
   field: FormField
 ): string {
   if (value === null || value === undefined) return "";
+  if (field.type === "file_upload") {
+    return String(value ?? "").trim();
+  }
   if (field.type === "multiple_choice" && Array.isArray(value)) {
     return (value as string[]).join("; ");
   }
@@ -380,6 +387,11 @@ function FormResponsesPageContent() {
       }
       case "multiple_choice":
         return Array.isArray(value) ? (value as string[]).join(", ") : String(value);
+      case "file_upload": {
+        const u = String(value ?? "").trim();
+        if (!u) return "-";
+        return <FormAttachmentViewer url={u} />;
+      }
       case "segmented_text": {
         const delim = field.segmentDelimiter ?? "/";
         const parts = splitSegments(String(value), delim);
@@ -619,6 +631,22 @@ function FormResponsesPageContent() {
                         (r) => r.fieldLabel === col.field.label
                       );
                       const raw = fr?.value;
+                      if (col.field.type === "file_upload") {
+                        const u =
+                          raw != null ? String(raw).trim() : "";
+                        return (
+                          <td
+                            key={col.key}
+                            className="px-3 py-2 text-gray-900 align-top"
+                          >
+                            {u ? (
+                              <FormAttachmentViewer url={u} compact />
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
+                          </td>
+                        );
+                      }
                       let cell = "";
                       if (col.partIndex !== undefined && col.field.type === "segmented_text") {
                         const delim = col.field.segmentDelimiter ?? "/";

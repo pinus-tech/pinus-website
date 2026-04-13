@@ -9,6 +9,7 @@ const FIELD_TYPES = [
   'multiple_choice',
   'section',
   'segmented_text',
+  'file_upload',
 ] as const;
 
 export interface IForm extends mongoose.Document {
@@ -33,6 +34,7 @@ export interface IForm extends mongoose.Document {
     maxSelections?: number;
     minLength?: number;
     maxLength?: number;
+    acceptedFileTypes?: string[];
   }[];
   responses: mongoose.Types.ObjectId[];
   isActive: boolean;
@@ -76,6 +78,7 @@ const formSchema = new mongoose.Schema({
     maxSelections: { type: Number },
     minLength: { type: Number },
     maxLength: { type: Number },
+    acceptedFileTypes: [{ type: String }],
   }],
   responses: [{ 
     type: mongoose.Schema.Types.ObjectId, 

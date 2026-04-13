@@ -1,5 +1,9 @@
 import type { FormFieldDefinition } from "@/lib/form-field-types";
 import { FORM_FIELD_TYPES } from "@/lib/form-field-types";
+import {
+  DEFAULT_ACCEPTED_FILE_TOKENS,
+  normalizeAcceptedFileTypes,
+} from "@/lib/forms/file-accepted";
 
 function validateLengthBounds(
   minLength: number | undefined,
@@ -116,6 +120,20 @@ function validateOneFormField(raw: unknown): string | null {
     case "text": {
       const lenErr = validateLengthBounds(field.minLength, field.maxLength);
       if (lenErr) return lenErr;
+      break;
+    }
+    case "file_upload": {
+      const acc = normalizeAcceptedFileTypes(field.acceptedFileTypes);
+      if (acc.length === 0) {
+        return "File upload must allow at least one file type";
+      }
+      for (const t of acc) {
+        if (
+          !(DEFAULT_ACCEPTED_FILE_TOKENS as readonly string[]).includes(t)
+        ) {
+          return "Invalid accepted file type";
+        }
+      }
       break;
     }
     default:
