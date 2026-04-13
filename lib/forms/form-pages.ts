@@ -92,10 +92,9 @@ export function resolveNextPageIndex(
     if (idx >= 0) return idx;
   }
 
-  // Any question can set where "Next" goes (bottom field on the page wins).
+  // Any field or section block can set where "Next" goes (bottom item on the page wins).
   for (let i = pageFields.length - 1; i >= 0; i--) {
     const f = pageFields[i];
-    if (f.type === "section") continue;
     const np = f.nextPageId;
     if (!np || np === "_next") continue;
     const idx = pages.findIndex((p) => p.id === np);

@@ -1158,9 +1158,13 @@ export default function FormDetailPage() {
                         )}
                       {(field.sectionDisplay ?? "both") !== "title_only" &&
                         field.sectionDescription?.trim() && (
-                          <p className="mt-1 text-sm text-gray-600 whitespace-pre-wrap">
-                            {field.sectionDescription}
-                          </p>
+                          <div className="mt-1 text-sm text-gray-600">
+                            <DescriptionContent
+                              text={field.sectionDescription}
+                              asMarkdown={!!field.sectionDescriptionMarkdown}
+                              className="text-sm text-gray-600"
+                            />
+                          </div>
                         )}
                     </div>
                   ) : (
@@ -1272,9 +1276,13 @@ export default function FormDetailPage() {
                         )}
                       {(field.sectionDisplay ?? "both") !== "title_only" &&
                         field.sectionDescription?.trim() && (
-                          <p className="mt-1 text-sm text-gray-600 whitespace-pre-wrap">
-                            {field.sectionDescription}
-                          </p>
+                          <div className="mt-1 text-sm text-gray-600">
+                            <DescriptionContent
+                              text={field.sectionDescription}
+                              asMarkdown={!!field.sectionDescriptionMarkdown}
+                              className="text-sm text-gray-600"
+                            />
+                          </div>
                         )}
                     </div>
                   ) : (

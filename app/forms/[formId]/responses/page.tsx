@@ -10,6 +10,7 @@ import type { FormFieldDefinition } from "@/lib/form-field-types";
 import { isDataField } from "@/lib/form-field-types";
 import { maxSegmentCount, splitSegments } from "@/lib/segmented-text";
 import { FormAttachmentViewer } from "@/app/components/forms/FormAttachmentViewer";
+import { DescriptionContent } from "@/app/components/DescriptionContent";
 
 type FormField = FormFieldDefinition;
 
@@ -729,9 +730,15 @@ function FormResponsesPageContent() {
                             )}
                           {(field.sectionDisplay ?? "both") !== "title_only" &&
                             field.sectionDescription?.trim() && (
-                              <p className="mt-1 text-sm text-gray-600 whitespace-pre-wrap">
-                                {field.sectionDescription}
-                              </p>
+                              <div className="mt-1 text-sm text-gray-600">
+                                <DescriptionContent
+                                  text={field.sectionDescription}
+                                  asMarkdown={
+                                    !!field.sectionDescriptionMarkdown
+                                  }
+                                  className="text-sm text-gray-600"
+                                />
+                              </div>
                             )}
                         </div>
                       );

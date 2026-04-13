@@ -8,6 +8,13 @@ import { buildLoginUrl } from "@/lib/login-callback";
 import { DescriptionContent } from "@/app/components/DescriptionContent";
 import { galleryImageUrls } from "@/lib/marketplace-images";
 import { MARKETPLACE_CONDITION_OPTIONS } from "@/lib/constants/marketplace-conditions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/app/components/ui/select";
 
 interface MarketplaceItem {
   id: string;
@@ -325,46 +332,64 @@ export default function MarketplaceItemDetailPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Status
                   </label>
-                  <select
+                  <Select
                     value={editData.status || item.status}
-                    onChange={(e) =>
+                    onValueChange={(v) =>
                       setEditData((prev) => ({
                         ...prev,
-                        status: e.target.value as MarketplaceItem["status"],
+                        status: v as MarketplaceItem["status"],
                       }))
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="available">Available</option>
-                    <option value="reserved">Reserved</option>
-                    <option value="sold">Sold</option>
-                  </select>
+                    <SelectTrigger
+                      variant="blue"
+                      outline
+                      rounding="lg"
+                      className="w-full"
+                    >
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent variant="blue" outline rounding="lg">
+                      <SelectItem value="available">Available</SelectItem>
+                      <SelectItem value="reserved">Reserved</SelectItem>
+                      <SelectItem value="sold">Sold</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Condition
                 </label>
-                <select
+                <Select
                   value={
                     editData.condition !== undefined
                       ? editData.condition
                       : item.condition ?? "Other"
                   }
-                  onChange={(e) =>
+                  onValueChange={(v) =>
                     setEditData((prev) => ({
                       ...prev,
-                      condition: e.target.value,
+                      condition: v,
                     }))
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  {MARKETPLACE_CONDITION_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger
+                    variant="blue"
+                    outline
+                    rounding="lg"
+                    className="w-full"
+                  >
+                    <SelectValue placeholder="Condition" />
+                  </SelectTrigger>
+                  <SelectContent variant="blue" outline rounding="lg">
+                    {MARKETPLACE_CONDITION_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex space-x-4">
                 <button

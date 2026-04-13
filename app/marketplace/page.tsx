@@ -7,6 +7,13 @@ import { MARKETPLACE_CATEGORIES } from "@/lib/constants/marketplace-categories";
 import { descriptionCardPreview } from "@/lib/description-preview";
 import { primaryMarketplaceImageUrl } from "@/lib/marketplace-images";
 import { MARKETPLACE_CONDITION_OPTIONS } from "@/lib/constants/marketplace-conditions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/app/components/ui/select";
 
 interface MarketplaceItem {
   id: string;
@@ -164,14 +171,8 @@ export default function MarketplacePage() {
     fetchItems();
   };
 
-  const handleFilterChange = () => {
-    fetchItems();
-  };
-
-  // Auto-filter when category changes
-  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedCategory(e.target.value);
-    // Don't auto-fetch here, let user control with search button
+  const handleCategoryChange = (value: string) => {
+    setSelectedCategory(value);
   };
 
   // Auto-filter when price changes (with debounce)
@@ -270,23 +271,35 @@ export default function MarketplacePage() {
                 Clear
               </button>
             )}
-            <label className="flex items-center gap-2 text-sm text-gray-700 whitespace-nowrap">
-              <span className="font-medium">Sort</span>
-              <select
+            <div className="flex min-w-0 flex-1 items-center gap-2 sm:min-w-[220px] sm:flex-initial">
+              <span className="shrink-0 text-sm font-medium text-gray-700">
+                Sort
+              </span>
+              <Select
                 value={sortOrder}
-                onChange={(e) => {
-                  const v = e.target.value as SortOrder;
-                  setSortOrder(v);
-                  void fetchItems({ sortOrder: v });
+                onValueChange={(v) => {
+                  const next = v as SortOrder;
+                  setSortOrder(next);
+                  void fetchItems({ sortOrder: next });
                 }}
-                className="rounded-md border border-gray-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="newest">Newest first</option>
-                <option value="oldest">Oldest first</option>
-                <option value="price_asc">Price: low to high</option>
-                <option value="price_desc">Price: high to low</option>
-              </select>
-            </label>
+                <SelectTrigger
+                  variant="blue"
+                  outline
+                  rounding="lg"
+                  size="sm"
+                  className="min-w-[180px] flex-1"
+                >
+                  <SelectValue placeholder="Sort" />
+                </SelectTrigger>
+                <SelectContent variant="blue" outline rounding="lg">
+                  <SelectItem value="newest">Newest first</SelectItem>
+                  <SelectItem value="oldest">Oldest first</SelectItem>
+                  <SelectItem value="price_asc">Price: low to high</SelectItem>
+                  <SelectItem value="price_desc">Price: high to low</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </form>
         </div>
 
@@ -326,59 +339,87 @@ export default function MarketplacePage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Category
                   </label>
-                  <select
+                  <Select
                     value={selectedCategory}
-                    onChange={handleCategoryChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onValueChange={handleCategoryChange}
                   >
-                    <option value="all">All Categories</option>
-                    {MARKETPLACE_CATEGORIES.map((category) => (
-                      <option key={category.value} value={category.value}>
-                        {category.label}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger
+                      variant="blue"
+                      outline
+                      rounding="lg"
+                      className="w-full"
+                    >
+                      <SelectValue placeholder="Category" />
+                    </SelectTrigger>
+                    <SelectContent variant="blue" outline rounding="lg">
+                      <SelectItem value="all">All Categories</SelectItem>
+                      {MARKETPLACE_CATEGORIES.map((category) => (
+                        <SelectItem key={category.value} value={category.value}>
+                          {category.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Listing status
                   </label>
-                  <select
+                  <Select
                     value={listingStatusFilter}
-                    onChange={(e) => {
-                      const v = e.target.value as ListingStatusFilter;
-                      setListingStatusFilter(v);
-                      void fetchItems({ listingStatusFilter: v });
+                    onValueChange={(v) => {
+                      const next = v as ListingStatusFilter;
+                      setListingStatusFilter(next);
+                      void fetchItems({ listingStatusFilter: next });
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="active">Available &amp; reserved</option>
-                    <option value="available">Available only</option>
-                    <option value="reserved">Reserved only</option>
-                  </select>
+                    <SelectTrigger
+                      variant="blue"
+                      outline
+                      rounding="lg"
+                      className="w-full"
+                    >
+                      <SelectValue placeholder="Listing status" />
+                    </SelectTrigger>
+                    <SelectContent variant="blue" outline rounding="lg">
+                      <SelectItem value="active">
+                        Available &amp; reserved
+                      </SelectItem>
+                      <SelectItem value="available">Available only</SelectItem>
+                      <SelectItem value="reserved">Reserved only</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Condition
                   </label>
-                  <select
+                  <Select
                     value={conditionFilter}
-                    onChange={(e) => {
-                      const v = e.target.value;
+                    onValueChange={(v) => {
                       setConditionFilter(v);
                       void fetchItems({ conditionFilter: v });
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="all">All conditions</option>
-                    {MARKETPLACE_CONDITION_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger
+                      variant="blue"
+                      outline
+                      rounding="lg"
+                      className="w-full"
+                    >
+                      <SelectValue placeholder="Condition" />
+                    </SelectTrigger>
+                    <SelectContent variant="blue" outline rounding="lg">
+                      <SelectItem value="all">All conditions</SelectItem>
+                      {MARKETPLACE_CONDITION_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
