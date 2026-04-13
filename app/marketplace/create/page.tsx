@@ -25,8 +25,10 @@ interface ItemData {
 type SgdIdrQuote = {
   idrPerSgd: number;
   updatedAt: string | null;
+  nextUpdateAt: string | null;
   providerUrl: string;
   documentationUrl: string | null;
+  termsUrl: string | null;
   sourceLabel: string;
 };
 
@@ -48,6 +50,7 @@ export default function CreateMarketplaceItemPage() {
   const [sgdIdrQuote, setSgdIdrQuote] = useState<SgdIdrQuote | null>(null);
   const [sgdIdrError, setSgdIdrError] = useState<string | null>(null);
   const [sgdIdrLoading, setSgdIdrLoading] = useState(true);
+  const [fxModalOpen, setFxModalOpen] = useState(false);
 
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -75,8 +78,10 @@ export default function CreateMarketplaceItemPage() {
           setSgdIdrQuote({
             idrPerSgd: data.idrPerSgd,
             updatedAt: data.updatedAt,
+            nextUpdateAt: data.nextUpdateAt ?? null,
             providerUrl: data.providerUrl,
             documentationUrl: data.documentationUrl,
+            termsUrl: data.termsUrl ?? null,
             sourceLabel: data.sourceLabel,
           });
         }
@@ -95,6 +100,20 @@ export default function CreateMarketplaceItemPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!fxModalOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFxModalOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [fxModalOpen]);
 
   useEffect(() => {
     // Wait for auth to complete before checking user
@@ -191,6 +210,30 @@ export default function CreateMarketplaceItemPage() {
   const formatRate = (n: number) =>
     new Intl.NumberFormat("en-SG", { maximumFractionDigits: 2 }).format(n);
 
+  /** Parses API UTC timestamps and formats in the viewer's local timezone. */
+  const formatFxDateShort = (utcString: string | null) => {
+    if (!utcString) return "";
+    const d = new Date(utcString);
+    if (Number.isNaN(d.getTime())) return utcString;
+    return new Intl.DateTimeFormat(undefined, {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(d);
+  };
+
+  const formatFxDateLong = (utcString: string | null) => {
+    if (!utcString) return "—";
+    const d = new Date(utcString);
+    if (Number.isNaN(d.getTime())) return utcString;
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(d);
+  };
+
   const idrEquivalent =
     sgdIdrQuote && Number.isFinite(itemData.price)
       ? itemData.price * sgdIdrQuote.idrPerSgd
@@ -274,65 +317,26 @@ export default function CreateMarketplaceItemPage() {
                       </p>
                     )}
                     {!sgdIdrLoading && sgdIdrQuote && (
-                      <>
-                        <p className="font-medium text-gray-900">
-                          ≈ Rp{" "}
-                          {idrEquivalent !== null
-                            ? formatIdr(idrEquivalent)
-                            : "—"}
-                        </p>
-                        <p className="mt-1 text-xs text-gray-600 leading-relaxed">
-                          1 SGD ≈ {formatRate(sgdIdrQuote.idrPerSgd)} IDR
+                      <p className="text-sm text-gray-800 leading-snug">
+                        ≈ Rp{" "}
+                        {idrEquivalent !== null
+                          ? formatIdr(idrEquivalent)
+                          : "—"}{" "}
+                        <span className="text-gray-600">
+                          (ExchangeRate-API
                           {sgdIdrQuote.updatedAt
-                            ? ` · Rate data: ${sgdIdrQuote.updatedAt}`
+                            ? `, ${formatFxDateShort(sgdIdrQuote.updatedAt)}`
                             : ""}
-                          . {sgdIdrQuote.sourceLabel}. Bank counters (e.g.{" "}
-                          <a
-                            href="https://www.ocbc.com/personal-banking/fx-rates.page"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-700 underline"
-                          >
-                            OCBC
-                          </a>
-                          ) or apps like{" "}
-                          <a
-                            href="https://www.google.com/finance/quote/SGD-IDR"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-700 underline"
-                          >
-                            Google Finance
-                          </a>{" "}
-                          may differ — this is an indicative figure only.
-                        </p>
-                        <p className="mt-1 text-xs text-gray-500">
-                          Source:{" "}
-                          <a
-                            href={sgdIdrQuote.providerUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-700 underline"
-                          >
-                            ExchangeRate-API
-                          </a>
-                          {sgdIdrQuote.documentationUrl ? (
-                            <>
-                              {" "}
-                              (
-                              <a
-                                href={sgdIdrQuote.documentationUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-700 underline"
-                              >
-                                docs
-                              </a>
-                              )
-                            </>
-                          ) : null}
-                        </p>
-                      </>
+                          )
+                        </span>{" "}
+                        <button
+                          type="button"
+                          onClick={() => setFxModalOpen(true)}
+                          className="text-blue-600 hover:text-blue-800 underline font-medium"
+                        >
+                          see more
+                        </button>
+                      </p>
                     )}
                   </div>
                 </div>
@@ -495,6 +499,125 @@ export default function CreateMarketplaceItemPage() {
           </div>
         </form>
       </div>
+
+      {fxModalOpen && sgdIdrQuote && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/40"
+            aria-label="Close exchange details"
+            onClick={() => setFxModalOpen(false)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="fx-modal-title"
+            className="relative z-10 w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl"
+          >
+            <h2
+              id="fx-modal-title"
+              className="text-lg font-semibold text-gray-900"
+            >
+              IDR estimate details
+            </h2>
+            <div className="mt-4 space-y-3 text-sm text-gray-700">
+              <p>
+                <span className="font-medium text-gray-900">≈ Rp </span>
+                {idrEquivalent !== null ? formatIdr(idrEquivalent) : "—"}{" "}
+                <span className="text-gray-500">
+                  (from your price in SGD × rate)
+                </span>
+              </p>
+              <p>
+                <span className="font-medium text-gray-900">1 SGD ≈ </span>
+                {formatRate(sgdIdrQuote.idrPerSgd)} IDR
+              </p>
+              <p>
+                <span className="font-medium text-gray-900">
+                  Rate last updated (your time):
+                </span>{" "}
+                {formatFxDateLong(sgdIdrQuote.updatedAt)}
+              </p>
+              {sgdIdrQuote.nextUpdateAt && (
+                <p>
+                  <span className="font-medium text-gray-900">
+                    Next data refresh (your time):
+                  </span>{" "}
+                  {formatFxDateLong(sgdIdrQuote.nextUpdateAt)}
+                </p>
+              )}
+              <p className="text-gray-600">{sgdIdrQuote.sourceLabel}</p>
+              <p className="text-gray-600">
+                Bank counters (e.g.{" "}
+                <a
+                  href="https://www.ocbc.com/personal-banking/fx-rates.page"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-700 underline"
+                >
+                  OCBC
+                </a>
+                ) or{" "}
+                <a
+                  href="https://www.google.com/finance/quote/SGD-IDR"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-700 underline"
+                >
+                  Google Finance
+                </a>{" "}
+                may show different rates — this is indicative only.
+              </p>
+              <p>
+                <span className="font-medium text-gray-900">Source: </span>
+                <a
+                  href={sgdIdrQuote.providerUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-700 underline"
+                >
+                  ExchangeRate-API
+                </a>
+                {sgdIdrQuote.documentationUrl ? (
+                  <>
+                    {" · "}
+                    <a
+                      href={sgdIdrQuote.documentationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-700 underline"
+                    >
+                      Documentation
+                    </a>
+                  </>
+                ) : null}
+                {sgdIdrQuote.termsUrl ? (
+                  <>
+                    {" · "}
+                    <a
+                      href={sgdIdrQuote.termsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-700 underline"
+                    >
+                      Terms of use
+                    </a>
+                  </>
+                ) : null}
+              </p>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setFxModalOpen(false)}
+                className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-200"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

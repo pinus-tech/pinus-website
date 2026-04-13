@@ -9,6 +9,7 @@ import {
   validateFieldValue,
 } from "@/lib/forms/validate-submission";
 import { verifyToken } from "@/lib/utils/auth";
+import { serializeFormRespondent } from "@/lib/serialize-form-users";
 
 // Middleware to check if user is logged in
 async function verifyLoggedInUser(req: NextRequest) {
@@ -71,7 +72,7 @@ export async function GET(
     return NextResponse.json({
       responses: responses.map((response) => ({
         id: response._id,
-        respondent: response.respondent,
+        respondent: serializeFormRespondent(response.respondent),
         responses: response.responses,
         submittedAt: response.submittedAt,
       })),

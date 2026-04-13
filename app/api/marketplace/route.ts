@@ -26,11 +26,30 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get('search');
     const minPrice = searchParams.get('minPrice');
     const maxPrice = searchParams.get('maxPrice');
-    const status = searchParams.get('status') || 'available';
-    const seller = searchParams.get('seller');
+    const statusParam = searchParams.get("status");
+    const seller = searchParams.get("seller");
 
-    // Build query
-    const query: { status: string; category?: string; $or?: Array<{ title: { $regex: string; $options: string } } | { description: { $regex: string; $options: string } }>; price?: { $gte?: number; $lte?: number }; seller?: string } = { status };
+    // Public marketplace: default to available only.
+    // Seller "my listings": omit status unless explicitly filtered (available | sold) so sold items load after refresh.
+    const query: {
+      status?: string;
+      category?: string;
+      $or?: Array<
+        | { title: { $regex: string; $options: string } }
+        | { description: { $regex: string; $options: string } }
+      >;
+      price?: { $gte?: number; $lte?: number };
+      seller?: string;
+    } = {};
+
+    if (seller) {
+      query.seller = seller;
+      if (statusParam === "available" || statusParam === "sold") {
+        query.status = statusParam;
+      }
+    } else {
+      query.status = statusParam || "available";
+    }
 
     if (category && category !== 'all') {
       query.category = category;
