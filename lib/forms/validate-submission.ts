@@ -91,6 +91,21 @@ export function validateFieldValue(
       }
       return null;
     }
+    case "file_upload": {
+      if (typeof value !== "string") return "Invalid attachment";
+      const s = value.trim();
+      if (s === "") return null;
+      try {
+        const u = new URL(s);
+        if (u.protocol !== "https:") return "Invalid file link";
+        if (!u.hostname.includes("firebasestorage.googleapis.com")) {
+          return "Invalid file link";
+        }
+      } catch {
+        return "Invalid file link";
+      }
+      return null;
+    }
     default:
       if (typeof value !== "string") return "Expected text";
       return null;

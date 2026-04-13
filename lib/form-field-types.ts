@@ -8,7 +8,8 @@ export type FormFieldType =
   | "dropdown"
   | "multiple_choice"
   | "section"
-  | "segmented_text";
+  | "segmented_text"
+  | "file_upload";
 
 export type DateFieldMode = "date" | "datetime" | "time";
 
@@ -37,6 +38,11 @@ export interface FormFieldDefinition {
   minLength?: number;
   /** When type === "text" or "segmented_text": maximum character length (inclusive). */
   maxLength?: number;
+  /**
+   * When type === "file_upload": which extensions to allow (jpeg, png, gif, webp, pdf).
+   * Empty/omitted means all types.
+   */
+  acceptedFileTypes?: string[];
 }
 
 export const FORM_FIELD_TYPES: FormFieldType[] = [
@@ -48,6 +54,7 @@ export const FORM_FIELD_TYPES: FormFieldType[] = [
   "multiple_choice",
   "section",
   "segmented_text",
+  "file_upload",
 ];
 
 export function isDataField(field: Pick<FormFieldDefinition, "type">): boolean {

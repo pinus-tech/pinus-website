@@ -7,6 +7,11 @@ import { useAuth } from "@/lib/contexts/AuthContext";
 import { MARKETPLACE_CATEGORIES } from "@/lib/constants/marketplace-categories";
 import { uploadMarketplaceImage } from "@/lib/firebase/upload-marketplace-image";
 import {
+  prepareMarketplaceListingImage,
+  FORM_FILE_MAX_SOURCE_BYTES,
+} from "@/lib/forms/form-file-prepare";
+import { ImageCropModal } from "@/app/components/ImageCropModal";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -21,7 +26,6 @@ interface ItemData {
   price: number;
   category: string;
   meetupLocation: string;
-  imageUrl: string;
 }
 
 type SgdIdrQuote = {
@@ -40,6 +44,9 @@ export default function CreateMarketplaceItemPage() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const previewUrlRef = useRef<string | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const cropSrcRef = useRef<string | null>(null);
   const [itemData, setItemData] = useState<ItemData>({
     title: '',
     description: '',
@@ -47,7 +54,6 @@ export default function CreateMarketplaceItemPage() {
     price: 0,
     category: 'Other',
     meetupLocation: '',
-    imageUrl: ''
   });
   const [error, setError] = useState<string | null>(null);
   const [sgdIdrQuote, setSgdIdrQuote] = useState<SgdIdrQuote | null>(null);
@@ -63,6 +69,9 @@ export default function CreateMarketplaceItemPage() {
     return () => {
       if (previewUrlRef.current) {
         URL.revokeObjectURL(previewUrlRef.current);
+      }
+      if (cropSrcRef.current) {
+        URL.revokeObjectURL(cropSrcRef.current);
       }
     };
   }, []);
@@ -147,12 +156,18 @@ export default function CreateMarketplaceItemPage() {
     setError(null);
 
     try {
-      let imageUrl = itemData.imageUrl.trim();
+      let imageUrl = "";
 
       if (imageFile && user) {
         setUploadingImage(true);
         try {
-          imageUrl = await uploadMarketplaceImage(imageFile, user.id);
+          const prepared = await prepareMarketplaceListingImage(imageFile);
+          imageUrl = await uploadMarketplaceImage(
+            prepared.blob,
+            prepared.filename,
+            prepared.contentType,
+            user.id
+          );
         } catch (uploadErr) {
           setError(
             uploadErr instanceof Error
@@ -413,60 +428,68 @@ export default function CreateMarketplaceItemPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/80 p-5 shadow-sm">
+                <label className="block text-sm font-semibold text-gray-900 mb-1">
                   Photo (optional)
                 </label>
+                <p className="text-sm text-gray-500 mb-4">
+                  Crop and zoom in the editor. Same rules as form uploads: up to{" "}
+                  <span className="font-medium text-gray-700">1 MB</span> as-is;
+                  larger images (up to 3 MB) are compressed automatically.
+                </p>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
                   onChange={(e) => {
                     const f = e.target.files?.[0] ?? null;
-                    setImageFile(f);
-                    if (previewUrlRef.current) {
-                      URL.revokeObjectURL(previewUrlRef.current);
-                      previewUrlRef.current = null;
+                    e.target.value = "";
+                    if (!f) return;
+                    if (!/^image\/(jpeg|png|gif|webp)$/i.test(f.type)) {
+                      setError("Please choose a JPEG, PNG, GIF, or WebP image.");
+                      return;
                     }
-                    if (f) {
-                      const url = URL.createObjectURL(f);
-                      previewUrlRef.current = url;
-                      setImagePreview(url);
-                    } else {
-                      setImagePreview(null);
+                    if (f.size > FORM_FILE_MAX_SOURCE_BYTES) {
+                      setError("Image must be 3 MB or smaller.");
+                      return;
                     }
+                    setError(null);
+                    if (cropSrcRef.current) {
+                      URL.revokeObjectURL(cropSrcRef.current);
+                      cropSrcRef.current = null;
+                    }
+                    const url = URL.createObjectURL(f);
+                    cropSrcRef.current = url;
+                    setCropSrc(url);
+                    setCropOpen(true);
                   }}
-                  className="w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-50 file:text-blue-700"
+                  className="w-full text-sm text-gray-700 file:mr-4 file:rounded-lg file:border file:border-slate-200 file:bg-white file:px-4 file:py-2.5 file:text-sm file:font-medium file:text-slate-800 hover:file:bg-slate-50"
                 />
-                <p className="text-sm text-gray-500 mt-1">
-                  Uploads to Firebase Storage (max 8 MB).
-                </p>
-                {imagePreview && (
-                  <div className="mt-3">
+                {imagePreview && imageFile && (
+                  <div className="mt-5 rounded-xl border border-slate-200 bg-white p-3 shadow-inner">
+                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+                      Preview (after crop)
+                    </p>
                     <img
                       src={imagePreview}
-                      alt="Preview"
-                      className="max-h-48 rounded-lg border border-gray-200 object-contain"
+                      alt="Listing preview"
+                      className="max-h-64 w-full rounded-lg object-contain"
                     />
+                    <button
+                      type="button"
+                      className="mt-3 text-sm font-medium text-red-600 hover:text-red-800 hover:underline"
+                      onClick={() => {
+                        setImageFile(null);
+                        if (previewUrlRef.current) {
+                          URL.revokeObjectURL(previewUrlRef.current);
+                          previewUrlRef.current = null;
+                        }
+                        setImagePreview(null);
+                      }}
+                    >
+                      Remove photo
+                    </button>
                   </div>
                 )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Or image URL (optional)
-                </label>
-                <input
-                  type="url"
-                  value={itemData.imageUrl}
-                  onChange={(e) =>
-                    setItemData((prev) => ({ ...prev, imageUrl: e.target.value }))
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="https://example.com/image.jpg"
-                />
-                <p className="text-sm text-gray-500 mt-1">
-                  Used only if you do not upload a file above.
-                </p>
               </div>
             </div>
           </div>
@@ -519,6 +542,38 @@ export default function CreateMarketplaceItemPage() {
           </div>
         </form>
       </div>
+
+      <ImageCropModal
+        imageSrc={cropSrc}
+        open={cropOpen}
+        title="Adjust your listing photo"
+        outputFileName="listing-photo.jpg"
+        onCancel={() => {
+          setCropOpen(false);
+          if (cropSrcRef.current) {
+            URL.revokeObjectURL(cropSrcRef.current);
+            cropSrcRef.current = null;
+          }
+          setCropSrc(null);
+        }}
+        onComplete={(file) => {
+          setImageFile(file);
+          if (previewUrlRef.current) {
+            URL.revokeObjectURL(previewUrlRef.current);
+            previewUrlRef.current = null;
+          }
+          const pu = URL.createObjectURL(file);
+          previewUrlRef.current = pu;
+          setImagePreview(pu);
+          setCropOpen(false);
+          if (cropSrcRef.current) {
+            URL.revokeObjectURL(cropSrcRef.current);
+            cropSrcRef.current = null;
+          }
+          setCropSrc(null);
+          setError(null);
+        }}
+      />
 
       {fxModalOpen && sgdIdrQuote && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">

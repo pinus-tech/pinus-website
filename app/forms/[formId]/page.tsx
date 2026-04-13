@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter, useParams, usePathname } from "next/navigation";
 import { buildLoginUrl } from "@/lib/login-callback";
 import { useAuth } from "@/lib/contexts/AuthContext";
@@ -18,6 +18,20 @@ import { Checkbox } from "@/app/components/ui/checkbox";
 import { DescriptionContent } from "@/app/components/DescriptionContent";
 import { validateFormFieldsArray } from "@/lib/forms/validate-form-fields";
 import { format, parseISO } from "date-fns";
+import {
+  prepareFormFileForUpload,
+  FORM_FILE_MAX_SOURCE_BYTES,
+  isPdfFile,
+} from "@/lib/forms/form-file-prepare";
+import {
+  isFileAccepted,
+  buildAcceptHtmlAttribute,
+  acceptedTypesSummary,
+} from "@/lib/forms/file-accepted";
+import { uploadFormAttachment } from "@/lib/firebase/upload-form-attachment";
+import { FormAttachmentViewer } from "@/app/components/forms/FormAttachmentViewer";
+import { FormFilePendingPreview } from "@/app/components/forms/FormFilePendingPreview";
+import { ImageCropModal } from "@/app/components/ImageCropModal";
 
 type FormField = FormFieldDefinition;
 
@@ -105,6 +119,14 @@ export default function FormDetailPage() {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<Form | null>(null);
   const [responses, setResponses] = useState<FormResponse[]>([]);
+  /** Pending files for file_upload fields (uploaded on submit). */
+  const [pendingFiles, setPendingFiles] = useState<Record<string, File | null>>({});
+  const [fileCropOpen, setFileCropOpen] = useState(false);
+  const [fileCropSrc, setFileCropSrc] = useState<string | null>(null);
+  const [fileCropFieldLabel, setFileCropFieldLabel] = useState<string | null>(
+    null
+  );
+  const fileCropSrcRef = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -162,6 +184,36 @@ export default function FormDetailPage() {
       window.removeEventListener("keydown", onKey);
     };
   }, [shareModalOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (fileCropSrcRef.current) {
+        URL.revokeObjectURL(fileCropSrcRef.current);
+        fileCropSrcRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!fileCropOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setFileCropOpen(false);
+      if (fileCropSrcRef.current) {
+        URL.revokeObjectURL(fileCropSrcRef.current);
+        fileCropSrcRef.current = null;
+      }
+      setFileCropSrc(null);
+      setFileCropFieldLabel(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [fileCropOpen]);
 
   const fetchForm = async () => {
     try {
@@ -282,6 +334,17 @@ export default function FormDetailPage() {
     for (const field of form.fields) {
       if (!isDataField(field) || !field.required) continue;
       const response = responses.find((r) => r.fieldLabel === field.label);
+      if (field.type === "file_upload") {
+        const hasUrl =
+          typeof response?.value === "string" &&
+          response.value.trim().length > 0;
+        const hasPending = !!pendingFiles[field.label];
+        if (!hasUrl && !hasPending) {
+          setError(`Field "${field.label}" is required`);
+          return;
+        }
+        continue;
+      }
       if (!response || isEmptyValue(field, response.value)) {
         setError(`Field "${field.label}" is required`);
         return;
@@ -291,6 +354,9 @@ export default function FormDetailPage() {
     for (const field of form.fields) {
       if (!isDataField(field)) continue;
       const response = responses.find((r) => r.fieldLabel === field.label);
+      if (field.type === "file_upload" && pendingFiles[field.label]) {
+        continue;
+      }
       const err = validateFieldValue(field, response?.value);
       if (err) {
         setError(`${field.label}: ${err}`);
@@ -302,22 +368,64 @@ export default function FormDetailPage() {
     setError(null);
 
     try {
+      if (!user?.id) {
+        setError("You must be signed in to submit.");
+        setSubmitting(false);
+        return;
+      }
+
+      let responsesPayload = responses.map((r) => ({ ...r }));
+
+      for (const field of form.fields) {
+        if (field.type !== "file_upload") continue;
+        const file = pendingFiles[field.label];
+        if (!file) continue;
+        const prepared = await prepareFormFileForUpload(file, {
+          acceptedTypes: field.acceptedFileTypes,
+        });
+        const url = await uploadFormAttachment(
+          prepared.blob,
+          prepared.filename,
+          prepared.contentType,
+          formId,
+          user.id
+        );
+        responsesPayload = responsesPayload.map((r) =>
+          r.fieldLabel === field.label ? { ...r, value: url } : r
+        );
+      }
+
+      for (const field of form.fields) {
+        if (!isDataField(field)) continue;
+        const payload = responsesPayload.find(
+          (r) => r.fieldLabel === field.label
+        );
+        const err = validateFieldValue(field, payload?.value);
+        if (err) {
+          setError(`${field.label}: ${err}`);
+          setSubmitting(false);
+          return;
+        }
+      }
+
       const response = await fetch(`/api/forms/${formId}/responses`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ responses }),
+        body: JSON.stringify({ responses: responsesPayload }),
       });
 
       if (response.ok) {
         router.push(`/forms/${formId}/thank-you`);
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Failed to submit form');
+        setError(errorData.error || "Failed to submit form");
       }
-    } catch (error) {
-      setError('Network error occurred');
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Network error occurred"
+      );
     } finally {
       setSubmitting(false);
     }
@@ -672,7 +780,7 @@ export default function FormDetailPage() {
         )}
 
         {isEditing && canEditForm && (
-          <div className="bg-white p-6 rounded-lg shadow mb-6 pb-28">
+          <div className="bg-white p-6 rounded-lg shadow mb-6 pb-20">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">
               Edit form
             </h2>
@@ -903,13 +1011,22 @@ export default function FormDetailPage() {
                           </p>
                         )}
                       </div>
-                      <p className="text-gray-900 border border-gray-100 rounded-md bg-gray-50 px-3 py-2 text-sm">
-                        {formatSubmittedAnswer(
-                          field,
-                          responses.find((r) => r.fieldLabel === field.label)
-                            ?.value
+                      <div className="text-gray-900 border border-gray-100 rounded-md bg-gray-50 px-3 py-2 text-sm">
+                        {field.type === "file_upload" ? (
+                          <FormAttachmentViewer
+                            url={String(
+                              responses.find((r) => r.fieldLabel === field.label)
+                                ?.value ?? ""
+                            )}
+                          />
+                        ) : (
+                          formatSubmittedAnswer(
+                            field,
+                            responses.find((r) => r.fieldLabel === field.label)
+                              ?.value
+                          )
                         )}
-                      </p>
+                      </div>
                     </>
                   )}
                 </div>
@@ -1156,6 +1273,100 @@ export default function FormDetailPage() {
                           })}
                         </div>
                       )}
+
+                      {field.type === "file_upload" && (
+                        <div className="space-y-3 rounded-xl border border-gray-100 bg-gray-50/80 p-4">
+                          <input
+                            type="file"
+                            accept={buildAcceptHtmlAttribute(
+                              field.acceptedFileTypes
+                            )}
+                            className="block w-full max-w-md text-sm text-gray-700 file:mr-3 file:rounded-md file:border file:border-gray-300 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0] ?? null;
+                              e.target.value = "";
+                              if (!f) {
+                                setPendingFiles((p) => ({
+                                  ...p,
+                                  [field.label]: null,
+                                }));
+                                handleResponseChange(field.label, "");
+                                return;
+                              }
+                              if (!isFileAccepted(f, field.acceptedFileTypes)) {
+                                setError(
+                                  `Allowed types for this question: ${acceptedTypesSummary(field.acceptedFileTypes)}.`
+                                );
+                                return;
+                              }
+                              if (f.size > FORM_FILE_MAX_SOURCE_BYTES) {
+                                setError("File must be 3 MB or smaller.");
+                                return;
+                              }
+                              if (isPdfFile(f)) {
+                                setPendingFiles((p) => ({
+                                  ...p,
+                                  [field.label]: f,
+                                }));
+                                handleResponseChange(field.label, "");
+                                setError(null);
+                                return;
+                              }
+                              if (fileCropSrcRef.current) {
+                                URL.revokeObjectURL(fileCropSrcRef.current);
+                                fileCropSrcRef.current = null;
+                              }
+                              const url = URL.createObjectURL(f);
+                              fileCropSrcRef.current = url;
+                              setFileCropSrc(url);
+                              setFileCropFieldLabel(field.label);
+                              setFileCropOpen(true);
+                              setError(null);
+                            }}
+                          />
+                          <p className="text-xs text-gray-500 max-w-xl">
+                            Allowed:{" "}
+                            <span className="font-medium text-gray-700">
+                              {acceptedTypesSummary(field.acceptedFileTypes)}
+                            </span>
+                            . Images open a crop step first. Up to 1 MB as-is;
+                            images 1–3 MB are compressed to 1 MB; PDFs must be
+                            ≤ 1 MB.
+                          </p>
+                          {pendingFiles[field.label] && (
+                            <div className="space-y-2">
+                              <p className="text-sm text-gray-700">
+                                <span className="font-medium">Selected:</span>{" "}
+                                {pendingFiles[field.label]!.name} (
+                                {(
+                                  pendingFiles[field.label]!.size / 1024
+                                ).toFixed(0)}{" "}
+                                KB)
+                              </p>
+                              <FormFilePendingPreview
+                                file={pendingFiles[field.label]!}
+                              />
+                            </div>
+                          )}
+                          {typeof (responses.find((r) => r.fieldLabel === field.label)
+                            ?.value as string) === "string" &&
+                            String(
+                              responses.find((r) => r.fieldLabel === field.label)
+                                ?.value ?? ""
+                            ).startsWith("https://") &&
+                            !pendingFiles[field.label] && (
+                              <div className="pt-1">
+                                <FormAttachmentViewer
+                                  url={String(
+                                    responses.find(
+                                      (r) => r.fieldLabel === field.label
+                                    )?.value ?? ""
+                                  )}
+                                />
+                              </div>
+                            )}
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -1297,6 +1508,39 @@ export default function FormDetailPage() {
           </div>
         </div>
       )}
+
+      <ImageCropModal
+        imageSrc={fileCropSrc}
+        open={fileCropOpen}
+        title="Adjust your image"
+        description="Drag to reposition and zoom. The cropped image is attached when you submit the form."
+        outputFileName="form-upload.jpg"
+        completeLabel="Use this image"
+        onCancel={() => {
+          setFileCropOpen(false);
+          if (fileCropSrcRef.current) {
+            URL.revokeObjectURL(fileCropSrcRef.current);
+            fileCropSrcRef.current = null;
+          }
+          setFileCropSrc(null);
+          setFileCropFieldLabel(null);
+        }}
+        onComplete={(file) => {
+          const label = fileCropFieldLabel;
+          if (label) {
+            setPendingFiles((p) => ({ ...p, [label]: file }));
+            handleResponseChange(label, "");
+          }
+          setFileCropOpen(false);
+          if (fileCropSrcRef.current) {
+            URL.revokeObjectURL(fileCropSrcRef.current);
+            fileCropSrcRef.current = null;
+          }
+          setFileCropSrc(null);
+          setFileCropFieldLabel(null);
+          setError(null);
+        }}
+      />
     </div>
   );
 }
