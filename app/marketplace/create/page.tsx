@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/app/components/ui/select";
+import { Button } from "@/app/components/ui/button";
 
 interface ItemData {
   title: string;
@@ -47,6 +48,7 @@ export default function CreateMarketplaceItemPage() {
   const [cropOpen, setCropOpen] = useState(false);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const cropSrcRef = useRef<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const [itemData, setItemData] = useState<ItemData>({
     title: '',
     description: '',
@@ -438,8 +440,11 @@ export default function CreateMarketplaceItemPage() {
                   larger images (up to 3 MB) are compressed automatically.
                 </p>
                 <input
+                  ref={photoInputRef}
                   type="file"
                   accept="image/jpeg,image/png,image/gif,image/webp"
+                  className="sr-only"
+                  tabIndex={-1}
                   onChange={(e) => {
                     const f = e.target.files?.[0] ?? null;
                     e.target.value = "";
@@ -462,32 +467,56 @@ export default function CreateMarketplaceItemPage() {
                     setCropSrc(url);
                     setCropOpen(true);
                   }}
-                  className="w-full text-sm text-gray-700 file:mr-4 file:rounded-lg file:border file:border-slate-200 file:bg-white file:px-4 file:py-2.5 file:text-sm file:font-medium file:text-slate-800 hover:file:bg-slate-50"
                 />
-                {imagePreview && imageFile && (
-                  <div className="mt-5 rounded-xl border border-slate-200 bg-white p-3 shadow-inner">
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-                      Preview (after crop)
-                    </p>
-                    <img
-                      src={imagePreview}
-                      alt="Listing preview"
-                      className="max-h-64 w-full rounded-lg object-contain"
-                    />
-                    <button
-                      type="button"
-                      className="mt-3 text-sm font-medium text-red-600 hover:text-red-800 hover:underline"
-                      onClick={() => {
-                        setImageFile(null);
-                        if (previewUrlRef.current) {
-                          URL.revokeObjectURL(previewUrlRef.current);
-                          previewUrlRef.current = null;
-                        }
-                        setImagePreview(null);
-                      }}
-                    >
-                      Remove photo
-                    </button>
+                {!imagePreview || !imageFile ? (
+                  <Button
+                    type="button"
+                    variant="blue"
+                    outline
+                    onClick={() => photoInputRef.current?.click()}
+                  >
+                    Add photo
+                  </Button>
+                ) : (
+                  <div className="mt-1 space-y-3">
+                    <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-inner">
+                      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+                        Preview (after crop)
+                      </p>
+                      <img
+                        src={imagePreview}
+                        alt="Listing preview"
+                        className="max-h-64 w-full rounded-lg object-contain"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="blue"
+                        outline
+                        onClick={() => photoInputRef.current?.click()}
+                      >
+                        Change photo
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="red"
+                        outline
+                        onClick={() => {
+                          setImageFile(null);
+                          if (previewUrlRef.current) {
+                            URL.revokeObjectURL(previewUrlRef.current);
+                            previewUrlRef.current = null;
+                          }
+                          setImagePreview(null);
+                          if (photoInputRef.current) {
+                            photoInputRef.current.value = "";
+                          }
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>

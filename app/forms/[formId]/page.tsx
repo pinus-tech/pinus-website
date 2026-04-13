@@ -127,6 +127,8 @@ export default function FormDetailPage() {
     null
   );
   const fileCropSrcRef = useRef<string | null>(null);
+  /** One hidden file input per row index for file_upload fields (change / replace). */
+  const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -1277,11 +1279,16 @@ export default function FormDetailPage() {
                       {field.type === "file_upload" && (
                         <div className="space-y-3 rounded-xl border border-gray-100 bg-gray-50/80 p-4">
                           <input
+                            id={`form-file-upload-${index}`}
+                            ref={(el) => {
+                              fileInputRefs.current[index] = el;
+                            }}
                             type="file"
                             accept={buildAcceptHtmlAttribute(
                               field.acceptedFileTypes
                             )}
-                            className="block w-full max-w-md text-sm text-gray-700 file:mr-3 file:rounded-md file:border file:border-gray-300 file:bg-white file:px-3 file:py-1.5 file:text-sm file:font-medium"
+                            className="sr-only"
+                            tabIndex={-1}
                             onChange={(e) => {
                               const f = e.target.files?.[0] ?? null;
                               e.target.value = "";
@@ -1333,8 +1340,21 @@ export default function FormDetailPage() {
                             images 1–3 MB are compressed to 1 MB; PDFs must be
                             ≤ 1 MB.
                           </p>
-                          {pendingFiles[field.label] && (
-                            <div className="space-y-2">
+                          {!pendingFiles[field.label] ? (
+                            <div>
+                              <Button
+                                type="button"
+                                variant="blue"
+                                outline
+                                onClick={() =>
+                                  fileInputRefs.current[index]?.click()
+                                }
+                              >
+                                Choose file
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
                               <p className="text-sm text-gray-700">
                                 <span className="font-medium">Selected:</span>{" "}
                                 {pendingFiles[field.label]!.name} (
@@ -1346,6 +1366,36 @@ export default function FormDetailPage() {
                               <FormFilePendingPreview
                                 file={pendingFiles[field.label]!}
                               />
+                              <div className="flex flex-wrap gap-2 pt-1">
+                                <Button
+                                  type="button"
+                                  variant="blue"
+                                  outline
+                                  onClick={() =>
+                                    fileInputRefs.current[index]?.click()
+                                  }
+                                >
+                                  {isPdfFile(pendingFiles[field.label]!)
+                                    ? "Change PDF"
+                                    : "Change image"}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="red"
+                                  outline
+                                  onClick={() => {
+                                    setPendingFiles((p) => ({
+                                      ...p,
+                                      [field.label]: null,
+                                    }));
+                                    handleResponseChange(field.label, "");
+                                    const el = fileInputRefs.current[index];
+                                    if (el) el.value = "";
+                                  }}
+                                >
+                                  Delete
+                                </Button>
+                              </div>
                             </div>
                           )}
                           {typeof (responses.find((r) => r.fieldLabel === field.label)
