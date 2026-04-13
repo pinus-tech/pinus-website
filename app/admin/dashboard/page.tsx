@@ -1174,50 +1174,50 @@ export default function AdminDashboard() {
                       {detailModalUser.telegram.replace(/^@+/, "")}
                     </>
                   ) : (
-                    "—"
+                    "-"
                   )}
                 </dd>
               </div>
               <div>
                 <dt className="font-medium text-gray-500">Phone</dt>
                 <dd className="mt-0.5 text-gray-900">
-                  {detailModalUser.phoneNumber || "—"}
+                  {detailModalUser.phoneNumber || "-"}
                 </dd>
               </div>
               <div>
                 <dt className="font-medium text-gray-500">City</dt>
                 <dd className="mt-0.5 text-gray-900">
-                  {detailModalUser.city || "—"}
+                  {detailModalUser.city || "-"}
                 </dd>
               </div>
               <div>
                 <dt className="font-medium text-gray-500">Major</dt>
                 <dd className="mt-0.5 text-gray-900">
-                  {detailModalUser.major || "—"}
+                  {detailModalUser.major || "-"}
                 </dd>
               </div>
               <div>
                 <dt className="font-medium text-gray-500">Career</dt>
                 <dd className="mt-0.5 text-gray-900 capitalize">
-                  {detailModalUser.career || "—"}
+                  {detailModalUser.career || "-"}
                 </dd>
               </div>
               <div>
                 <dt className="font-medium text-gray-500">Intake year</dt>
                 <dd className="mt-0.5 text-gray-900">
-                  {detailModalUser.intakeYear ?? "—"}
+                  {detailModalUser.intakeYear ?? "-"}
                 </dd>
               </div>
               <div>
                 <dt className="font-medium text-gray-500">Year of study</dt>
                 <dd className="mt-0.5 text-gray-900">
-                  {detailModalUser.yearOfStudy ?? "—"}
+                  {detailModalUser.yearOfStudy ?? "-"}
                 </dd>
               </div>
               <div>
                 <dt className="font-medium text-gray-500">High school</dt>
                 <dd className="mt-0.5 text-gray-900 whitespace-pre-wrap">
-                  {detailModalUser.highSchool || "—"}
+                  {detailModalUser.highSchool || "-"}
                 </dd>
               </div>
               <div>

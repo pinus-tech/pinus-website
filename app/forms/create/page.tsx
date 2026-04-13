@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { buildLoginUrl } from "@/lib/login-callback";
 import { useAuth } from "@/lib/contexts/AuthContext";
@@ -19,6 +19,8 @@ import {
   prepareFormFileForUpload,
   FORM_FILE_MAX_SOURCE_BYTES,
 } from "@/lib/forms/form-file-prepare";
+import { FORM_HEADER_IMAGE_CROP_ASPECT } from "@/lib/forms/form-header-aspect";
+import { ImageCropModal } from "@/app/components/ImageCropModal";
 import { Input } from "@/app/components/ui/input";
 import { Textarea } from "@/app/components/ui/textarea";
 import { Button } from "@/app/components/ui/button";
@@ -54,6 +56,9 @@ export default function CreateFormPage() {
     shortLink: '',
   });
   const [headerUploading, setHeaderUploading] = useState(false);
+  const [headerCropOpen, setHeaderCropOpen] = useState(false);
+  const [headerCropSrc, setHeaderCropSrc] = useState<string | null>(null);
+  const headerCropSrcRef = useRef<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [potentialManagers, setPotentialManagers] = useState<Array<{
     id: string;
@@ -326,8 +331,9 @@ export default function CreateFormPage() {
                   Header image (optional)
                 </label>
                 <p className="text-xs text-gray-500 mb-2">
-                  Shown at the top of the form. Paste an HTTPS image URL, or
-                  upload (stored securely).
+                  Shown at the top of the form. Paste an HTTPS URL, or upload -
+                  you&apos;ll crop a wide banner (21∶9), same rules as marketplace
+                  photos: up to 1 MB as-is; larger (up to 3 MB) compressed.
                 </p>
                 <Input
                   type="url"
@@ -345,36 +351,30 @@ export default function CreateFormPage() {
                   type="file"
                   accept="image/jpeg,image/png,image/gif,image/webp"
                   className="text-sm text-gray-600"
-                  disabled={headerUploading || !user}
-                  onChange={async (e) => {
+                  disabled={headerUploading || !user || headerCropOpen}
+                  onChange={(e) => {
                     const f = e.target.files?.[0];
                     e.target.value = "";
                     if (!f || !user) return;
+                    if (!/^image\/(jpeg|png|gif|webp)$/i.test(f.type)) {
+                      setError(
+                        "Please choose a JPEG, PNG, GIF, or WebP image."
+                      );
+                      return;
+                    }
                     if (f.size > FORM_FILE_MAX_SOURCE_BYTES) {
                       setError("Image must be 3 MB or smaller.");
                       return;
                     }
-                    setHeaderUploading(true);
                     setError(null);
-                    try {
-                      const prepared = await prepareFormFileForUpload(f, {
-                        acceptedTypes: ["jpeg", "png", "gif", "webp"],
-                      });
-                      const url = await uploadFormHeaderImage(
-                        prepared.blob,
-                        prepared.filename,
-                        prepared.contentType,
-                        "draft",
-                        user.id
-                      );
-                      setFormData((prev) => ({ ...prev, headerImageUrl: url }));
-                    } catch (err) {
-                      setError(
-                        err instanceof Error ? err.message : "Upload failed"
-                      );
-                    } finally {
-                      setHeaderUploading(false);
+                    if (headerCropSrcRef.current) {
+                      URL.revokeObjectURL(headerCropSrcRef.current);
+                      headerCropSrcRef.current = null;
                     }
+                    const url = URL.createObjectURL(f);
+                    headerCropSrcRef.current = url;
+                    setHeaderCropSrc(url);
+                    setHeaderCropOpen(true);
                   }}
                 />
                 {headerUploading && (
@@ -475,6 +475,54 @@ export default function CreateFormPage() {
           </div>
         </form>
       </div>
+
+      <ImageCropModal
+        imageSrc={headerCropSrc}
+        open={headerCropOpen}
+        aspect={FORM_HEADER_IMAGE_CROP_ASPECT}
+        title="Adjust header banner"
+        description="Wide banner (21∶9). Drag to position and zoom. Same rules as marketplace listing photos."
+        outputFileName="form-header.jpg"
+        completeLabel="Use this image"
+        onCancel={() => {
+          setHeaderCropOpen(false);
+          if (headerCropSrcRef.current) {
+            URL.revokeObjectURL(headerCropSrcRef.current);
+            headerCropSrcRef.current = null;
+          }
+          setHeaderCropSrc(null);
+        }}
+        onComplete={async (file) => {
+          setHeaderCropOpen(false);
+          if (headerCropSrcRef.current) {
+            URL.revokeObjectURL(headerCropSrcRef.current);
+            headerCropSrcRef.current = null;
+          }
+          setHeaderCropSrc(null);
+          if (!user) return;
+          setHeaderUploading(true);
+          setError(null);
+          try {
+            const prepared = await prepareFormFileForUpload(file, {
+              acceptedTypes: ["jpeg", "png", "gif", "webp"],
+            });
+            const url = await uploadFormHeaderImage(
+              prepared.blob,
+              prepared.filename,
+              prepared.contentType,
+              "draft",
+              user.id
+            );
+            setFormData((prev) => ({ ...prev, headerImageUrl: url }));
+          } catch (err) {
+            setError(
+              err instanceof Error ? err.message : "Upload failed"
+            );
+          } finally {
+            setHeaderUploading(false);
+          }
+        }}
+      />
     </div>
   );
 }

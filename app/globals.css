@@ -81,7 +81,7 @@ textarea {
   box-shadow: rgb(128, 155, 206) 2px 2px 0px, rgb(64, 59, 59) 2px 2px 0px 2px;
 }
 
-/* Form respondent UI — PINUS logo colors */
+/* Form respondent UI - PINUS logo colors */
 .pinus-form-theme-blue {
   --pf-accent: #222e89;
   --pf-accent-soft: rgba(34, 46, 137, 0.1);

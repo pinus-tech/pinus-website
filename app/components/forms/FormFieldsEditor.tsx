@@ -201,6 +201,44 @@ export function FormFieldsEditor({
                     />
                   </div>
                 )}
+                {pages.length > 1 && field.type !== "section" && (
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      After this question, go to
+                    </label>
+                    <p className="text-xs text-gray-500 mb-2">
+                      When the respondent taps Next, jump here instead of the
+                      following page in the list. If two questions on this page
+                      set this, the one lower on the form wins. Drop-down /
+                      single-choice{" "}
+                      <span className="font-medium">per-option</span> routing
+                      below overrides when it applies.
+                    </p>
+                    <FormSelect
+                      value={field.nextPageId ?? "_next"}
+                      onValueChange={(v) =>
+                        updateField(index, {
+                          nextPageId: v === "_next" ? undefined : v,
+                        })
+                      }
+                      options={[
+                        {
+                          value: "_next",
+                          label: "Next page in order",
+                        },
+                        ...pages.map((p, i) => ({
+                          value: p.id,
+                          label: (p.title?.trim() || `Page ${i + 1}`).slice(
+                            0,
+                            60
+                          ),
+                        })),
+                      ]}
+                      placeholder="Choose destination"
+                      className="max-w-md"
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Field Label *
@@ -491,8 +529,10 @@ export function FormFieldsEditor({
                       (field.type === "multiple_choice" &&
                         (field.maxSelections ?? 999) <= 1)) && (
                       <p className="text-xs text-gray-600 mb-2">
-                        After each option, choose which page comes next (like
-                        Google Forms). “Next in order” follows your page list.
+                        After each option, choose which page comes next. “Next in
+                        order” follows your page list. Overrides{" "}
+                        <span className="font-medium">After this question, go to</span>{" "}
+                        for the selected answer only.
                       </p>
                     )}
                   <div className="space-y-2">

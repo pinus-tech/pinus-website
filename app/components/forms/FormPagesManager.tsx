@@ -50,7 +50,7 @@ export function FormPagesManager({
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Pages</h3>
           <p className="text-sm text-gray-600 mt-0.5">
-            Split questions across pages (like Google Forms). Use branching on
+            Split questions across pages. Use branching on
             drop-downs to jump to a page based on the answer.
           </p>
         </div>

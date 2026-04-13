@@ -170,6 +170,13 @@ export function validateFormWithPages(
         }
       }
     }
+    if (
+      f.nextPageId &&
+      f.nextPageId !== "_next" &&
+      !pageIds.has(f.nextPageId)
+    ) {
+      return `Field "${f.label}" has \"After this question\" target to an unknown page`;
+    }
   }
   return null;
 }

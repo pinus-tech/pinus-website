@@ -195,7 +195,7 @@ export default function MarketplacePage() {
   };
 
   const getConditionLabel = (c?: string) =>
-    MARKETPLACE_CONDITION_OPTIONS.find((o) => o.value === c)?.label ?? c ?? "—";
+    MARKETPLACE_CONDITION_OPTIONS.find((o) => o.value === c)?.label ?? c ?? "-";
 
   const handleContact = (item: MarketplaceItem) => {
     setSelectedItem(item);

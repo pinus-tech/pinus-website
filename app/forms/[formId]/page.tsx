@@ -40,6 +40,7 @@ import {
   FORM_THEMES,
 } from "@/lib/forms/form-pages";
 import { formThemeClass } from "@/lib/forms/form-theme-styles";
+import { FORM_HEADER_IMAGE_CROP_ASPECT } from "@/lib/forms/form-header-aspect";
 import { FormPagesManager } from "@/app/components/forms/FormPagesManager";
 import { uploadFormHeaderImage } from "@/lib/firebase/upload-form-header";
 
@@ -147,6 +148,9 @@ export default function FormDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [fillStep, setFillStep] = useState(0);
   const [headerUploading, setHeaderUploading] = useState(false);
+  const [headerCropOpen, setHeaderCropOpen] = useState(false);
+  const [headerCropSrc, setHeaderCropSrc] = useState<string | null>(null);
+  const headerCropSrcRef = useRef<string | null>(null);
   const [editData, setEditData] = useState<{
     title?: string;
     description?: string;
@@ -465,14 +469,6 @@ export default function FormDetailPage() {
 
   const isFormFiller = user && form && !form.userPermissions?.canEdit && form.userPermissions?.canFill;
 
-  const showOrganiserMeta =
-    user &&
-    form &&
-    (user.isSuperAdmin ||
-      user.isAdmin ||
-      !!canEditForm ||
-      !!form.userPermissions?.canViewResponses);
-
   /** Creators, managers, and admins can open sharing / copy the participant link */
   const canShareLink = !!canEditForm;
 
@@ -729,82 +725,87 @@ export default function FormDetailPage() {
     }
   };
 
+  const showGoogleStyleFillCard =
+    form.isActive && !!canFillForm && !isEditing;
+
+  const topBarActions =
+    (canShareLink || canEditForm || form.userPermissions?.canViewResponses) && (
+      <div className="flex flex-wrap gap-2 justify-end">
+        {canShareLink && (
+          <Button
+            type="button"
+            variant="blue"
+            onClick={openShareModal}
+            disabled={shareBusy}
+          >
+            {shareBusy ? "…" : "Share form"}
+          </Button>
+        )}
+        {canEditForm && (
+          <Button
+            type="button"
+            variant="blue"
+            onClick={() => {
+              if (isEditing) {
+                setIsEditing(false);
+                setEditData({});
+              } else {
+                startEditing();
+              }
+            }}
+          >
+            {isEditing ? "Cancel Edit" : "Edit Form"}
+          </Button>
+        )}
+        {form.userPermissions?.canViewResponses && (
+          <Link
+            href={`/forms/${formId}/responses`}
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+          >
+            View Responses ({form.responseCount})
+          </Link>
+        )}
+      </div>
+    );
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">{form.title}</h1>
-            {form.description && (
-              <div className="text-gray-600 mt-2 max-w-3xl">
-                <DescriptionContent
-                  text={form.description}
-                  asMarkdown={!!form.descriptionMarkdown}
-                />
-              </div>
-            )}
-            {form.slug && (
-              <p className="text-gray-500 mt-2 text-sm">
-                Short link:{" "}
-                <code className="rounded bg-gray-100 px-1.5 py-0.5 text-gray-800">
-                  /f/{form.slug}
-                </code>
-              </p>
-            )}
-            {isFormFiller && (
-              <p className="text-blue-600 mt-1 text-sm">You can fill out this form</p>
-            )}
-            {form.userHasSubmitted && !form.userPermissions?.canFill && (
-              <p className="text-green-700 mt-1 text-sm font-medium">
-                You have already submitted this form.
-              </p>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2 justify-end">
-            <Button
-              type="button"
-              variant="black"
-              outline
-              onClick={() => router.push("/forms")}
-            >
-              ← Back to Forms
-            </Button>
-            {canShareLink && (
-              <Button
-                type="button"
-                variant="blue"
-                onClick={openShareModal}
-                disabled={shareBusy}
-              >
-                {shareBusy ? "…" : "Share form"}
-              </Button>
-            )}
-            {canEditForm && (
-              <Button
-                type="button"
-                variant="blue"
-                onClick={() => {
-                  if (isEditing) {
-                    setIsEditing(false);
-                    setEditData({});
-                  } else {
-                    startEditing();
-                  }
-                }}
-              >
-                {isEditing ? "Cancel Edit" : "Edit Form"}
-              </Button>
-            )}
-            {form.userPermissions?.canViewResponses && (
-              <Link
-                href={`/forms/${formId}/responses`}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-              >
-                View Responses ({form.responseCount})
-              </Link>
+        {showGoogleStyleFillCard ? (
+          topBarActions && (
+            <div className="mb-6 flex justify-end">{topBarActions}</div>
+          )
+        ) : (
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">{form.title}</h1>
+              {form.description && (
+                <div className="text-gray-600 mt-2 max-w-3xl">
+                  <DescriptionContent
+                    text={form.description}
+                    asMarkdown={!!form.descriptionMarkdown}
+                  />
+                </div>
+              )}
+              {form.slug && (
+                <p className="text-gray-500 mt-2 text-sm">
+                  Short link:{" "}
+                  <code className="rounded bg-gray-100 px-1.5 py-0.5 text-gray-800">
+                    /f/{form.slug}
+                  </code>
+                </p>
+              )}
+              {form.userHasSubmitted && !form.userPermissions?.canFill && (
+                <p className="text-green-700 mt-1 text-sm font-medium">
+                  You have already submitted this form.
+                </p>
+              )}
+            </div>
+            {topBarActions && (
+              <div className="shrink-0 sm:pt-1">{topBarActions}</div>
             )}
           </div>
-        </div>
+        )}
 
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
@@ -817,50 +818,6 @@ export default function FormDetailPage() {
             {success}
           </div>
         )}
-
-        {/* Form Info - creator / managers / response counts: organisers only */}
-        <div className="bg-white p-6 rounded-lg shadow mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-            {showOrganiserMeta && (
-              <div>
-                <span className="font-medium">Created by:</span>{" "}
-                {form.createdBy.name}
-              </div>
-            )}
-            {showOrganiserMeta && (
-              <div>
-                <span className="font-medium">Responses:</span>{" "}
-                {form.responseCount}
-              </div>
-            )}
-            {showOrganiserMeta && (
-              <div>
-                <span className="font-medium">Status:</span>{" "}
-                {form.isActive ? "Active" : "Inactive"}
-              </div>
-            )}
-            {!showOrganiserMeta && (
-              <div className="md:col-span-3">
-                <span className="font-medium">Status:</span>{" "}
-                {form.isActive ? "Active" : "Inactive"}
-              </div>
-            )}
-          </div>
-          {showOrganiserMeta &&
-            form.managers &&
-            form.managers.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <span className="font-medium text-sm text-gray-600">Managers:</span>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {form.managers.map((manager, index) => (
-                  <span key={index} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
-                    {manager.name}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
 
         {!isEditing && canEditForm && (
           <div className="bg-white p-6 rounded-lg shadow mb-6">
@@ -988,7 +945,8 @@ export default function FormDetailPage() {
                   Header image (optional)
                 </label>
                 <p className="text-xs text-gray-500 mb-2">
-                  Paste an HTTPS image URL, or upload (stored securely).
+                  Paste an HTTPS URL, or upload - crop a wide banner (21∶9),
+                  same rules as marketplace photos (stored securely).
                 </p>
                 <Input
                   type="url"
@@ -1006,36 +964,32 @@ export default function FormDetailPage() {
                   type="file"
                   accept="image/jpeg,image/png,image/gif,image/webp"
                   className="text-sm text-gray-600"
-                  disabled={headerUploading || !user}
-                  onChange={async (e) => {
+                  disabled={
+                    headerUploading || !user || headerCropOpen
+                  }
+                  onChange={(e) => {
                     const f = e.target.files?.[0];
                     e.target.value = "";
                     if (!f || !user || !formId) return;
+                    if (!/^image\/(jpeg|png|gif|webp)$/i.test(f.type)) {
+                      setError(
+                        "Please choose a JPEG, PNG, GIF, or WebP image."
+                      );
+                      return;
+                    }
                     if (f.size > FORM_FILE_MAX_SOURCE_BYTES) {
                       setError("Image must be 3 MB or smaller.");
                       return;
                     }
-                    setHeaderUploading(true);
                     setError(null);
-                    try {
-                      const prepared = await prepareFormFileForUpload(f, {
-                        acceptedTypes: ["jpeg", "png", "gif", "webp"],
-                      });
-                      const url = await uploadFormHeaderImage(
-                        prepared.blob,
-                        prepared.filename,
-                        prepared.contentType,
-                        formId,
-                        user.id
-                      );
-                      setEditData((prev) => ({ ...prev, headerImageUrl: url }));
-                    } catch (err) {
-                      setError(
-                        err instanceof Error ? err.message : "Upload failed"
-                      );
-                    } finally {
-                      setHeaderUploading(false);
+                    if (headerCropSrcRef.current) {
+                      URL.revokeObjectURL(headerCropSrcRef.current);
+                      headerCropSrcRef.current = null;
                     }
+                    const url = URL.createObjectURL(f);
+                    headerCropSrcRef.current = url;
+                    setHeaderCropSrc(url);
+                    setHeaderCropOpen(true);
                   }}
                 />
                 {headerUploading && (
@@ -1247,10 +1201,16 @@ export default function FormDetailPage() {
 
         {form.isActive && canFillForm && !isEditing ? (
           <div
-            className={`overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm ${formThemeClass(
+            className={`relative overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm ${formThemeClass(
               form.theme ?? "blue"
             )}`}
           >
+            <span
+              className="pointer-events-none absolute right-4 top-4 z-10 inline-flex items-center rounded-full border border-emerald-200/90 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800 shadow-sm"
+              title="This form is accepting responses"
+            >
+              Active
+            </span>
             {form.headerImageUrl && (
               <img
                 src={form.headerImageUrl}
@@ -1282,7 +1242,7 @@ export default function FormDetailPage() {
                   <p className="text-sm text-gray-500">
                     Page {fillStep + 1} of {pagesList.length}
                     {pagesList[fillStep]?.title?.trim()
-                      ? ` — ${pagesList[fillStep]!.title}`
+                      ? ` - ${pagesList[fillStep]!.title}`
                       : ""}
                   </p>
                   {pagesList[fillStep]?.description?.trim() && (
@@ -1840,8 +1800,57 @@ export default function FormDetailPage() {
       )}
 
       <ImageCropModal
+        imageSrc={headerCropSrc}
+        open={headerCropOpen}
+        aspect={FORM_HEADER_IMAGE_CROP_ASPECT}
+        title="Adjust header banner"
+        description="Wide banner (21∶9). Drag to position and zoom. Same rules as marketplace listing photos."
+        outputFileName="form-header.jpg"
+        completeLabel="Use this image"
+        onCancel={() => {
+          setHeaderCropOpen(false);
+          if (headerCropSrcRef.current) {
+            URL.revokeObjectURL(headerCropSrcRef.current);
+            headerCropSrcRef.current = null;
+          }
+          setHeaderCropSrc(null);
+        }}
+        onComplete={async (file) => {
+          setHeaderCropOpen(false);
+          if (headerCropSrcRef.current) {
+            URL.revokeObjectURL(headerCropSrcRef.current);
+            headerCropSrcRef.current = null;
+          }
+          setHeaderCropSrc(null);
+          if (!user?.id || !formId) return;
+          setHeaderUploading(true);
+          setError(null);
+          try {
+            const prepared = await prepareFormFileForUpload(file, {
+              acceptedTypes: ["jpeg", "png", "gif", "webp"],
+            });
+            const url = await uploadFormHeaderImage(
+              prepared.blob,
+              prepared.filename,
+              prepared.contentType,
+              formId,
+              user.id
+            );
+            setEditData((prev) => ({ ...prev, headerImageUrl: url }));
+          } catch (err) {
+            setError(
+              err instanceof Error ? err.message : "Upload failed"
+            );
+          } finally {
+            setHeaderUploading(false);
+          }
+        }}
+      />
+
+      <ImageCropModal
         imageSrc={fileCropSrc}
         open={fileCropOpen}
+        aspect={4 / 3}
         title="Adjust your image"
         description="Drag to reposition and zoom. The cropped image is attached when you submit the form."
         outputFileName="form-upload.jpg"

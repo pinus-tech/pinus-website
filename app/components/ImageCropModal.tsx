@@ -19,6 +19,11 @@ type ImageCropModalProps = {
   completeLabel?: string;
   /** Filename for the cropped JPEG File. */
   outputFileName?: string;
+  /**
+   * Crop frame width/height. Marketplace and form question images use 4∶3;
+   * form header banners use a wider ratio (see `FORM_HEADER_IMAGE_CROP_ASPECT`).
+   */
+  aspect?: number;
 };
 
 export function ImageCropModal({
@@ -30,6 +35,7 @@ export function ImageCropModal({
   description = "Drag to reposition, use the slider to zoom. Larger files are compressed to fit upload limits.",
   completeLabel = "Use this photo",
   outputFileName = "image.jpg",
+  aspect = 4 / 3,
 }: ImageCropModalProps) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
@@ -78,13 +84,19 @@ export function ImageCropModal({
           <p className="mt-1 text-sm text-gray-500">{description}</p>
         </div>
 
-        <div className="relative mx-auto h-[min(420px,52vh)] w-full bg-gray-900">
+        <div
+          className={`relative mx-auto w-full bg-gray-900 ${
+            aspect >= 2
+              ? "h-[min(380px,52vh)]"
+              : "h-[min(420px,52vh)]"
+          }`}
+        >
           <Cropper
-            key={imageSrc}
+            key={`${imageSrc}-${aspect}`}
             image={imageSrc}
             crop={crop}
             zoom={zoom}
-            aspect={4 / 3}
+            aspect={aspect}
             onCropChange={setCrop}
             onZoomChange={setZoom}
             onCropComplete={onCropComplete}

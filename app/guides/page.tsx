@@ -17,7 +17,7 @@ import Image from 'next/image'
 
 const BLUR_FADE_DELAY = 0.02;
 
-/** Notion guide descriptions use "Title—blockId" (em dash). `split("-")` fails on em dashes and breaks UUIDs. */
+/** Notion guide descriptions use "Title-blockId" (em dash). `split("-")` fails on em dashes and breaks UUIDs. */
 function splitGuideDescriptionLine(line: string): { label: string; blockId: string } {
   const trimmed = line.trim();
   if (!trimmed) return { label: "", blockId: "" };
