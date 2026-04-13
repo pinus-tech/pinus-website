@@ -3,13 +3,12 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import type {
+  FormFieldDefinition,
+  FormFieldType,
+} from "@/lib/form-field-types";
 
-interface FormField {
-  label: string;
-  type: 'text' | 'number' | 'date' | 'checkbox' | 'dropdown';
-  required: boolean;
-  options?: string[];
-}
+type FormField = FormFieldDefinition;
 
 interface FormData {
   title: string;
@@ -67,14 +66,17 @@ export default function CreateFormPage() {
   };
 
   const addField = () => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      fields: [...prev.fields, {
-        label: '',
-        type: 'text',
-        required: false,
-        options: []
-      }]
+      fields: [
+        ...prev.fields,
+        {
+          label: "",
+          type: "text",
+          required: false,
+          options: [],
+        },
+      ],
     }));
   };
 
@@ -148,17 +150,45 @@ export default function CreateFormPage() {
       return;
     }
 
-    // Validate fields
     for (const field of formData.fields) {
+      if (field.type === "section") {
+        const mode = field.sectionDisplay ?? "both";
+        const title = (field.sectionTitle ?? "").trim();
+        const desc = (field.sectionDescription ?? "").trim();
+        if (mode === "title_only" && !title) {
+          setError("Section (title only) needs a section title");
+          return;
+        }
+        if (mode === "description_only" && !desc) {
+          setError("Section (description only) needs a section description");
+          return;
+        }
+        if (mode === "both" && !title && !desc) {
+          setError("Section needs a title and/or description");
+          return;
+        }
+        if (!field.label.trim()) {
+          setError("All fields must have a label (used as an internal name)");
+          return;
+        }
+        continue;
+      }
+
       if (!field.label.trim()) {
-        setError('All fields must have a label');
+        setError("All fields must have a label");
         return;
       }
 
-      if (field.type === 'dropdown' && (!field.options || field.options.length === 0)) {
-        setError('Dropdown fields must have at least one option');
+      if (
+        (field.type === "dropdown" || field.type === "multiple_choice") &&
+        (!field.options || field.options.filter((o) => o.trim()).length === 0)
+      ) {
+        setError(
+          "Dropdown and multiple-choice fields need at least one option"
+        );
         return;
       }
+
     }
 
     setLoading(true);
@@ -310,14 +340,43 @@ export default function CreateFormPage() {
                         </label>
                         <select
                           value={field.type}
-                          onChange={(e) => updateField(index, { type: e.target.value as FormField['type'] })}
+                          onChange={(e) => {
+                            const t = e.target.value as FormFieldType;
+                            const patch: Partial<FormField> = { type: t };
+                            if (t === "date") patch.dateMode = "date";
+                            if (t === "dropdown" || t === "multiple_choice") {
+                              patch.options =
+                                field.options?.length ? field.options : [""];
+                            }
+                            if (t === "section") {
+                              patch.required = false;
+                              patch.sectionDisplay = field.sectionDisplay ?? "both";
+                              patch.sectionTitle = field.sectionTitle ?? "";
+                              patch.sectionDescription =
+                                field.sectionDescription ?? "";
+                            }
+                            if (t === "segmented_text") {
+                              patch.segmentDelimiter =
+                                field.segmentDelimiter ?? "/";
+                            }
+                            updateField(index, patch);
+                          }}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                          <option value="text">Text Input</option>
-                          <option value="number">Number Input</option>
-                          <option value="date">Date Picker</option>
-                          <option value="checkbox">Checkbox</option>
-                          <option value="dropdown">Dropdown</option>
+                          <option value="text">Text input</option>
+                          <option value="number">Number</option>
+                          <option value="date">Date / time</option>
+                          <option value="checkbox">Checkbox (yes/no)</option>
+                          <option value="dropdown">Dropdown (single choice)</option>
+                          <option value="multiple_choice">
+                            Multiple choice
+                          </option>
+                          <option value="segmented_text">
+                            Path / structured text
+                          </option>
+                          <option value="section">
+                            Section (title / description only)
+                          </option>
                         </select>
                       </div>
                     </div>
@@ -327,15 +386,127 @@ export default function CreateFormPage() {
                         <input
                           type="checkbox"
                           checked={field.required}
-                          onChange={(e) => updateField(index, { required: e.target.checked })}
+                          disabled={field.type === "section"}
+                          onChange={(e) =>
+                            updateField(index, { required: e.target.checked })
+                          }
                           className="mr-2"
                         />
-                        <span className="text-sm font-medium text-gray-700">Required field</span>
+                        <span className="text-sm font-medium text-gray-700">
+                          Required field
+                        </span>
                       </label>
                     </div>
 
-                    {/* Dropdown options */}
-                    {field.type === 'dropdown' && (
+                    {field.type === "date" && (
+                      <div className="mt-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Date field collects
+                        </label>
+                        <select
+                          value={field.dateMode ?? "date"}
+                          onChange={(e) =>
+                            updateField(index, {
+                              dateMode: e.target.value as FormField["dateMode"],
+                            })
+                          }
+                          className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="date">Date only</option>
+                          <option value="datetime">Date and time</option>
+                          <option value="time">Time only</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {field.type === "section" && (
+                      <div className="mt-4 space-y-3 rounded-md border border-dashed border-gray-300 bg-gray-50 p-4">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Show
+                        </label>
+                        <select
+                          value={field.sectionDisplay ?? "both"}
+                          onChange={(e) =>
+                            updateField(index, {
+                              sectionDisplay: e.target
+                                .value as FormField["sectionDisplay"],
+                            })
+                          }
+                          className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md bg-white"
+                        >
+                          <option value="both">Title and description</option>
+                          <option value="title_only">Title only</option>
+                          <option value="description_only">
+                            Description only
+                          </option>
+                        </select>
+                        {(field.sectionDisplay ?? "both") !==
+                          "description_only" && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Section title
+                            </label>
+                            <input
+                              type="text"
+                              value={field.sectionTitle ?? ""}
+                              onChange={(e) =>
+                                updateField(index, {
+                                  sectionTitle: e.target.value,
+                                })
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                              placeholder="Heading shown to respondents"
+                            />
+                          </div>
+                        )}
+                        {(field.sectionDisplay ?? "both") !== "title_only" && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Section description
+                            </label>
+                            <textarea
+                              value={field.sectionDescription ?? ""}
+                              onChange={(e) =>
+                                updateField(index, {
+                                  sectionDescription: e.target.value,
+                                })
+                              }
+                              rows={3}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                              placeholder="Supporting text (optional)"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {field.type === "segmented_text" && (
+                      <div className="mt-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Path separator (split on this character)
+                        </label>
+                        <input
+                          type="text"
+                          value={field.segmentDelimiter ?? "/"}
+                          onChange={(e) =>
+                            updateField(index, {
+                              segmentDelimiter: e.target.value || "/",
+                            })
+                          }
+                          className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md font-mono"
+                          placeholder="/"
+                          maxLength={8}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Example: <code>cilla/off-camp/1234/message</code> with
+                          &quot;/&quot;
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Dropdown / multiple choice options */}
+                    {(field.type === "dropdown" ||
+                      field.type === "multiple_choice") && (
                       <div className="mt-4">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                           Options *

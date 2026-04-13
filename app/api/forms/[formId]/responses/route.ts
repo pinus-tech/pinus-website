@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Form from "@/lib/models/Form";
 import Response from "@/lib/models/Response";
+import type { FormFieldDefinition } from "@/lib/form-field-types";
+import { isDataField } from "@/lib/form-field-types";
+import {
+  isEmptyValue,
+  validateFieldValue,
+} from "@/lib/forms/validate-submission";
 import { verifyToken } from "@/lib/utils/auth";
 
 // Middleware to check if user is logged in
@@ -126,13 +132,26 @@ export async function POST(
       );
     }
 
-    // Validate each response against form fields
-    const formFields = form.fields;
-    const submittedFields = new Set(responses.map(r => r.fieldLabel));
+    const formFields = form.fields as FormFieldDefinition[];
+    const dataLabels = new Set(
+      formFields.filter((f) => isDataField(f)).map((f) => f.label)
+    );
 
-    // Check if all required fields are submitted
+    for (const r of responses) {
+      if (!dataLabels.has(r.fieldLabel)) {
+        return NextResponse.json(
+          {
+            error: `Unknown field or invalid field: ${r.fieldLabel}`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     for (const field of formFields) {
-      if (field.required && !submittedFields.has(field.label)) {
+      if (!isDataField(field) || !field.required) continue;
+      const resp = responses.find((x) => x.fieldLabel === field.label);
+      if (!resp || isEmptyValue(field, resp.value)) {
         return NextResponse.json(
           { error: `Required field '${field.label}' is missing` },
           { status: 400 }
@@ -140,50 +159,15 @@ export async function POST(
       }
     }
 
-    // Validate field values
     for (const response of responses) {
-      const formField = formFields.find((f: { label: string; type: string; options?: string[] }) => f.label === response.fieldLabel);
-      if (!formField) {
+      const formField = formFields.find((f) => f.label === response.fieldLabel);
+      if (!formField || !isDataField(formField)) continue;
+      const err = validateFieldValue(formField, response.value);
+      if (err) {
         return NextResponse.json(
-          { error: `Unknown field: ${response.fieldLabel}` },
+          { error: `${response.fieldLabel}: ${err}` },
           { status: 400 }
         );
-      }
-
-      // Validate field type
-      switch (formField.type) {
-        case 'number':
-          if (isNaN(Number(response.value))) {
-            return NextResponse.json(
-              { error: `Field '${response.fieldLabel}' must be a number` },
-              { status: 400 }
-            );
-          }
-          break;
-        case 'date':
-          if (isNaN(Date.parse(response.value))) {
-            return NextResponse.json(
-              { error: `Field '${response.fieldLabel}' must be a valid date` },
-              { status: 400 }
-            );
-          }
-          break;
-        case 'dropdown':
-          if (!formField.options?.includes(response.value)) {
-            return NextResponse.json(
-              { error: `Invalid option for field '${response.fieldLabel}'` },
-              { status: 400 }
-            );
-          }
-          break;
-        case 'checkbox':
-          if (typeof response.value !== 'boolean') {
-            return NextResponse.json(
-              { error: `Field '${response.fieldLabel}' must be true or false` },
-              { status: 400 }
-            );
-          }
-          break;
       }
     }
 

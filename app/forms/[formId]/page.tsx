@@ -4,13 +4,12 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import Link from "next/link";
+import type { FormFieldDefinition } from "@/lib/form-field-types";
+import { isDataField } from "@/lib/form-field-types";
+import { isEmptyValue } from "@/lib/forms/validate-submission";
+import { FormDateField } from "@/app/components/forms/FormDateField";
 
-interface FormField {
-  label: string;
-  type: 'text' | 'number' | 'date' | 'checkbox' | 'dropdown';
-  required: boolean;
-  options?: string[];
-}
+type FormField = FormFieldDefinition;
 
 interface Form {
   id: string;
@@ -39,6 +38,17 @@ interface Form {
 interface FormResponse {
   fieldLabel: string;
   value: string | number | boolean | string[];
+}
+
+function defaultValueForField(field: FormField): FormResponse["value"] {
+  switch (field.type) {
+    case "checkbox":
+      return false;
+    case "multiple_choice":
+      return [];
+    default:
+      return "";
+  }
 }
 
 export default function FormDetailPage() {
@@ -87,11 +97,12 @@ export default function FormDetailPage() {
         const data = await response.json();
         setForm(data.form);
         
-        // Initialize responses array
-        const initialResponses: FormResponse[] = data.form.fields.map((field: FormField) => ({
-          fieldLabel: field.label,
-          value: field.type === 'checkbox' ? false : field.type === 'dropdown' ? '' : ''
-        }));
+        const initialResponses: FormResponse[] = data.form.fields
+          .filter((field: FormField) => isDataField(field))
+          .map((field: FormField) => ({
+            fieldLabel: field.label,
+            value: defaultValueForField(field),
+          }));
         setResponses(initialResponses);
         
         // Initialize selected managers
@@ -125,13 +136,36 @@ export default function FormDetailPage() {
     }
   };
 
-  const handleResponseChange = (fieldLabel: string, value: string | number | boolean) => {
-    setResponses(prev => 
-      prev.map(response => 
-        response.fieldLabel === fieldLabel 
-          ? { ...response, value } 
-          : response
+  const handleResponseChange = (
+    fieldLabel: string,
+    value: string | number | boolean | string[]
+  ) => {
+    setResponses((prev) =>
+      prev.map((response) =>
+        response.fieldLabel === fieldLabel ? { ...response, value } : response
       )
+    );
+  };
+
+  const handleMultipleChoiceToggle = (
+    fieldLabel: string,
+    option: string,
+    checked: boolean
+  ) => {
+    setResponses((prev) =>
+      prev.map((response) => {
+        if (response.fieldLabel !== fieldLabel) return response;
+        const cur = Array.isArray(response.value)
+          ? (response.value as string[])
+          : [];
+        if (checked) {
+          return { ...response, value: [...cur, option] };
+        }
+        return {
+          ...response,
+          value: cur.filter((x) => x !== option),
+        };
+      })
     );
   };
 
@@ -140,16 +174,12 @@ export default function FormDetailPage() {
     
     if (!form) return;
 
-    // Validate required fields
     for (const field of form.fields) {
-      if (field.required) {
-        const response = responses.find(r => r.fieldLabel === field.label);
-        if (!response || 
-            (typeof response.value === 'string' && !response.value.trim()) ||
-            (typeof response.value === 'boolean' && !response.value)) {
-          setError(`Field "${field.label}" is required`);
-          return;
-        }
+      if (!isDataField(field) || !field.required) continue;
+      const response = responses.find((r) => r.fieldLabel === field.label);
+      if (!response || isEmptyValue(field, response.value)) {
+        setError(`Field "${field.label}" is required`);
+        return;
       }
     }
 
@@ -168,10 +198,12 @@ export default function FormDetailPage() {
       if (response.ok) {
         setSuccess('Form submitted successfully!');
         // Reset form
-        const initialResponses: FormResponse[] = form.fields.map(field => ({
-          fieldLabel: field.label,
-          value: field.type === 'checkbox' ? false : field.type === 'dropdown' ? '' : ''
-        }));
+        const initialResponses: FormResponse[] = form.fields
+          .filter((field) => isDataField(field))
+          .map((field) => ({
+            fieldLabel: field.label,
+            value: defaultValueForField(field),
+          }));
         setResponses(initialResponses);
       } else {
         const errorData = await response.json();
@@ -489,68 +521,177 @@ export default function FormDetailPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               {form.fields.map((field, index) => (
                 <div key={index} className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700">
-                    {field.label}
-                    {field.required && <span className="text-red-500 ml-1">*</span>}
-                  </label>
-                  
-                  {field.type === 'text' && (
-                    <input
-                      type="text"
-                      value={responses.find(r => r.fieldLabel === field.label)?.value as string || ''}
-                      onChange={(e) => handleResponseChange(field.label, e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required={field.required}
-                    />
-                  )}
+                  {field.type === "section" ? (
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                      {(field.sectionDisplay ?? "both") !== "description_only" &&
+                        (field.sectionTitle?.trim() || field.label) && (
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {field.sectionTitle?.trim() || field.label}
+                          </h3>
+                        )}
+                      {(field.sectionDisplay ?? "both") !== "title_only" &&
+                        field.sectionDescription?.trim() && (
+                          <p className="mt-1 text-sm text-gray-600 whitespace-pre-wrap">
+                            {field.sectionDescription}
+                          </p>
+                        )}
+                    </div>
+                  ) : (
+                    <>
+                      <label className="block text-sm font-medium text-gray-700">
+                        {field.label}
+                        {field.required && (
+                          <span className="text-red-500 ml-1">*</span>
+                        )}
+                      </label>
 
-                  {field.type === 'number' && (
-                    <input
-                      type="number"
-                      value={responses.find(r => r.fieldLabel === field.label)?.value as string || ''}
-                      onChange={(e) => handleResponseChange(field.label, Number(e.target.value))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required={field.required}
-                    />
-                  )}
+                      {field.type === "text" && (
+                        <input
+                          type="text"
+                          value={
+                            (responses.find((r) => r.fieldLabel === field.label)
+                              ?.value as string) || ""
+                          }
+                          onChange={(e) =>
+                            handleResponseChange(field.label, e.target.value)
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          required={field.required}
+                        />
+                      )}
 
-                  {field.type === 'date' && (
-                    <input
-                      type="date"
-                      value={responses.find(r => r.fieldLabel === field.label)?.value as string || ''}
-                      onChange={(e) => handleResponseChange(field.label, e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required={field.required}
-                    />
-                  )}
+                      {field.type === "segmented_text" && (
+                        <div>
+                          <input
+                            type="text"
+                            value={
+                              (responses.find((r) => r.fieldLabel === field.label)
+                                ?.value as string) || ""
+                            }
+                            onChange={(e) =>
+                              handleResponseChange(field.label, e.target.value)
+                            }
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder={`Parts separated by "${field.segmentDelimiter ?? "/"}"`}
+                            required={field.required}
+                          />
+                          <p className="mt-1 text-xs text-gray-500">
+                            Use the separator{" "}
+                            <span className="font-mono">
+                              {field.segmentDelimiter ?? "/"}
+                            </span>{" "}
+                            between segments.
+                          </p>
+                        </div>
+                      )}
 
-                  {field.type === 'checkbox' && (
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={responses.find(r => r.fieldLabel === field.label)?.value as boolean || false}
-                        onChange={(e) => handleResponseChange(field.label, e.target.checked)}
-                        className="mr-2"
-                        required={field.required}
-                      />
-                      <span className="text-sm text-gray-700">Yes</span>
-                    </label>
-                  )}
+                      {field.type === "number" && (
+                        <input
+                          type="number"
+                          value={
+                            (responses.find((r) => r.fieldLabel === field.label)
+                              ?.value as string | number) ?? ""
+                          }
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            handleResponseChange(
+                              field.label,
+                              v === "" ? "" : Number(v)
+                            );
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          required={field.required}
+                        />
+                      )}
 
-                  {field.type === 'dropdown' && (
-                    <select
-                      value={responses.find(r => r.fieldLabel === field.label)?.value as string || ''}
-                      onChange={(e) => handleResponseChange(field.label, e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required={field.required}
-                    >
-                      <option value="">Select an option</option>
-                      {field.options?.map((option, optionIndex) => (
-                        <option key={optionIndex} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
+                      {field.type === "date" && (
+                        <FormDateField
+                          mode={field.dateMode ?? "date"}
+                          value={
+                            (responses.find((r) => r.fieldLabel === field.label)
+                              ?.value as string) || ""
+                          }
+                          onChange={(v) =>
+                            handleResponseChange(field.label, v)
+                          }
+                          required={field.required}
+                        />
+                      )}
+
+                      {field.type === "checkbox" && (
+                        <label className="flex items-center">
+                          <input
+                            type="checkbox"
+                            checked={
+                              (responses.find(
+                                (r) => r.fieldLabel === field.label
+                              )?.value as boolean) || false
+                            }
+                            onChange={(e) =>
+                              handleResponseChange(
+                                field.label,
+                                e.target.checked
+                              )
+                            }
+                            className="mr-2"
+                            required={field.required}
+                          />
+                          <span className="text-sm text-gray-700">Yes</span>
+                        </label>
+                      )}
+
+                      {field.type === "dropdown" && (
+                        <select
+                          value={
+                            (responses.find((r) => r.fieldLabel === field.label)
+                              ?.value as string) || ""
+                          }
+                          onChange={(e) =>
+                            handleResponseChange(field.label, e.target.value)
+                          }
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          required={field.required}
+                        >
+                          <option value="">Select an option</option>
+                          {field.options?.map((option, optionIndex) => (
+                            <option key={optionIndex} value={option}>
+                              {option}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+
+                      {field.type === "multiple_choice" && (
+                        <div className="space-y-2 rounded-md border border-gray-200 bg-white p-3">
+                          {field.options?.map((option, optionIndex) => {
+                            const selected = (
+                              (responses.find(
+                                (r) => r.fieldLabel === field.label)
+                                ?.value as string[]) || []
+                            ).includes(option);
+                            return (
+                              <label
+                                key={optionIndex}
+                                className="flex items-center gap-2 text-sm"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selected}
+                                  onChange={(e) =>
+                                    handleMultipleChoiceToggle(
+                                      field.label,
+                                      option,
+                                      e.target.checked
+                                    )
+                                  }
+                                />
+                                <span>{option}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               ))}
