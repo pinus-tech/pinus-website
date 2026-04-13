@@ -149,15 +149,16 @@ export default function RegisterPage() {
       phoneNumber: formData.phoneNumber,
       city: formData.city,
       major: formData.major,
-      intakeYear: parseInt(formData.intakeYear),
-      yearOfStudy: parseInt(formData.yearOfStudy),
+      intakeYear: parseInt(formData.intakeYear, 10),
+      yearOfStudy: parseInt(formData.yearOfStudy, 10),
       highSchool: formData.highSchool,
+      career: formData.career,
     };
 
     const result = await register(registerData);
 
     if (result.success) {
-      router.push("/login?registered=1");
+      router.push("/");
     } else {
       setError(result.error || "Registration failed");
     }

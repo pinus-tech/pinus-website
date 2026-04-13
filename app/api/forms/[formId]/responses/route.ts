@@ -124,6 +124,26 @@ export async function POST(
       );
     }
 
+    const managerIds = (form.managers ?? []).map((id: { toString: () => string }) =>
+      id.toString()
+    );
+    const isStaff =
+      user.isSuperAdmin ||
+      user.isAdmin ||
+      form.createdBy.toString() === user.userId ||
+      managerIds.includes(user.userId);
+
+    const shared = form.isShared ?? true;
+    if (!shared && !isStaff) {
+      return NextResponse.json(
+        {
+          error:
+            "This form is not open for submissions yet. The organiser must share the form first.",
+        },
+        { status: 403 }
+      );
+    }
+
     // Validate response data
     if (!responses || !Array.isArray(responses)) {
       return NextResponse.json(

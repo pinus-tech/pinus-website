@@ -80,14 +80,6 @@ const Header = () => {
             >
               Contact
             </Link>
-            <a
-              href="https://www.pinusstudy.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="pinus-study-button shrink-0 whitespace-nowrap text-sm"
-            >
-              PINUS Study
-            </a>
           </nav>
 
           <div className="hidden lg:flex shrink-0 items-center gap-2 xl:gap-3">
@@ -221,15 +213,6 @@ const Header = () => {
               >
                 Contact
               </Link>
-              <a
-                href="https://www.pinusstudy.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="pinus-study-button text-center"
-                onClick={toggleMenu}
-              >
-                PINUS Study
-              </a>
             </nav>
 
             <div className="mt-8 flex flex-col gap-4 border-t border-gray-100 pt-6">

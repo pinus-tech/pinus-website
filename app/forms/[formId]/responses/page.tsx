@@ -74,6 +74,7 @@ export default function FormResponsesPage() {
   const [exportLoading, setExportLoading] = useState(false);
 
   const { user, loading: authLoading } = useAuth();
+  const isSiteAdmin = !!(user?.isSuperAdmin || user?.isAdmin);
   const router = useRouter();
   const params = useParams();
   const formId = params.formId as string;
@@ -369,9 +370,12 @@ export default function FormResponsesPage() {
         {/* Form Info */}
         <div className="bg-white p-6 rounded-lg shadow mb-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-            <div>
-              <span className="font-medium">Created by:</span> {form.createdBy.name}
-            </div>
+            {isSiteAdmin && (
+              <div>
+                <span className="font-medium">Created by:</span>{" "}
+                {form.createdBy.name}
+              </div>
+            )}
             <div>
               <span className="font-medium">Total Responses:</span> {responses.length}
             </div>
@@ -379,7 +383,7 @@ export default function FormResponsesPage() {
               <span className="font-medium">Status:</span> {form.isActive ? 'Active' : 'Inactive'}
             </div>
           </div>
-          {form.managers && form.managers.length > 0 && (
+          {isSiteAdmin && form.managers && form.managers.length > 0 && (
             <div className="mt-4">
               <span className="font-medium text-sm text-gray-600">Managers:</span>
               <div className="flex flex-wrap gap-2 mt-1">

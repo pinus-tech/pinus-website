@@ -13,8 +13,14 @@ const exploreLinks = [
 const participateLinks = [
   { href: "/forms", label: "Forms" },
   { href: "/marketplace", label: "Marketplace" },
-  { href: "/sharing-sessions", label: "Sharing sessions" },
-  { href: "/pbl", label: "PBL" },
+];
+
+const externalApps = [
+  {
+    href: "https://www.pinusstudy.com/",
+    label: "PINUS Study",
+    description: "Study resources & programmes",
+  },
 ];
 
 const accountLinks = [
@@ -29,13 +35,16 @@ const Footer = () => {
   return (
     <footer className="bg-blue-main text-white">
       <div className="container mx-auto px-4 py-10 md:py-12">
-        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+        <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-5 lg:gap-8">
           <div>
             <h2 className="mb-4 text-lg font-bold tracking-wide">Explore</h2>
             <ul className="space-y-2.5 text-sm">
               {exploreLinks.map((item) => (
                 <li key={item.href}>
-                  <Link href={item.href} className="hover:underline opacity-95 hover:opacity-100">
+                  <Link
+                    href={item.href}
+                    className="opacity-95 hover:opacity-100 hover:underline"
+                  >
                     {item.label}
                   </Link>
                 </li>
@@ -48,7 +57,10 @@ const Footer = () => {
             <ul className="space-y-2.5 text-sm">
               {participateLinks.map((item) => (
                 <li key={item.href}>
-                  <Link href={item.href} className="hover:underline opacity-95 hover:opacity-100">
+                  <Link
+                    href={item.href}
+                    className="opacity-95 hover:opacity-100 hover:underline"
+                  >
                     {item.label}
                   </Link>
                 </li>
@@ -61,7 +73,10 @@ const Footer = () => {
             <ul className="space-y-2.5 text-sm">
               {accountLinks.map((item) => (
                 <li key={item.href}>
-                  <Link href={item.href} className="hover:underline opacity-95 hover:opacity-100">
+                  <Link
+                    href={item.href}
+                    className="opacity-95 hover:opacity-100 hover:underline"
+                  >
                     {item.label}
                   </Link>
                 </li>
@@ -74,35 +89,68 @@ const Footer = () => {
             </p>
           </div>
 
-          <div className="flex flex-col items-start sm:items-end lg:items-start">
+          <div>
+            <h2 className="mb-4 text-lg font-bold tracking-wide">
+              External apps
+            </h2>
+            <ul className="space-y-3 text-sm">
+              {externalApps.map((item) => (
+                <li key={item.href}>
+                  <a
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium underline-offset-2 hover:underline"
+                  >
+                    {item.label}
+                  </a>
+                  {item.description && (
+                    <p className="mt-0.5 text-xs text-white/75">
+                      {item.description}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="flex flex-col sm:col-span-2 lg:col-span-1">
             <h2 className="mb-4 text-lg font-bold tracking-wide">Connect</h2>
-            <div className="mb-4 flex gap-4">
-              <Link href="https://www.instagram.com/pinusonline" target="_blank" rel="noopener noreferrer">
-                <img src="/ic-instagram-white.svg" alt="Instagram" className="h-10 w-10" />
+            <div className="mb-4 flex flex-wrap gap-4">
+              <Link
+                href="https://www.instagram.com/pinusonline"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img
+                  src="/ic-instagram-white.svg"
+                  alt="Instagram"
+                  className="h-10 w-10"
+                />
               </Link>
               <Link
                 href="https://www.facebook.com/PerhimpunanIndonesiaNUS"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <img src="/ic-facebook-white.svg" alt="Facebook" className="h-10 w-10" />
+                <img
+                  src="/ic-facebook-white.svg"
+                  alt="Facebook"
+                  className="h-10 w-10"
+                />
               </Link>
               <Link
                 href="https://www.youtube.com/channel/UCfYU_ttUpJWNEKIbiWoQQHQ"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <img src="/ic-youtube-white.svg" alt="YouTube" className="h-10 w-10" />
+                <img
+                  src="/ic-youtube-white.svg"
+                  alt="YouTube"
+                  className="h-10 w-10"
+                />
               </Link>
             </div>
-            <a
-              href="https://www.pinusstudy.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mb-2 text-sm font-medium underline-offset-2 hover:underline"
-            >
-              PINUS Study
-            </a>
             <p className="text-sm text-white/80">© {year} PINUS</p>
           </div>
         </div>

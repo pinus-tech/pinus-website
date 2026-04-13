@@ -1,6 +1,12 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 
 interface User {
   id: string;
@@ -30,7 +36,12 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (userData: RegisterData) => Promise<{ success: boolean; error?: string; userId?: string; email?: string }>;
+  register: (userData: RegisterData) => Promise<{
+    success: boolean;
+    error?: string;
+    userId?: string;
+    email?: string;
+  }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   hasPermission: (permission: keyof User['permissions']) => boolean;
@@ -58,21 +69,30 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  /** Bumps when login/register succeeds so a stale /api/auth/me cannot clear the new session. */
+  const authEpochRef = useRef(0);
 
   const fetchUser = async () => {
+    const startedEpoch = authEpochRef.current;
     try {
       const response = await fetch('/api/auth/me');
+      if (startedEpoch !== authEpochRef.current) return;
       if (response.ok) {
         const data = await response.json();
+        if (startedEpoch !== authEpochRef.current) return;
         setUser(data.user);
       } else {
+        if (startedEpoch !== authEpochRef.current) return;
         setUser(null);
       }
     } catch (error) {
       console.error('Error fetching user:', error);
+      if (startedEpoch !== authEpochRef.current) return;
       setUser(null);
     } finally {
-      setLoading(false);
+      if (startedEpoch === authEpochRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -89,6 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json();
 
       if (response.ok) {
+        authEpochRef.current += 1;
         setUser(data.user);
         return { success: true };
       } else {
@@ -112,7 +133,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await response.json();
 
       if (response.ok) {
-        return { success: true, userId: data.userId, email: data.email };
+        authEpochRef.current += 1;
+        if (data.user) {
+          setUser(data.user);
+        } else {
+          await fetchUser();
+        }
+        return {
+          success: true,
+          userId: data.userId,
+          email: data.email,
+        };
       } else {
         return { success: false, error: data.error };
       }
