@@ -40,7 +40,7 @@ export default function ProfilePage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Wait for /api/auth/me — on refresh `user` is null until the session is loaded
+    // Wait for /api/auth/me - on refresh `user` is null until the session is loaded
     if (authLoading) return;
     if (!user) {
       router.push("/login");

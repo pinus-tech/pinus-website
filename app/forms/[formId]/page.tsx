@@ -69,7 +69,7 @@ function defaultValueForField(field: FormField): FormResponse["value"] {
 }
 
 function formatSubmittedAnswer(field: FormField, value: unknown): string {
-  if (value === null || value === undefined) return "—";
+  if (value === null || value === undefined) return "-";
   switch (field.type) {
     case "checkbox":
       return value ? "Yes" : "No";
@@ -595,7 +595,7 @@ export default function FormDetailPage() {
           </div>
         )}
 
-        {/* Form Info — creator / managers / response counts: organisers only */}
+        {/* Form Info - creator / managers / response counts: organisers only */}
         <div className="bg-white p-6 rounded-lg shadow mb-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
             {showOrganiserMeta && (

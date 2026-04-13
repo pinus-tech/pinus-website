@@ -156,7 +156,7 @@ const Footer = () => {
         </div>
 
         <div className="mt-10 border-t border-white/20 pt-6 text-center text-xs text-white/70">
-          Perhimpunan Indonesia NUS —{" "}
+          Perhimpunan Indonesia NUS -{" "}
           <Link href="/contact-us" className="hover:underline">
             Get in touch
           </Link>

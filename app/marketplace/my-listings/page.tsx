@@ -49,7 +49,7 @@ export default function MyListingsPage() {
       setLoading(true);
       
       // Always load all statuses for this seller; tabs filter client-side.
-      // (Sending no status for seller returns available + sold — see API.)
+      // (Sending no status for seller returns available + sold - see API.)
       const params = new URLSearchParams();
       params.append("seller", user!.id);
 

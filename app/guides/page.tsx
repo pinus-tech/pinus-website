@@ -306,7 +306,7 @@ function GuideContent({
             guide.properties.Description.rich_text[0].plain_text
               .split("\n")
               .map((line, i) => {
-                const [content, id] = line.split("—");
+                const [content, id] = line.split("-");
                 return (
                   <div
                     key={i}

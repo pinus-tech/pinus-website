@@ -162,10 +162,10 @@ These are **not** meant to be opened in a browser for browsing; they are JSON (o
 
 ## Repository layout (high level)
 
-- `app/` — Routes, layouts, `page.tsx` files, and `api/` route handlers.
-- `app/components/` — Shared UI (header, forms, buttons, etc.).
-- `lib/` — Models (Mongoose), auth helpers, validation, constants, Firebase helpers.
-- `public/` — Static assets.
+- `app/` - Routes, layouts, `page.tsx` files, and `api/` route handlers.
+- `app/components/` - Shared UI (header, forms, buttons, etc.).
+- `lib/` - Models (Mongoose), auth helpers, validation, constants, Firebase helpers.
+- `public/` - Static assets.
 
 ---
 

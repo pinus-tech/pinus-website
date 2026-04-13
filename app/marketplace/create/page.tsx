@@ -225,7 +225,7 @@ export default function CreateMarketplaceItemPage() {
   };
 
   const formatFxDateLong = (utcString: string | null) => {
-    if (!utcString) return "—";
+    if (!utcString) return "-";
     const d = new Date(utcString);
     if (Number.isNaN(d.getTime())) return utcString;
     return new Intl.DateTimeFormat(undefined, {
@@ -321,7 +321,7 @@ export default function CreateMarketplaceItemPage() {
                         ≈ Rp{" "}
                         {idrEquivalent !== null
                           ? formatIdr(idrEquivalent)
-                          : "—"}{" "}
+                          : "-"}{" "}
                         <span className="text-gray-600">
                           (ExchangeRate-API
                           {sgdIdrQuote.updatedAt
@@ -523,7 +523,7 @@ export default function CreateMarketplaceItemPage() {
             <div className="mt-4 space-y-3 text-sm text-gray-700">
               <p>
                 <span className="font-medium text-gray-900">≈ Rp </span>
-                {idrEquivalent !== null ? formatIdr(idrEquivalent) : "—"}{" "}
+                {idrEquivalent !== null ? formatIdr(idrEquivalent) : "-"}{" "}
                 <span className="text-gray-500">
                   (from your price in SGD × rate)
                 </span>
@@ -566,44 +566,7 @@ export default function CreateMarketplaceItemPage() {
                 >
                   Google Finance
                 </a>{" "}
-                may show different rates — this is indicative only.
-              </p>
-              <p>
-                <span className="font-medium text-gray-900">Source: </span>
-                <a
-                  href={sgdIdrQuote.providerUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-700 underline"
-                >
-                  ExchangeRate-API
-                </a>
-                {sgdIdrQuote.documentationUrl ? (
-                  <>
-                    {" · "}
-                    <a
-                      href={sgdIdrQuote.documentationUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-700 underline"
-                    >
-                      Documentation
-                    </a>
-                  </>
-                ) : null}
-                {sgdIdrQuote.termsUrl ? (
-                  <>
-                    {" · "}
-                    <a
-                      href={sgdIdrQuote.termsUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-700 underline"
-                    >
-                      Terms of use
-                    </a>
-                  </>
-                ) : null}
+                may show different rates - this is indicative only.
               </p>
             </div>
             <div className="mt-6 flex justify-end">

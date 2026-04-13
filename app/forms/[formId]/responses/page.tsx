@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from "react";
-import { useRouter, useParams } from "next/navigation";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
+import { useRouter, useParams, useSearchParams, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
@@ -92,20 +92,31 @@ function formatPlainCell(
   return String(value);
 }
 
-export default function FormResponsesPage() {
+function FormResponsesPageContent() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<Form | null>(null);
   const [responses, setResponses] = useState<FormResponse[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [exportLoading, setExportLoading] = useState(false);
-  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const { user, loading: authLoading } = useAuth();
   const isSiteAdmin = !!(user?.isSuperAdmin || user?.isAdmin);
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const params = useParams();
   const formId = params.formId as string;
+
+  const viewMode: "cards" | "table" =
+    searchParams.get("showAs") === "card" ? "cards" : "table";
+
+  const setShowAs = (next: "card" | "table") => {
+    const paramsNext = new URLSearchParams(searchParams.toString());
+    paramsNext.set("showAs", next);
+    const q = paramsNext.toString();
+    router.replace(q ? `${pathname}?${q}` : pathname);
+  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -117,6 +128,16 @@ export default function FormResponsesPage() {
 
     fetchFormAndResponses();
   }, [user, authLoading, router, formId]);
+
+  useEffect(() => {
+    const msg = error?.trim().toLowerCase() ?? "";
+    if (!msg.includes("internal server error")) return;
+    if (typeof window === "undefined") return;
+    const key = `pinus-fr-ise-retry-${formId}`;
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+    window.location.reload();
+  }, [error, formId]);
 
   const dataFields = useMemo(
     () => (form ? form.fields.filter((f) => isDataField(f)) : []),
@@ -182,6 +203,9 @@ export default function FormResponsesPage() {
       }
       const responsesData = await responsesResponse.json();
       setResponses(responsesData.responses);
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem(`pinus-fr-ise-retry-${formId}`);
+      }
     } catch (error) {
       setError('Network error occurred');
     } finally {
@@ -331,7 +355,7 @@ export default function FormResponsesPage() {
     value: string | number | boolean | string[] | null | undefined,
     field: FormField
   ) => {
-    if (value === null || value === undefined) return "—";
+    if (value === null || value === undefined) return "-";
 
     switch (field.type) {
       case "checkbox":
@@ -358,7 +382,7 @@ export default function FormResponsesPage() {
       case "segmented_text": {
         const delim = field.segmentDelimiter ?? "/";
         const parts = splitSegments(String(value), delim);
-        if (parts.length === 0) return "—";
+        if (parts.length === 0) return "-";
         return (
           <table className="mt-1 min-w-[240px] border-collapse border border-gray-200 text-sm">
             <thead>
@@ -380,7 +404,7 @@ export default function FormResponsesPage() {
                     key={i}
                     className="border border-gray-200 px-2 py-1 text-gray-900"
                   >
-                    {p || "—"}
+                    {p || "-"}
                   </td>
                 ))}
               </tr>
@@ -451,7 +475,7 @@ export default function FormResponsesPage() {
             <div className="flex rounded-lg border border-gray-200 bg-white p-0.5 text-sm">
               <button
                 type="button"
-                onClick={() => setViewMode("cards")}
+                onClick={() => setShowAs("card")}
                 className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
                   viewMode === "cards"
                     ? "bg-blue-600 text-white"
@@ -462,7 +486,7 @@ export default function FormResponsesPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setViewMode("table")}
+                onClick={() => setShowAs("table")}
                 className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
                   viewMode === "table"
                     ? "bg-blue-600 text-white"
@@ -500,7 +524,7 @@ export default function FormResponsesPage() {
             {isSiteAdmin && (
               <div>
                 <span className="font-medium">Created by:</span>{" "}
-                {form.createdBy?.name ?? "—"}
+                {form.createdBy?.name ?? "-"}
               </div>
             )}
             <div>
@@ -516,7 +540,7 @@ export default function FormResponsesPage() {
               <div className="flex flex-wrap gap-2 mt-1">
                 {form.managers.map((manager, index) => (
                   <span key={index} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
-                    {manager?.name ?? "—"}
+                    {manager?.name ?? "-"}
                   </span>
                 ))}
               </div>
@@ -575,16 +599,16 @@ export default function FormResponsesPage() {
                       {index + 1}
                     </td>
                     <td className="px-3 py-2 text-gray-900 whitespace-nowrap">
-                      {response.respondent?.name ?? "—"}
+                      {response.respondent?.name ?? "-"}
                     </td>
                     <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
-                      {response.respondent?.email ?? "—"}
+                      {response.respondent?.email ?? "-"}
                     </td>
                     <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
-                      {response.respondent?.phoneNumber?.trim() || "—"}
+                      {response.respondent?.phoneNumber?.trim() || "-"}
                     </td>
                     <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
-                      {response.respondent?.telegram?.trim() || "—"}
+                      {response.respondent?.telegram?.trim() || "-"}
                     </td>
                     <td className="px-3 py-2 text-gray-600 whitespace-nowrap">
                       {new Date(response.submittedAt).toLocaleString()}
@@ -607,7 +631,7 @@ export default function FormResponsesPage() {
                       }
                       return (
                         <td key={col.key} className="px-3 py-2 text-gray-900 max-w-[280px]">
-                          <span className="line-clamp-4 break-words">{cell || "—"}</span>
+                          <span className="line-clamp-4 break-words">{cell || "-"}</span>
                         </td>
                       );
                     })}
@@ -636,14 +660,14 @@ export default function FormResponsesPage() {
                       Response #{index + 1}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      Submitted by {response.respondent?.name ?? "—"} (
-                      {response.respondent?.email ?? "—"})
+                      Submitted by {response.respondent?.name ?? "-"} (
+                      {response.respondent?.email ?? "-"})
                     </p>
                     <p className="text-sm text-gray-600">
-                      Phone: {response.respondent?.phoneNumber?.trim() || "—"}
+                      Phone: {response.respondent?.phoneNumber?.trim() || "-"}
                     </p>
                     <p className="text-sm text-gray-600">
-                      Telegram: {response.respondent?.telegram?.trim() || "—"}
+                      Telegram: {response.respondent?.telegram?.trim() || "-"}
                     </p>
                     <p className="text-sm text-gray-500">
                       {new Date(response.submittedAt).toLocaleString()}
@@ -717,5 +741,19 @@ export default function FormResponsesPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function FormResponsesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-main" />
+        </div>
+      }
+    >
+      <FormResponsesPageContent />
+    </Suspense>
   );
 } 
