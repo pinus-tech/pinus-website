@@ -1,6 +1,30 @@
 import type { FormFieldDefinition } from "@/lib/form-field-types";
 import { FORM_FIELD_TYPES } from "@/lib/form-field-types";
 
+function validateLengthBounds(
+  minLength: number | undefined,
+  maxLength: number | undefined
+): string | null {
+  if (minLength !== undefined) {
+    if (!Number.isInteger(minLength) || minLength < 0) {
+      return "Minimum length must be a non-negative integer";
+    }
+  }
+  if (maxLength !== undefined) {
+    if (!Number.isInteger(maxLength) || maxLength < 0) {
+      return "Maximum length must be a non-negative integer";
+    }
+  }
+  if (
+    minLength !== undefined &&
+    maxLength !== undefined &&
+    minLength > maxLength
+  ) {
+    return "Minimum length cannot exceed maximum length";
+  }
+  return null;
+}
+
 export function validateFormFieldsArray(fields: unknown): string | null {
   if (!Array.isArray(fields)) return "Fields must be an array";
 
@@ -54,6 +78,19 @@ function validateOneFormField(raw: unknown): string | null {
       if (!field.options?.length) {
         return `${field.type} fields must have at least one option`;
       }
+      if (field.type === "multiple_choice") {
+        const min = field.minSelections ?? 0;
+        const max = field.maxSelections;
+        if (min < 0 || (max !== undefined && max < 0)) {
+          return "Selection limits must be non-negative";
+        }
+        if (max !== undefined && max < min) {
+          return "Maximum selections must be at least the minimum";
+        }
+        if (max !== undefined && field.options && max > field.options.length) {
+          return "Maximum selections cannot exceed the number of options";
+        }
+      }
       break;
     case "date":
       if (
@@ -71,7 +108,16 @@ function validateOneFormField(raw: unknown): string | null {
       ) {
         return "Path delimiter must be at most 8 characters";
       }
+      {
+        const lenErr = validateLengthBounds(field.minLength, field.maxLength);
+        if (lenErr) return lenErr;
+      }
       break;
+    case "text": {
+      const lenErr = validateLengthBounds(field.minLength, field.maxLength);
+      if (lenErr) return lenErr;
+      break;
+    }
     default:
       break;
   }

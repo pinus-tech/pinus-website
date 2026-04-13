@@ -17,6 +17,8 @@ interface FormData {
   description: string;
   fields: FormField[];
   managers: string[];
+  /** Optional short path segment for /f/{shortLink} */
+  shortLink: string;
 }
 
 export default function CreateFormPage() {
@@ -25,7 +27,8 @@ export default function CreateFormPage() {
     title: '',
     description: '',
     fields: [],
-    managers: []
+    managers: [],
+    shortLink: '',
   });
   const [error, setError] = useState<string | null>(null);
   const [potentialManagers, setPotentialManagers] = useState<Array<{
@@ -130,7 +133,15 @@ export default function CreateFormPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          title: formData.title,
+          description: formData.description,
+          fields: formData.fields,
+          managers: formData.managers,
+          ...(formData.shortLink.trim()
+            ? { shortLink: formData.shortLink.trim() }
+            : {}),
+        }),
       });
 
       if (response.ok) {
@@ -215,6 +226,31 @@ export default function CreateFormPage() {
                   }
                   rows={3}
                   placeholder="Enter form description (optional)"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Short link (optional)
+                </label>
+                <p className="text-xs text-gray-500 mb-2">
+                  Share <code className="rounded bg-gray-100 px-1">/f/&lt;slug&gt;</code>{" "}
+                  instead of the long form URL. Letters, numbers, and hyphens
+                  only. If the slug is taken, a suffix like{" "}
+                  <span className="font-mono">my-form-2</span> is added
+                  automatically.
+                </p>
+                <Input
+                  type="text"
+                  value={formData.shortLink}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      shortLink: e.target.value,
+                    }))
+                  }
+                  placeholder="e.g. form1"
+                  className="font-mono"
                 />
               </div>
             </div>

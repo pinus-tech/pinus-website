@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import Link from "next/link";
@@ -58,6 +58,8 @@ interface FormResponse {
   respondent: {
     name: string;
     email: string;
+    telegram?: string;
+    phoneNumber?: string;
   };
   responses: Array<{
     fieldLabel: string;
@@ -66,12 +68,37 @@ interface FormResponse {
   submittedAt: string;
 }
 
+function formatPlainCell(
+  value: string | number | boolean | string[] | null | undefined,
+  field: FormField
+): string {
+  if (value === null || value === undefined) return "";
+  if (field.type === "multiple_choice" && Array.isArray(value)) {
+    return (value as string[]).join("; ");
+  }
+  if (field.type === "checkbox") return value ? "Yes" : "No";
+  if (field.type === "date") {
+    const mode = field.dateMode ?? "date";
+    const s = String(value);
+    if (mode === "time") return s;
+    if (mode === "date") return s;
+    try {
+      return format(parseISO(s), "yyyy-MM-dd HH:mm");
+    } catch {
+      return s;
+    }
+  }
+  return String(value);
+}
+
 export default function FormResponsesPage() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState<Form | null>(null);
   const [responses, setResponses] = useState<FormResponse[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [exportLoading, setExportLoading] = useState(false);
+  const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const { user, loading: authLoading } = useAuth();
   const isSiteAdmin = !!(user?.isSuperAdmin || user?.isAdmin);
@@ -89,6 +116,47 @@ export default function FormResponsesPage() {
 
     fetchFormAndResponses();
   }, [user, authLoading, router, formId]);
+
+  const dataFields = useMemo(
+    () => (form ? form.fields.filter((f) => isDataField(f)) : []),
+    [form]
+  );
+
+  const segmentedMaxByLabel = useMemo(() => {
+    const m = new Map<string, number>();
+    if (!form || responses.length === 0) return m;
+    for (const field of dataFields) {
+      if (field.type !== "segmented_text") continue;
+      const delim = field.segmentDelimiter ?? "/";
+      const vals = responses.map((r) => {
+        const fr = r.responses.find((x) => x.fieldLabel === field.label);
+        return fr ? String(fr.value ?? "") : "";
+      });
+      m.set(field.label, maxSegmentCount(vals, delim));
+    }
+    return m;
+  }, [form, responses, dataFields]);
+
+  const tableColumns = useMemo(() => {
+    const cols: { key: string; label: string; field: FormField; partIndex?: number }[] =
+      [];
+    for (const field of dataFields) {
+      if (field.type === "segmented_text") {
+        const n = Math.max(1, segmentedMaxByLabel.get(field.label) ?? 1);
+        for (let i = 0; i < n; i++) {
+          cols.push({
+            key: `${field.label}::${i}`,
+            label: `${field.label} (${i + 1})`,
+            field,
+            partIndex: i,
+          });
+        }
+      } else {
+        cols.push({ key: field.label, label: field.label, field });
+      }
+    }
+    return cols;
+  }, [dataFields, segmentedMaxByLabel]);
 
   const fetchFormAndResponses = async () => {
     try {
@@ -127,6 +195,37 @@ export default function FormResponsesPage() {
     form.managers?.some(manager => manager.email === user.email)
   );
 
+  const deleteResponse = async (responseId: string) => {
+    if (!canViewResponses) return;
+    if (!window.confirm("Delete this response permanently?")) return;
+    setDeletingId(responseId);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/forms/${formId}/responses/${responseId}`,
+        { method: "DELETE" }
+      );
+      if (!res.ok) {
+        const err = await res.json();
+        setError(err.error || "Failed to delete");
+        return;
+      }
+      setResponses((prev) => prev.filter((r) => r.id !== responseId));
+      setForm((prev) =>
+        prev
+          ? {
+              ...prev,
+              responseCount: Math.max(0, prev.responseCount - 1),
+            }
+          : prev
+      );
+    } catch {
+      setError("Failed to delete response");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const exportToCSV = () => {
     if (!form || responses.length === 0) return;
 
@@ -139,6 +238,8 @@ export default function FormResponsesPage() {
       const headers: string[] = [
         "Respondent Name",
         "Respondent Email",
+        "Phone",
+        "Telegram",
         "Submitted At",
       ];
 
@@ -172,6 +273,8 @@ export default function FormResponsesPage() {
         const row: string[] = [
           escapeCell(response.respondent.name),
           escapeCell(response.respondent.email),
+          escapeCell(response.respondent.phoneNumber ?? ""),
+          escapeCell(response.respondent.telegram ?? ""),
           escapeCell(new Date(response.submittedAt).toLocaleString()),
         ];
 
@@ -339,12 +442,35 @@ export default function FormResponsesPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Form Responses</h1>
-            <p className="text-gray-600 mt-2">{form.title}</p>
-            {form.description && (
-              <p className="text-gray-500 mt-1">{form.description}</p>
-            )}
+            <p className="text-gray-500 mt-1 text-sm">
+              {responses.length} response{responses.length === 1 ? "" : "s"}
+            </p>
           </div>
-          <div className="flex space-x-2">
+          <div className="flex flex-wrap gap-2 items-center justify-end">
+            <div className="flex rounded-lg border border-gray-200 bg-white p-0.5 text-sm">
+              <button
+                type="button"
+                onClick={() => setViewMode("cards")}
+                className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                  viewMode === "cards"
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                Cards
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("table")}
+                className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
+                  viewMode === "table"
+                    ? "bg-blue-600 text-white"
+                    : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                Table
+              </button>
+            </div>
             <button
               onClick={exportToCSV}
               disabled={exportLoading || responses.length === 0}
@@ -405,11 +531,105 @@ export default function FormResponsesPage() {
               This form hasn&apos;t received any responses yet.
             </p>
           </div>
+        ) : viewMode === "table" ? (
+          <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white shadow">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="sticky left-0 z-10 bg-gray-50 px-3 py-2 text-left font-semibold text-gray-900">
+                    #
+                  </th>
+                  <th className="px-3 py-2 text-left font-semibold text-gray-900 whitespace-nowrap">
+                    Respondent
+                  </th>
+                  <th className="px-3 py-2 text-left font-semibold text-gray-900 whitespace-nowrap">
+                    Email
+                  </th>
+                  <th className="px-3 py-2 text-left font-semibold text-gray-900 whitespace-nowrap">
+                    Phone
+                  </th>
+                  <th className="px-3 py-2 text-left font-semibold text-gray-900 whitespace-nowrap">
+                    Telegram
+                  </th>
+                  <th className="px-3 py-2 text-left font-semibold text-gray-900 whitespace-nowrap">
+                    Submitted
+                  </th>
+                  {tableColumns.map((col) => (
+                    <th
+                      key={col.key}
+                      className="px-3 py-2 text-left font-semibold text-gray-900 whitespace-nowrap min-w-[120px]"
+                    >
+                      {col.label}
+                    </th>
+                  ))}
+                  <th className="px-3 py-2 text-left font-semibold text-gray-900 whitespace-nowrap">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {responses.map((response, index) => (
+                  <tr key={response.id} className="hover:bg-gray-50/80">
+                    <td className="sticky left-0 z-10 bg-white px-3 py-2 text-gray-600">
+                      {index + 1}
+                    </td>
+                    <td className="px-3 py-2 text-gray-900 whitespace-nowrap">
+                      {response.respondent.name}
+                    </td>
+                    <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
+                      {response.respondent.email}
+                    </td>
+                    <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
+                      {response.respondent.phoneNumber?.trim() || "—"}
+                    </td>
+                    <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
+                      {response.respondent.telegram?.trim() || "—"}
+                    </td>
+                    <td className="px-3 py-2 text-gray-600 whitespace-nowrap">
+                      {new Date(response.submittedAt).toLocaleString()}
+                    </td>
+                    {tableColumns.map((col) => {
+                      const fr = response.responses.find(
+                        (r) => r.fieldLabel === col.field.label
+                      );
+                      const raw = fr?.value;
+                      let cell = "";
+                      if (col.partIndex !== undefined && col.field.type === "segmented_text") {
+                        const delim = col.field.segmentDelimiter ?? "/";
+                        const parts = splitSegments(
+                          raw != null ? String(raw) : "",
+                          delim
+                        );
+                        cell = parts[col.partIndex] ?? "";
+                      } else {
+                        cell = formatPlainCell(raw, col.field);
+                      }
+                      return (
+                        <td key={col.key} className="px-3 py-2 text-gray-900 max-w-[280px]">
+                          <span className="line-clamp-4 break-words">{cell || "—"}</span>
+                        </td>
+                      );
+                    })}
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => deleteResponse(response.id)}
+                        disabled={deletingId === response.id}
+                        className="text-red-600 hover:text-red-800 hover:underline disabled:opacity-50 text-sm font-medium"
+                      >
+                        {deletingId === response.id ? "…" : "Delete"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         ) : (
           <div className="space-y-6">
             {responses.map((response, index) => (
               <div key={response.id} className="bg-white p-6 rounded-lg shadow">
-                <div className="flex justify-between items-start mb-4">
+                <div className="flex justify-between items-start mb-4 gap-4">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">
                       Response #{index + 1}
@@ -417,10 +637,24 @@ export default function FormResponsesPage() {
                     <p className="text-sm text-gray-600">
                       Submitted by {response.respondent.name} ({response.respondent.email})
                     </p>
+                    <p className="text-sm text-gray-600">
+                      Phone: {response.respondent.phoneNumber?.trim() || "—"}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Telegram: {response.respondent.telegram?.trim() || "—"}
+                    </p>
                     <p className="text-sm text-gray-500">
                       {new Date(response.submittedAt).toLocaleString()}
                     </p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => deleteResponse(response.id)}
+                    disabled={deletingId === response.id}
+                    className="shrink-0 text-red-600 hover:text-red-800 border border-red-200 rounded-lg px-3 py-1.5 text-sm font-medium hover:bg-red-50 disabled:opacity-50"
+                  >
+                    {deletingId === response.id ? "Deleting…" : "Delete response"}
+                  </button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
