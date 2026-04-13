@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Form from "@/lib/models/Form";
+import Response from "@/lib/models/Response";
 import User from "@/lib/models/User";
 import { serializeFormUser } from "@/lib/serialize-form-users";
 import { validateFormFieldsArray } from "@/lib/forms/validate-form-fields";
@@ -52,54 +53,103 @@ export async function GET(req: NextRequest) {
 
     await dbConnect();
 
-    // All logged-in users can see all active forms
-    const forms = await Form.find({ isActive: true })
-      .populate('createdBy', 'name email')
-      .populate('managers', 'name email')
-      .sort({ createdAt: -1 });
+    const isSiteAdmin = user.isSuperAdmin || user.isAdmin;
+    const canCreateFormsPerm = user.permissions?.canCreateForms === true;
+
+    let forms;
+    if (isSiteAdmin) {
+      forms = await Form.find({ isActive: true })
+        .populate("createdBy", "name email")
+        .populate("managers", "name email")
+        .sort({ createdAt: -1 });
+    } else if (canCreateFormsPerm) {
+      forms = await Form.find({
+        isActive: true,
+        $or: [
+          { createdBy: user.userId },
+          { managers: user.userId },
+        ],
+      })
+        .populate("createdBy", "name email")
+        .populate("managers", "name email")
+        .sort({ createdAt: -1 });
+    } else {
+      const respondedIds = await Response.distinct("formId", {
+        respondent: user.userId,
+      });
+      forms = await Form.find({
+        _id: { $in: respondedIds },
+        isActive: true,
+      })
+        .populate("createdBy", "name email")
+        .populate("managers", "name email")
+        .sort({ createdAt: -1 });
+    }
 
     return NextResponse.json({
-      forms: forms.map((form) => {
-        const createdBy = serializeFormUser(form.createdBy);
-        const managers = (form.managers ?? []).map((m: unknown) =>
-          serializeFormUser(m)
-        );
-        // Determine user permissions for this form
-        const canEdit =
-          user.isSuperAdmin ||
-          user.isAdmin ||
-          createdBy._id === user.userId ||
-          managers.some(
-            (manager: { _id: string }) => manager._id === user.userId
+      forms: await Promise.all(
+        forms.map(async (form) => {
+          const createdBy = serializeFormUser(form.createdBy);
+          const managers = (form.managers ?? []).map((m: unknown) =>
+            serializeFormUser(m)
           );
+          const canEdit =
+            user.isSuperAdmin ||
+            user.isAdmin ||
+            createdBy._id === user.userId ||
+            managers.some(
+              (manager: { _id: string }) => manager._id === user.userId
+            );
 
-        const canViewResponses =
-          user.isSuperAdmin ||
-          user.isAdmin ||
-          createdBy._id === user.userId ||
-          managers.some(
-            (manager: { _id: string }) => manager._id === user.userId
-          );
+          const canViewResponses =
+            user.isSuperAdmin ||
+            user.isAdmin ||
+            createdBy._id === user.userId ||
+            managers.some(
+              (manager: { _id: string }) => manager._id === user.userId
+            );
 
-        return {
-          id: form._id,
-          title: form.title,
-          description: form.description,
-          createdBy,
-          managers,
-          fields: form.fields,
-          responses: form.responses,
-          isActive: form.isActive,
-          createdAt: form.createdAt,
-          updatedAt: form.updatedAt,
-          responseCount: form.responses.length,
-          userPermissions: {
-            canEdit,
-            canViewResponses,
-            canFill: true // All logged-in users can fill forms
-          }
-        };
-      })
+          const isStaff =
+            user.isSuperAdmin ||
+            user.isAdmin ||
+            createdBy._id === user.userId ||
+            managers.some(
+              (manager: { _id: string }) => manager._id === user.userId
+            );
+
+          const hasSubmitted = !!(await Response.exists({
+            formId: form._id,
+            respondent: user.userId,
+          }));
+
+          const shared = form.isShared ?? true;
+          const canFill =
+            form.isActive &&
+            !hasSubmitted &&
+            (shared || isStaff);
+
+          return {
+            id: form._id,
+            title: form.title,
+            description: form.description,
+            createdBy,
+            managers,
+            fields: form.fields,
+            responses: form.responses,
+            isActive: form.isActive,
+            isShared: shared,
+            createdAt: form.createdAt,
+            updatedAt: form.updatedAt,
+            responseCount: form.responses.length,
+            userHasSubmitted: hasSubmitted,
+            userPermissions: {
+              canEdit,
+              canViewResponses,
+              canFill,
+            },
+          };
+        })
+      ),
     });
   } catch (error) {
     console.error("Error fetching forms:", error);
@@ -166,7 +216,8 @@ export async function POST(req: NextRequest) {
       managers: managers || [],
       fields,
       responses: [],
-      isActive: true
+      isActive: true,
+      isShared: false,
     });
 
     await newForm.save();

@@ -10,6 +10,8 @@ import {
   PopoverTrigger,
 } from "@/app/components/ui/popover";
 import { cn } from "@/app/components/lib/utils";
+import { Input } from "@/app/components/ui/input";
+import { Button } from "@/app/components/ui/button";
 
 function parseYmd(value: string): Date | undefined {
   if (!value?.trim()) return undefined;
@@ -63,14 +65,14 @@ export function FormDateField({
 
   if (mode === "time") {
     return (
-      <input
+      <Input
         id={id}
         type="time"
         value={value || ""}
         onChange={(e) => onChange(e.target.value)}
         required={required}
         disabled={disabled}
-        className="w-full max-w-xs rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="max-w-xs"
       />
     );
   }
@@ -80,19 +82,22 @@ export function FormDateField({
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <button
+          <Button
             id={id}
             type="button"
+            variant="black"
+            outline
             disabled={disabled}
+            rounding="md"
             className={cn(
-              "flex w-full max-w-md justify-start rounded-md border border-gray-300 bg-white px-3 py-2 text-left text-sm font-normal",
+              "w-full max-w-md justify-start font-normal text-left h-auto py-2 px-3",
               !value && "text-gray-500"
             )}
           >
             {value
               ? format(parseYmd(value)!, "PPP")
               : "Pick a date"}
-          </button>
+          </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
           <Calendar
@@ -114,19 +119,22 @@ export function FormDateField({
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <button
+          <Button
             id={id}
             type="button"
+            variant="black"
+            outline
             disabled={disabled}
+            rounding="md"
             className={cn(
-              "flex w-full max-w-md justify-start rounded-md border border-gray-300 bg-white px-3 py-2 text-left text-sm",
+              "w-full max-w-md justify-start font-normal text-left h-auto py-2 px-3 text-sm",
               !datePart && "text-gray-500"
             )}
           >
             {datePart
               ? format(datePart, "PPP")
               : "Pick a date"}
-          </button>
+          </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
           <Calendar
@@ -143,7 +151,7 @@ export function FormDateField({
           />
         </PopoverContent>
       </Popover>
-      <input
+      <Input
         type="time"
         value={timePart}
         onChange={(e) => {
@@ -162,7 +170,7 @@ export function FormDateField({
           onChange(next.toISOString());
         }}
         disabled={disabled}
-        className="w-full max-w-xs rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="max-w-xs"
       />
     </div>
   );

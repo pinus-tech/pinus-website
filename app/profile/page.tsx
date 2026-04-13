@@ -32,12 +32,16 @@ export default function ProfilePage() {
     city: "",
     major: "",
     career: "undergrad",
+    intakeYear: "",
+    yearOfStudy: "",
   });
 
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, loading: authLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
+    // Wait for /api/auth/me — on refresh `user` is null until the session is loaded
+    if (authLoading) return;
     if (!user) {
       router.push("/login");
       return;
@@ -51,8 +55,16 @@ export default function ProfilePage() {
       city: user.city || "",
       major: user.major || "",
       career: user.career || "undergrad",
+      intakeYear:
+        user.intakeYear !== undefined && user.intakeYear !== null
+          ? String(user.intakeYear)
+          : "",
+      yearOfStudy:
+        user.yearOfStudy !== undefined && user.yearOfStudy !== null
+          ? String(user.yearOfStudy)
+          : "",
     });
-  }, [user, router]);
+  }, [user, router, authLoading]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -91,13 +103,42 @@ export default function ProfilePage() {
     setSuccess("");
     setLoading(true);
 
+    const iyRaw = formData.intakeYear.trim();
+    const yosRaw = formData.yearOfStudy.trim();
+    const iy = iyRaw === "" ? undefined : parseInt(iyRaw, 10);
+    const yos = yosRaw === "" ? undefined : parseInt(yosRaw, 10);
+    if (iyRaw !== "" && (iy === undefined || Number.isNaN(iy))) {
+      setError("Intake year must be a valid number.");
+      setLoading(false);
+      return;
+    }
+    if (yosRaw !== "" && (yos === undefined || Number.isNaN(yos))) {
+      setError("Year of study must be a valid number.");
+      setLoading(false);
+      return;
+    }
+    if (iy !== undefined && (iy < 1990 || iy > 2100)) {
+      setError("Intake year must be between 1990 and 2100.");
+      setLoading(false);
+      return;
+    }
+    if (yos !== undefined && (yos < 1 || yos > 10)) {
+      setError("Year of study must be between 1 and 10.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch("/api/profile", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          intakeYear: iy,
+          yearOfStudy: yos,
+        }),
       });
 
       if (response.ok) {
@@ -125,13 +166,21 @@ export default function ProfilePage() {
       city: user?.city || "",
       major: user?.major || "",
       career: user?.career || "undergrad",
+      intakeYear:
+        user?.intakeYear !== undefined && user?.intakeYear !== null
+          ? String(user.intakeYear)
+          : "",
+      yearOfStudy:
+        user?.yearOfStudy !== undefined && user?.yearOfStudy !== null
+          ? String(user.yearOfStudy)
+          : "",
     });
     setIsEditing(false);
     setError("");
     setSuccess("");
   };
 
-  if (!user) {
+  if (authLoading || !user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-main"></div>
@@ -275,17 +324,39 @@ export default function ProfilePage() {
                 />
 
                 <Input
-                  label="Intake Year (Cannot be changed)"
-                  value={user.intakeYear?.toString() || "Not provided"}
-                  disabled
-                  className="bg-gray-100"
+                  label="Intake year *"
+                  name="intakeYear"
+                  type={isEditing ? "number" : "text"}
+                  value={
+                    isEditing
+                      ? formData.intakeYear
+                      : user.intakeYear != null
+                        ? String(user.intakeYear)
+                        : "Not provided"
+                  }
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  required={isEditing}
+                  placeholder="e.g. 2024"
+                  className={!isEditing ? "bg-gray-100" : undefined}
                 />
 
                 <Input
-                  label="Year of Study (Cannot be changed)"
-                  value={user.yearOfStudy?.toString() || "Not provided"}
-                  disabled
-                  className="bg-gray-100"
+                  label="Year of study *"
+                  name="yearOfStudy"
+                  type={isEditing ? "number" : "text"}
+                  value={
+                    isEditing
+                      ? formData.yearOfStudy
+                      : user.yearOfStudy != null
+                        ? String(user.yearOfStudy)
+                        : "Not provided"
+                  }
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  required={isEditing}
+                  placeholder="e.g. 2 (undergrad year 2)"
+                  className={!isEditing ? "bg-gray-100" : undefined}
                 />
               </div>
 
@@ -386,43 +457,6 @@ export default function ProfilePage() {
                     </div>
                   )}
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Quick Links */}
-        <Card className="mb-8 max-w-7xl mx-auto">
-          <CardHeader>
-            <CardTitle>Quick Links</CardTitle>
-          </CardHeader>
-          <CardContent className="mb-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <Button
-                onClick={() => router.push("/forms")}
-                variant="blue"
-                outline
-                className="w-full"
-              >
-                📝 Forms
-              </Button>
-              <Button
-                onClick={() => router.push("/marketplace")}
-                variant="blue"
-                outline
-                className="w-full"
-              >
-                🛒 Marketplace
-              </Button>
-              {user.isAdmin && (
-                <Button
-                  onClick={() => router.push("/admin/dashboard")}
-                  variant="blue"
-                  outline
-                  className="w-full"
-                >
-                  👑 Admin Dashboard
-                </Button>
               )}
             </div>
           </CardContent>

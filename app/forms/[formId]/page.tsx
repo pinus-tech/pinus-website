@@ -8,6 +8,13 @@ import type { FormFieldDefinition } from "@/lib/form-field-types";
 import { isDataField } from "@/lib/form-field-types";
 import { isEmptyValue } from "@/lib/forms/validate-submission";
 import { FormDateField } from "@/app/components/forms/FormDateField";
+import { FormFieldsEditor } from "@/app/components/forms/FormFieldsEditor";
+import { FormSelect } from "@/app/components/forms/FormSelect";
+import { Input } from "@/app/components/ui/input";
+import { Textarea } from "@/app/components/ui/textarea";
+import { Button } from "@/app/components/ui/button";
+import { Checkbox } from "@/app/components/ui/checkbox";
+import { validateFormFieldsArray } from "@/lib/forms/validate-form-fields";
 
 type FormField = FormFieldDefinition;
 
@@ -20,12 +27,16 @@ interface Form {
     email: string;
   };
   managers?: Array<{
+    _id?: string;
+    id?: string;
     name: string;
     email: string;
   }>;
   fields: FormField[];
   responseCount: number;
   isActive: boolean;
+  isShared?: boolean;
+  userHasSubmitted?: boolean;
   createdAt: string;
   updatedAt: string;
   userPermissions?: {
@@ -59,14 +70,19 @@ export default function FormDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [editData, setEditData] = useState<Partial<Form>>({});
-  const [isEditingManagers, setIsEditingManagers] = useState(false);
+  const [editData, setEditData] = useState<{
+    title?: string;
+    description?: string;
+    fields?: FormField[];
+    isActive?: boolean;
+  }>({});
   const [potentialManagers, setPotentialManagers] = useState<Array<{
     id: string;
     name: string;
     email: string;
   }>>([]);
   const [selectedManagers, setSelectedManagers] = useState<string[]>([]);
+  const [shareBusy, setShareBusy] = useState(false);
 
   const { user, loading: authLoading, canCreateForms } = useAuth();
   const router = useRouter();
@@ -107,11 +123,16 @@ export default function FormDetailPage() {
         
         // Initialize selected managers
         if (data.form.managers) {
-          setSelectedManagers(data.form.managers.map((m: { id?: string; _id?: string }) => m.id || m._id));
+          setSelectedManagers(
+            data.form.managers.map((m: { id?: string; _id?: string }) =>
+              String(m._id ?? m.id ?? "")
+            ).filter(Boolean)
+          );
         }
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Failed to fetch form');
+        setError(errorData.error || "Failed to fetch form");
+        setForm(null);
       }
     } catch (error) {
       setError('Network error occurred');
@@ -216,19 +237,52 @@ export default function FormDetailPage() {
     }
   };
 
+  const startEditing = () => {
+    if (!form) return;
+    setEditData({
+      title: form.title,
+      description: form.description ?? "",
+      fields: JSON.parse(JSON.stringify(form.fields)) as FormField[],
+      isActive: form.isActive,
+    });
+    setSelectedManagers(
+      (form.managers ?? []).map((m) => String(m._id ?? m.id ?? "")).filter(Boolean)
+    );
+    setIsEditing(true);
+    setError(null);
+  };
+
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    if (!form) return;
+
+    const fields = editData.fields ?? form.fields;
+    if (!fields.length) {
+      setError("At least one field is required");
+      return;
+    }
+    const fieldsError = validateFormFieldsArray(fields);
+    if (fieldsError) {
+      setError(fieldsError);
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
     try {
       const response = await fetch(`/api/forms/${formId}`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(editData),
+        body: JSON.stringify({
+          title: editData.title ?? form.title,
+          description: editData.description,
+          fields,
+          isActive: editData.isActive ?? form.isActive,
+          managers: selectedManagers,
+        }),
       });
 
       if (response.ok) {
@@ -236,39 +290,29 @@ export default function FormDetailPage() {
         setForm(data.form);
         setIsEditing(false);
         setEditData({});
-        setSuccess('Form updated successfully!');
+        setSuccess("Form updated successfully!");
+        const initialResponses: FormResponse[] = data.form.fields
+          .filter((field: FormField) => isDataField(field))
+          .map((field: FormField) => ({
+            fieldLabel: field.label,
+            value: defaultValueForField(field),
+          }));
+        setResponses(initialResponses);
+        if (data.form.managers) {
+          setSelectedManagers(
+            data.form.managers.map((m: { _id?: string; id?: string }) =>
+              String(m._id ?? m.id ?? "")
+            ).filter(Boolean)
+          );
+        }
       } else {
         const errorData = await response.json();
-        setError(errorData.error || 'Failed to update form');
+        setError(errorData.error || "Failed to update form");
       }
-    } catch (error) {
-      setError('Network error occurred');
+    } catch {
+      setError("Network error occurred");
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const handleManagerUpdate = async () => {
-    try {
-      const response = await fetch(`/api/forms/${formId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ managers: selectedManagers }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setForm(data.form);
-        setIsEditingManagers(false);
-        setSuccess('Form managers updated successfully!');
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to update form managers');
-      }
-    } catch (error) {
-      setError('Network error occurred');
     }
   };
 
@@ -283,6 +327,44 @@ export default function FormDetailPage() {
   const canFillForm = user && form && form.userPermissions?.canFill;
 
   const isFormFiller = user && form && !form.userPermissions?.canEdit && form.userPermissions?.canFill;
+
+  const showOrganiserMeta =
+    user &&
+    form &&
+    (user.isSuperAdmin ||
+      user.isAdmin ||
+      !!canEditForm ||
+      !!form.userPermissions?.canViewResponses);
+
+  /** Creators, managers, and admins can open sharing / copy the participant link */
+  const canShareLink = !!canEditForm;
+
+  const copyParticipantLink = async () => {
+    if (!formId) return;
+    setShareBusy(true);
+    try {
+      const patch = await fetch(`/api/forms/${formId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isShared: true }),
+      });
+      if (!patch.ok) {
+        const err = await patch.json();
+        setError(err.error || "Could not enable sharing");
+        return;
+      }
+      const data = await patch.json();
+      setForm(data.form);
+      await navigator.clipboard.writeText(
+        `${window.location.origin}/forms/${formId}`
+      );
+      setSuccess("Participant link copied. The form is open for submissions.");
+    } catch {
+      setError("Could not copy link");
+    } finally {
+      setShareBusy(false);
+    }
+  };
 
   // Show loading while auth is loading
   if (authLoading) {
@@ -329,21 +411,46 @@ export default function FormDetailPage() {
             {isFormFiller && (
               <p className="text-blue-600 mt-1 text-sm">You can fill out this form</p>
             )}
+            {form.userHasSubmitted && !form.userPermissions?.canFill && (
+              <p className="text-green-700 mt-1 text-sm font-medium">
+                You have already submitted this form.
+              </p>
+            )}
           </div>
-          <div className="flex space-x-2">
-            <button
-              onClick={() => router.push('/forms')}
-              className="text-gray-600 hover:text-gray-900 font-medium"
+          <div className="flex flex-wrap gap-2 justify-end">
+            <Button
+              type="button"
+              variant="black"
+              outline
+              onClick={() => router.push("/forms")}
             >
               ← Back to Forms
-            </button>
-            {canEditForm && (
-              <button
-                onClick={() => setIsEditing(!isEditing)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            </Button>
+            {canShareLink && (
+              <Button
+                type="button"
+                variant="blue"
+                onClick={copyParticipantLink}
+                disabled={shareBusy}
               >
-                {isEditing ? 'Cancel Edit' : 'Edit Form'}
-              </button>
+                {shareBusy ? "…" : "Share form (copy link)"}
+              </Button>
+            )}
+            {canEditForm && (
+              <Button
+                type="button"
+                variant="blue"
+                onClick={() => {
+                  if (isEditing) {
+                    setIsEditing(false);
+                    setEditData({});
+                  } else {
+                    startEditing();
+                  }
+                }}
+              >
+                {isEditing ? "Cancel Edit" : "Edit Form"}
+              </Button>
             )}
             {form.userPermissions?.canViewResponses && (
               <Link
@@ -368,22 +475,37 @@ export default function FormDetailPage() {
           </div>
         )}
 
-        {/* Form Info */}
+        {/* Form Info — creator / managers / response counts: organisers only */}
         <div className="bg-white p-6 rounded-lg shadow mb-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-            <div>
-              <span className="font-medium">Created by:</span> {form.createdBy.name}
-            </div>
-            {!isFormFiller && (
+            {showOrganiserMeta && (
               <div>
-                <span className="font-medium">Responses:</span> {form.responseCount}
+                <span className="font-medium">Created by:</span>{" "}
+                {form.createdBy.name}
               </div>
             )}
-            <div>
-              <span className="font-medium">Status:</span> {form.isActive ? 'Active' : 'Inactive'}
-            </div>
+            {showOrganiserMeta && (
+              <div>
+                <span className="font-medium">Responses:</span>{" "}
+                {form.responseCount}
+              </div>
+            )}
+            {showOrganiserMeta && (
+              <div>
+                <span className="font-medium">Status:</span>{" "}
+                {form.isActive ? "Active" : "Inactive"}
+              </div>
+            )}
+            {!showOrganiserMeta && (
+              <div className="md:col-span-3">
+                <span className="font-medium">Status:</span>{" "}
+                {form.isActive ? "Active" : "Inactive"}
+              </div>
+            )}
           </div>
-          {!isFormFiller && form.managers && form.managers.length > 0 && (
+          {showOrganiserMeta &&
+            form.managers &&
+            form.managers.length > 0 && (
             <div className="mt-4 pt-4 border-t border-gray-200">
               <span className="font-medium text-sm text-gray-600">Managers:</span>
               <div className="flex flex-wrap gap-2 mt-1">
@@ -397,40 +519,105 @@ export default function FormDetailPage() {
           )}
         </div>
 
-        {/* Manager Management */}
-        {canEditForm && (
+        {!isEditing && canEditForm && (
           <div className="bg-white p-6 rounded-lg shadow mb-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">Form Managers</h2>
-              <button
-                onClick={() => setIsEditingManagers(!isEditingManagers)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
-              >
-                {isEditingManagers ? 'Cancel' : 'Edit Managers'}
-              </button>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Form Managers</h2>
+            <div className="text-sm text-gray-600">
+              {form.managers && form.managers.length > 0 ? (
+                <p>
+                  Current managers:{" "}
+                  {form.managers.map((m) => m.name).join(", ")}
+                </p>
+              ) : (
+                <p>
+                  No managers assigned. Use &quot;Edit Form&quot; to add managers
+                  and change fields.
+                </p>
+              )}
             </div>
-            
-            {isEditingManagers ? (
-              <div className="space-y-4">
-                <div className="max-h-40 overflow-y-auto border border-gray-300 rounded-md p-3">
+          </div>
+        )}
+
+        {isEditing && canEditForm && (
+          <div className="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              Edit form
+            </h2>
+            <form onSubmit={handleEditSubmit} className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Form title
+                </label>
+                <Input
+                  type="text"
+                  value={editData.title ?? form.title}
+                  onChange={(e) =>
+                    setEditData((prev) => ({ ...prev, title: e.target.value }))
+                  }
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description
+                </label>
+                <Textarea
+                  value={editData.description ?? form.description ?? ""}
+                  onChange={(e) =>
+                    setEditData((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
+                  rows={3}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="edit-form-active"
+                  checked={editData.isActive ?? form.isActive}
+                  onCheckedChange={(c) =>
+                    setEditData((prev) => ({
+                      ...prev,
+                      isActive: c === true,
+                    }))
+                  }
+                />
+                <label
+                  htmlFor="edit-form-active"
+                  className="text-sm font-medium text-gray-700 cursor-pointer"
+                >
+                  Form is active (accepting responses)
+                </label>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Managers
+                </h3>
+                <div className="max-h-48 overflow-y-auto border border-gray-300 rounded-md p-3 space-y-2">
                   {potentialManagers.map((manager) => (
-                    <label key={manager.id} className="flex items-center">
-                      <input
-                        type="checkbox"
+                    <div key={manager.id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`mgr-${manager.id}`}
                         checked={selectedManagers.includes(manager.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedManagers(prev => [...prev, manager.id]);
+                        onCheckedChange={(checked) => {
+                          if (checked === true) {
+                            setSelectedManagers((prev) => [...prev, manager.id]);
                           } else {
-                            setSelectedManagers(prev => prev.filter(id => id !== manager.id));
+                            setSelectedManagers((prev) =>
+                              prev.filter((id) => id !== manager.id)
+                            );
                           }
                         }}
-                        className="mr-2"
                       />
-                      <span className="text-sm">
+                      <label
+                        htmlFor={`mgr-${manager.id}`}
+                        className="text-sm cursor-pointer"
+                      >
                         {manager.name} ({manager.email})
-                      </span>
-                    </label>
+                      </label>
+                    </div>
                   ))}
                   {potentialManagers.length === 0 && (
                     <p className="text-sm text-gray-500 italic">
@@ -438,85 +625,48 @@ export default function FormDetailPage() {
                     </p>
                   )}
                 </div>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={handleManagerUpdate}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm font-medium transition-colors"
-                  >
-                    Save Changes
-                  </button>
-                  <button
-                    onClick={() => setIsEditingManagers(false)}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded text-sm font-medium hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Managers can view responses and edit this form.
+                </p>
               </div>
-            ) : (
-              <div className="text-sm text-gray-600">
-                {form.managers && form.managers.length > 0 ? (
-                  <p>Current managers: {form.managers.map(m => m.name).join(', ')}</p>
-                ) : (
-                  <p>No managers assigned. Click &quot;Edit Managers&quot; to add managers.</p>
-                )}
-              </div>
-            )}
-          </div>
-        )}
 
-        {/* Edit Form */}
-        {isEditing && canEditForm && (
-          <div className="bg-white p-6 rounded-lg shadow mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Edit Form</h2>
-            <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Form Title
-                </label>
-                <input
-                  type="text"
-                  value={editData.title || form.title}
-                  onChange={(e) => setEditData(prev => ({ ...prev, title: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              <div className="border-t border-gray-200 pt-4">
+                <FormFieldsEditor
+                  fields={editData.fields ?? form.fields}
+                  onChange={(fields) =>
+                    setEditData((prev) => ({ ...prev, fields }))
+                  }
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description
-                </label>
-                <textarea
-                  value={editData.description || form.description || ''}
-                  onChange={(e) => setEditData(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={3}
-                />
-              </div>
-              <div className="flex space-x-4">
-                <button
+
+              <div className="flex flex-wrap gap-3">
+                <Button
                   type="submit"
+                  variant="blue"
                   disabled={submitting}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg font-medium transition-colors"
                 >
-                  {submitting ? 'Saving...' : 'Save Changes'}
-                </button>
-                <button
+                  {submitting ? "Saving..." : "Save all changes"}
+                </Button>
+                <Button
                   type="button"
-                  onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                  variant="black"
+                  outline
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditData({});
+                  }}
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             </form>
           </div>
         )}
 
-        {/* Form Fields */}
-        {form.isActive && canFillForm ? (
+        {form.isActive && canFillForm && !isEditing ? (
           <div className="bg-white p-6 rounded-lg shadow">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">
-              {isFormFiller ? 'Fill Form' : 'Edit Form'}
+              {isFormFiller ? "Fill form" : "Your responses"}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-6">
               {form.fields.map((field, index) => (
@@ -546,7 +696,7 @@ export default function FormDetailPage() {
                       </label>
 
                       {field.type === "text" && (
-                        <input
+                        <Input
                           type="text"
                           value={
                             (responses.find((r) => r.fieldLabel === field.label)
@@ -555,14 +705,13 @@ export default function FormDetailPage() {
                           onChange={(e) =>
                             handleResponseChange(field.label, e.target.value)
                           }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           required={field.required}
                         />
                       )}
 
                       {field.type === "segmented_text" && (
                         <div>
-                          <input
+                          <Input
                             type="text"
                             value={
                               (responses.find((r) => r.fieldLabel === field.label)
@@ -571,7 +720,7 @@ export default function FormDetailPage() {
                             onChange={(e) =>
                               handleResponseChange(field.label, e.target.value)
                             }
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="font-mono text-sm"
                             placeholder={`Parts separated by "${field.segmentDelimiter ?? "/"}"`}
                             required={field.required}
                           />
@@ -586,7 +735,7 @@ export default function FormDetailPage() {
                       )}
 
                       {field.type === "number" && (
-                        <input
+                        <Input
                           type="number"
                           value={
                             (responses.find((r) => r.fieldLabel === field.label)
@@ -599,7 +748,6 @@ export default function FormDetailPage() {
                               v === "" ? "" : Number(v)
                             );
                           }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           required={field.required}
                         />
                       )}
@@ -619,46 +767,44 @@ export default function FormDetailPage() {
                       )}
 
                       {field.type === "checkbox" && (
-                        <label className="flex items-center">
-                          <input
-                            type="checkbox"
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id={`fill-checkbox-${index}`}
                             checked={
                               (responses.find(
                                 (r) => r.fieldLabel === field.label
                               )?.value as boolean) || false
                             }
-                            onChange={(e) =>
-                              handleResponseChange(
-                                field.label,
-                                e.target.checked
-                              )
+                            onCheckedChange={(c) =>
+                              handleResponseChange(field.label, c === true)
                             }
-                            className="mr-2"
-                            required={field.required}
                           />
-                          <span className="text-sm text-gray-700">Yes</span>
-                        </label>
+                          <label
+                            htmlFor={`fill-checkbox-${index}`}
+                            className="text-sm text-gray-700 cursor-pointer"
+                          >
+                            Yes
+                          </label>
+                        </div>
                       )}
 
                       {field.type === "dropdown" && (
-                        <select
+                        <FormSelect
                           value={
                             (responses.find((r) => r.fieldLabel === field.label)
                               ?.value as string) || ""
                           }
-                          onChange={(e) =>
-                            handleResponseChange(field.label, e.target.value)
+                          onValueChange={(v) =>
+                            handleResponseChange(field.label, v)
                           }
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          options={(field.options ?? []).map((o) => ({
+                            value: o,
+                            label: o,
+                          }))}
+                          allowNone
+                          noneOptionLabel="Select an option"
                           required={field.required}
-                        >
-                          <option value="">Select an option</option>
-                          {field.options?.map((option, optionIndex) => (
-                            <option key={optionIndex} value={option}>
-                              {option}
-                            </option>
-                          ))}
-                        </select>
+                        />
                       )}
 
                       {field.type === "multiple_choice" && (
@@ -669,24 +815,30 @@ export default function FormDetailPage() {
                                 (r) => r.fieldLabel === field.label)
                                 ?.value as string[]) || []
                             ).includes(option);
+                            const optId = `mc-${index}-${optionIndex}`;
                             return (
-                              <label
+                              <div
                                 key={optionIndex}
                                 className="flex items-center gap-2 text-sm"
                               >
-                                <input
-                                  type="checkbox"
+                                <Checkbox
+                                  id={optId}
                                   checked={selected}
-                                  onChange={(e) =>
+                                  onCheckedChange={(c) =>
                                     handleMultipleChoiceToggle(
                                       field.label,
                                       option,
-                                      e.target.checked
+                                      c === true
                                     )
                                   }
                                 />
-                                <span>{option}</span>
-                              </label>
+                                <label
+                                  htmlFor={optId}
+                                  className="cursor-pointer text-gray-900"
+                                >
+                                  {option}
+                                </label>
+                              </div>
                             );
                           })}
                         </div>
@@ -697,13 +849,9 @@ export default function FormDetailPage() {
               ))}
 
               <div className="pt-4">
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-                >
-                  {submitting ? 'Submitting...' : 'Submit Form'}
-                </button>
+                <Button type="submit" variant="blue" disabled={submitting}>
+                  {submitting ? "Submitting..." : "Submit Form"}
+                </Button>
               </div>
             </form>
           </div>
@@ -712,9 +860,16 @@ export default function FormDetailPage() {
             This form is currently inactive and not accepting responses.
           </div>
         ) : !canFillForm ? (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-            You don&apos;t have permission to fill this form.
-          </div>
+          form.userHasSubmitted ? (
+            <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
+              You have already submitted a response to this form. Thank you.
+            </div>
+          ) : (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              You don&apos;t have permission to fill this form, or it is not open
+              for submissions yet.
+            </div>
+          )
         ) : null}
 
         {/* Management Links */}

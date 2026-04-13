@@ -60,7 +60,7 @@ export async function PATCH(req: NextRequest) {
     await dbConnect();
 
     const body = await req.json();
-    const { name, telegram, phoneNumber, city, major, career } = body;
+    const { name, telegram, phoneNumber, city, major, career, intakeYear, yearOfStudy } = body;
 
     // Validate required fields
     if (!name || !phoneNumber || !city) {
@@ -68,6 +68,27 @@ export async function PATCH(req: NextRequest) {
         { error: 'Name, phone number, and city are required' },
         { status: 400 }
       );
+    }
+
+    const toInt = (v: unknown): number | undefined => {
+      if (v === '' || v === null || v === undefined) return undefined;
+      const n = typeof v === 'number' ? v : parseInt(String(v), 10);
+      return Number.isFinite(n) ? n : undefined;
+    };
+
+    const iy = toInt(intakeYear);
+    const yos = toInt(yearOfStudy);
+    if (intakeYear !== undefined && intakeYear !== null && intakeYear !== '' && iy === undefined) {
+      return NextResponse.json({ error: 'Intake year must be a valid number' }, { status: 400 });
+    }
+    if (yearOfStudy !== undefined && yearOfStudy !== null && yearOfStudy !== '' && yos === undefined) {
+      return NextResponse.json({ error: 'Year of study must be a valid number' }, { status: 400 });
+    }
+    if (iy !== undefined && (iy < 1990 || iy > 2100)) {
+      return NextResponse.json({ error: 'Intake year must be between 1990 and 2100' }, { status: 400 });
+    }
+    if (yos !== undefined && (yos < 1 || yos > 10)) {
+      return NextResponse.json({ error: 'Year of study must be between 1 and 10' }, { status: 400 });
     }
 
     // Find and update the user
@@ -86,6 +107,8 @@ export async function PATCH(req: NextRequest) {
     userProfile.city = city;
     userProfile.major = major || '';
     userProfile.career = career || 'undergrad';
+    if (iy !== undefined) userProfile.intakeYear = iy;
+    if (yos !== undefined) userProfile.yearOfStudy = yos;
 
     await userProfile.save();
 

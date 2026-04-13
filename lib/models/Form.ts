@@ -29,6 +29,8 @@ export interface IForm extends mongoose.Document {
   }[];
   responses: mongoose.Types.ObjectId[];
   isActive: boolean;
+  /** When false, only staff (admins / creators / managers) can open or fill; participants need this enabled (Share). */
+  isShared: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -64,7 +66,8 @@ const formSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'Response' 
   }],
-  isActive: { type: Boolean, default: true }
+  isActive: { type: Boolean, default: true },
+  isShared: { type: Boolean, default: false },
 }, {
   timestamps: true,
 });

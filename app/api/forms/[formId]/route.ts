@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Form from "@/lib/models/Form";
+import Response from "@/lib/models/Response";
 import { serializeFormUser } from "@/lib/serialize-form-users";
 import { validateFormFieldsArray } from "@/lib/forms/validate-form-fields";
 import { verifyToken } from "@/lib/utils/auth";
@@ -67,6 +68,36 @@ export async function GET(
         (manager: { _id: string }) => manager._id === user.userId
       );
 
+    const isStaff =
+      user.isSuperAdmin ||
+      user.isAdmin ||
+      createdBy._id === user.userId ||
+      managers.some(
+        (manager: { _id: string }) => manager._id === user.userId
+      );
+
+    const hasSubmitted = !!(await Response.exists({
+      formId: form._id,
+      respondent: user.userId,
+    }));
+
+    const shared = form.isShared ?? true;
+    const canViewForm = shared || isStaff || hasSubmitted;
+    if (!canViewForm) {
+      return NextResponse.json(
+        {
+          error:
+            "This form is not open yet. Ask an organiser to share the participation link.",
+        },
+        { status: 403 }
+      );
+    }
+
+    const canFill =
+      form.isActive &&
+      !hasSubmitted &&
+      (shared || isStaff);
+
     return NextResponse.json({
       form: {
         id: form._id,
@@ -77,15 +108,17 @@ export async function GET(
         fields: form.fields,
         responses: form.responses,
         isActive: form.isActive,
+        isShared: shared,
         createdAt: form.createdAt,
         updatedAt: form.updatedAt,
         responseCount: form.responses.length,
+        userHasSubmitted: hasSubmitted,
         userPermissions: {
           canEdit,
           canViewResponses,
-          canFill: true // All logged-in users can fill forms
-        }
-      }
+          canFill,
+        },
+      },
     });
   } catch (error) {
     console.error("Error fetching form:", error);
@@ -162,22 +195,63 @@ export async function PATCH(
       );
     }
 
+    const createdByU = serializeFormUser(updatedForm.createdBy);
+    const managersU = (updatedForm.managers ?? []).map((m: unknown) =>
+      serializeFormUser(m)
+    );
+    const canEditU =
+      user.isSuperAdmin ||
+      user.isAdmin ||
+      createdByU._id === user.userId ||
+      managersU.some(
+        (manager: { _id: string }) => manager._id === user.userId
+      );
+    const canViewResponsesU =
+      user.isSuperAdmin ||
+      user.isAdmin ||
+      createdByU._id === user.userId ||
+      managersU.some(
+        (manager: { _id: string }) => manager._id === user.userId
+      );
+    const isStaffU =
+      user.isSuperAdmin ||
+      user.isAdmin ||
+      createdByU._id === user.userId ||
+      managersU.some(
+        (manager: { _id: string }) => manager._id === user.userId
+      );
+    const hasSubmittedU = !!(await Response.exists({
+      formId: updatedForm._id,
+      respondent: user.userId,
+    }));
+    const sharedU = updatedForm.isShared ?? true;
+    const canFillU =
+      updatedForm.isActive &&
+      !hasSubmittedU &&
+      (sharedU || isStaffU);
+
     return NextResponse.json({
       message: "Form updated successfully",
       form: {
         id: updatedForm._id,
         title: updatedForm.title,
         description: updatedForm.description,
-        createdBy: serializeFormUser(updatedForm.createdBy),
-        managers: (updatedForm.managers ?? []).map((m: unknown) =>
-          serializeFormUser(m)
-        ),
+        createdBy: createdByU,
+        managers: managersU,
         fields: updatedForm.fields,
         responses: updatedForm.responses,
         isActive: updatedForm.isActive,
+        isShared: sharedU,
         createdAt: updatedForm.createdAt,
-        updatedAt: updatedForm.updatedAt
-      }
+        updatedAt: updatedForm.updatedAt,
+        responseCount: updatedForm.responses.length,
+        userHasSubmitted: hasSubmittedU,
+        userPermissions: {
+          canEdit: canEditU,
+          canViewResponses: canViewResponsesU,
+          canFill: canFillU,
+        },
+      },
     });
   } catch (error) {
     console.error("Error updating form:", error);
