@@ -44,12 +44,17 @@ export async function POST(req: NextRequest) {
     user.emailVerificationExpires = verificationExpires;
     await user.save();
 
-    // Send verification email
-    const emailSent = await sendVerificationEmail(user.email, verificationCode);
-    
-    if (!emailSent) {
+    const emailResult = await sendVerificationEmail(user.email, verificationCode);
+
+    if (!emailResult.ok) {
+      console.error("Resend verification email failed:", emailResult.error);
+      const isDev = process.env.NODE_ENV === "development";
       return NextResponse.json(
-        { error: 'Failed to send verification email. Please try again.' },
+        {
+          error: isDev
+            ? `Failed to send verification email: ${emailResult.error}`
+            : "Failed to send verification email. Please try again.",
+        },
         { status: 500 }
       );
     }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Item from "@/lib/models/Item";
+import { toMarketplaceSellerPayload } from "@/lib/marketplace-seller";
 import { verifyToken } from "@/lib/utils/auth";
 
 // Middleware to check if user is logged in
@@ -64,7 +65,7 @@ export async function GET(req: NextRequest) {
         title: item.title,
         description: item.description,
         price: item.price,
-        seller: item.seller,
+        seller: toMarketplaceSellerPayload(item.seller),
         status: item.status,
         category: item.category,
         meetupLocation: item.meetupLocation,
@@ -156,7 +157,7 @@ export async function POST(req: NextRequest) {
         title: newItem.title,
         description: newItem.description,
         price: newItem.price,
-        seller: newItem.seller,
+        seller: toMarketplaceSellerPayload(newItem.seller),
         status: newItem.status,
         category: newItem.category,
         meetupLocation: newItem.meetupLocation,

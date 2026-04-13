@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Item from "@/lib/models/Item";
+import { toMarketplaceSellerPayload } from "@/lib/marketplace-seller";
 import { verifyToken } from "@/lib/utils/auth";
 
 // Middleware to check if user is logged in
@@ -39,20 +40,16 @@ export async function GET(
       );
     }
 
-    // Prepare seller information based on login status
-    let sellerInfo;
+    const sellerBase = toMarketplaceSellerPayload(item.seller);
+    let sellerInfo: {
+      name: string;
+      telegram?: string;
+      phoneNumber?: string;
+    };
     if (isLoggedIn) {
-      // Show full contact information for logged-in users
-      sellerInfo = {
-        name: item.seller.name,
-        telegram: item.seller.telegram,
-        phoneNumber: item.seller.phoneNumber
-      };
+      sellerInfo = sellerBase;
     } else {
-      // Only show name for non-logged-in users
-      sellerInfo = {
-        name: item.seller.name
-      };
+      sellerInfo = { name: sellerBase.name };
     }
 
     return NextResponse.json({
@@ -155,6 +152,13 @@ export async function PATCH(
       { new: true }
     ).populate('seller', 'name telegram phoneNumber');
 
+    if (!updatedItem) {
+      return NextResponse.json(
+        { error: "Item not found" },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json({
       message: "Item updated successfully",
       item: {
@@ -162,7 +166,7 @@ export async function PATCH(
         title: updatedItem.title,
         description: updatedItem.description,
         price: updatedItem.price,
-        seller: updatedItem.seller,
+        seller: toMarketplaceSellerPayload(updatedItem.seller),
         status: updatedItem.status,
         category: updatedItem.category,
         meetupLocation: updatedItem.meetupLocation,

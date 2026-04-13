@@ -68,14 +68,19 @@ export async function POST(req: NextRequest) {
 
     await newUser.save();
 
-    // Send verification email
-    const emailSent = await sendVerificationEmail(email, verificationCode);
-    
-    if (!emailSent) {
-      // If email fails, delete the user and return error
+    // Send verification email (Mailjet: sender must be validated; sandbox only allows test recipients)
+    const emailResult = await sendVerificationEmail(email, verificationCode);
+
+    if (!emailResult.ok) {
+      console.error("Verification email failed:", emailResult.error);
       await User.findByIdAndDelete(newUser._id);
+      const isDev = process.env.NODE_ENV === "development";
       return NextResponse.json(
-        { error: 'Failed to send verification email. Please try again.' },
+        {
+          error: isDev
+            ? `Failed to send verification email: ${emailResult.error}`
+            : "Failed to send verification email. Please try again.",
+        },
         { status: 500 }
       );
     }
