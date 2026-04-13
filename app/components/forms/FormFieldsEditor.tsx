@@ -184,7 +184,7 @@ export function FormFieldsEditor({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {pages.length > 0 && field.type !== "section" && (
+                {pages.length > 0 && (
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Page
@@ -201,18 +201,31 @@ export function FormFieldsEditor({
                     />
                   </div>
                 )}
-                {pages.length > 1 && field.type !== "section" && (
+                {pages.length > 1 && (
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      After this question, go to
+                      {field.type === "section"
+                        ? "After this section, go to"
+                        : "After this question, go to"}
                     </label>
                     <p className="text-xs text-gray-500 mb-2">
-                      When the respondent taps Next, jump here instead of the
-                      following page in the list. If two questions on this page
-                      set this, the one lower on the form wins. Drop-down /
-                      single-choice{" "}
-                      <span className="font-medium">per-option</span> routing
-                      below overrides when it applies.
+                      {field.type === "section" ? (
+                        <>
+                          When the respondent taps Next, jump here instead of
+                          the following page in the list. Applies after this
+                          title/description section. If several fields on this
+                          page set this, the one lower on the form wins.
+                        </>
+                      ) : (
+                        <>
+                          When the respondent taps Next, jump here instead of
+                          the following page in the list. If two questions on
+                          this page set this, the one lower on the form wins.
+                          Drop-down / single-choice{" "}
+                          <span className="font-medium">per-option</span>{" "}
+                          routing below overrides when it applies.
+                        </>
+                      )}
                     </p>
                     <FormSelect
                       value={field.nextPageId ?? "_next"}
@@ -275,6 +288,8 @@ export function FormFieldsEditor({
                         patch.sectionTitle = field.sectionTitle ?? "";
                         patch.sectionDescription =
                           field.sectionDescription ?? "";
+                        patch.sectionDescriptionMarkdown =
+                          field.sectionDescriptionMarkdown ?? false;
                       }
                       if (t === "segmented_text") {
                         patch.segmentDelimiter = field.segmentDelimiter ?? "/";
@@ -389,6 +404,22 @@ export function FormFieldsEditor({
                         rows={3}
                         placeholder="Supporting text (optional)"
                       />
+                      <label className="mt-2 flex cursor-pointer items-center gap-2">
+                        <Checkbox
+                          checked={
+                            field.sectionDescriptionMarkdown ?? false
+                          }
+                          onCheckedChange={(checked) =>
+                            updateField(index, {
+                              sectionDescriptionMarkdown: checked === true,
+                            })
+                          }
+                        />
+                        <span className="text-sm text-gray-700">
+                          Format section description as Markdown (headings,
+                          lists, links, etc.)
+                        </span>
+                      </label>
                     </div>
                   )}
                 </div>

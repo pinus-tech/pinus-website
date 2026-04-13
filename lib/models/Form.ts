@@ -28,6 +28,7 @@ export interface IForm extends mongoose.Document {
     dateMode?: 'date' | 'datetime' | 'time';
     sectionTitle?: string;
     sectionDescription?: string;
+    sectionDescriptionMarkdown?: boolean;
     sectionDisplay?: 'both' | 'title_only' | 'description_only';
     segmentDelimiter?: string;
     minSelections?: number;
@@ -85,6 +86,7 @@ const formSchema = new mongoose.Schema({
     dateMode: { type: String, enum: ['date', 'datetime', 'time'] },
     sectionTitle: { type: String },
     sectionDescription: { type: String },
+    sectionDescriptionMarkdown: { type: Boolean, default: false },
     sectionDisplay: { type: String, enum: ['both', 'title_only', 'description_only'] },
     segmentDelimiter: { type: String },
     description: { type: String },

@@ -40,6 +40,8 @@ export interface FormFieldDefinition {
   /** Used when type === "section" */
   sectionTitle?: string;
   sectionDescription?: string;
+  /** When true, `sectionDescription` is rendered as Markdown. */
+  sectionDescriptionMarkdown?: boolean;
   sectionDisplay?: SectionDisplayMode;
   /** Used when type === "segmented_text" - delimiter for splitting (e.g. / or -) */
   segmentDelimiter?: string;

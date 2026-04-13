@@ -8,6 +8,13 @@ import Link from "next/link";
 import { descriptionCardPreview } from "@/lib/description-preview";
 import { primaryMarketplaceImageUrl } from "@/lib/marketplace-images";
 import { MARKETPLACE_CONDITION_OPTIONS } from "@/lib/constants/marketplace-conditions";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/app/components/ui/select";
 
 interface MarketplaceItem {
   id: string;
@@ -351,22 +358,36 @@ export default function MyListingsPage() {
                       >
                         View Details
                       </Link>
-                      <select
+                      <Select
                         value={item.status}
                         disabled={actionLoading === item.id}
-                        onChange={(e) =>
+                        onValueChange={(v) =>
                           handleStatusChange(
                             item.id,
-                            e.target.value as "available" | "reserved" | "sold"
+                            v as "available" | "reserved" | "sold"
                           )
                         }
-                        className="rounded border border-gray-300 px-2 py-2 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                        aria-label="Change listing status"
                       >
-                        <option value="available">Mark: Available</option>
-                        <option value="reserved">Mark: Reserved</option>
-                        <option value="sold">Mark: Sold</option>
-                      </select>
+                        <SelectTrigger
+                          variant="blue"
+                          outline
+                          rounding="lg"
+                          size="sm"
+                          className="w-full min-w-0 flex-1 sm:min-w-[160px]"
+                          aria-label="Change listing status"
+                        >
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent variant="blue" outline rounding="lg">
+                          <SelectItem value="available">
+                            Mark: Available
+                          </SelectItem>
+                          <SelectItem value="reserved">
+                            Mark: Reserved
+                          </SelectItem>
+                          <SelectItem value="sold">Mark: Sold</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <button
                         onClick={() => handleDelete(item.id)}
                         disabled={actionLoading === item.id}
