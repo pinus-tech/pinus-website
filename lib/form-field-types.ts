@@ -26,6 +26,12 @@ export interface FormFieldDefinition {
    * or `"_next"` for the next page in order (default).
    */
   optionGoToPageId?: Record<string, string>;
+  /**
+   * When the respondent leaves this page (Next), go to this page instead of the
+   * next page in order. Per-option routes above take priority for dropdown /
+   * single-select. If several fields set this, the lower field on the page wins.
+   */
+  nextPageId?: string;
   /** Optional helper text under the label (like Google Forms description). */
   description?: string;
   options?: string[];

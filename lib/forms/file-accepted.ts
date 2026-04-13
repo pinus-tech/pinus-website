@@ -1,4 +1,4 @@
-/** Tokens stored on form fields for file_upload — keep in sync with editor checkboxes. */
+/** Tokens stored on form fields for file_upload - keep in sync with editor checkboxes. */
 
 export const DEFAULT_ACCEPTED_FILE_TOKENS = [
   "jpeg",

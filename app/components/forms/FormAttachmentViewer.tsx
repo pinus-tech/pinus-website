@@ -32,7 +32,7 @@ export function FormAttachmentViewer({
   }, [open]);
 
   if (!trimmed) {
-    return <span className="text-gray-400">—</span>;
+    return <span className="text-gray-400">-</span>;
   }
 
   const tryImageThumb = isLikelyImageUrl(trimmed) && !thumbFailed;

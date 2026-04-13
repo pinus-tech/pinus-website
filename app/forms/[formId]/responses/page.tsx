@@ -642,7 +642,7 @@ function FormResponsesPageContent() {
                             {u ? (
                               <FormAttachmentViewer url={u} compact />
                             ) : (
-                              <span className="text-gray-400">—</span>
+                              <span className="text-gray-400">-</span>
                             )}
                           </td>
                         );

@@ -37,6 +37,7 @@ export interface IForm extends mongoose.Document {
     acceptedFileTypes?: string[];
     pageId?: string;
     optionGoToPageId?: Record<string, string>;
+    nextPageId?: string;
   }[];
   responses: mongoose.Types.ObjectId[];
   isActive: boolean;
@@ -94,6 +95,7 @@ const formSchema = new mongoose.Schema({
     acceptedFileTypes: [{ type: String }],
     pageId: { type: String },
     optionGoToPageId: { type: mongoose.Schema.Types.Mixed },
+    nextPageId: { type: String },
   }],
   pages: [
     {

@@ -150,7 +150,7 @@ export async function prepareFormFileForUpload(
   return compressImageToMaxBytes(file, FORM_FILE_MAX_BYTES);
 }
 
-/** Marketplace listing images only — same size rules as form uploads. */
+/** Marketplace listing images only - same size rules as form uploads. */
 export async function prepareMarketplaceListingImage(file: File) {
   return prepareFormFileForUpload(file, {
     acceptedTypes: ["jpeg", "png", "gif", "webp"],

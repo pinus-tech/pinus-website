@@ -506,7 +506,7 @@ export default function MarketplaceItemDetailPage() {
                         ? MARKETPLACE_CONDITION_OPTIONS.find(
                             (o) => o.value === item.condition
                           )?.label ?? item.condition
-                        : "—"}
+                        : "-"}
                     </span>
                   </div>
                   {item.meetupLocation && (
