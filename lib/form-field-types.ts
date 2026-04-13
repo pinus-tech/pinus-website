@@ -1,4 +1,4 @@
-/** Form builder field types — kept in sync with lib/models/Form.ts */
+/** Form builder field types - kept in sync with lib/models/Form.ts */
 
 export type FormFieldType =
   | "text"
@@ -27,7 +27,7 @@ export interface FormFieldDefinition {
   sectionTitle?: string;
   sectionDescription?: string;
   sectionDisplay?: SectionDisplayMode;
-  /** Used when type === "segmented_text" — delimiter for splitting (e.g. / or -) */
+  /** Used when type === "segmented_text" - delimiter for splitting (e.g. / or -) */
   segmentDelimiter?: string;
   /** When type === "multiple_choice": minimum number of options to select (default 0). */
   minSelections?: number;

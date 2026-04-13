@@ -1,5 +1,5 @@
 /**
- * Committee roster — edit this file to update the /committee page.
+ * Committee roster - edit this file to update the /committee page.
  * Add photos under `public/committee/` (e.g. `/committee/jane-doe.jpg`) and set `photo` to that path.
  * Leave `photo` empty to use the default placeholder image on the page.
  */
@@ -9,7 +9,7 @@ export interface CommitteeMember {
   committeeGroup: string;
   name: string;
   role: string;
-  /** Public URL path, e.g. `/committee/name.jpg` — file should live in `public/committee/` */
+  /** Public URL path, e.g. `/committee/name.jpg` - file should live in `public/committee/` */
   photo: string;
 }
 

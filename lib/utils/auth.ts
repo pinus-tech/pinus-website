@@ -283,7 +283,7 @@ export const sendVerificationEmail = async (
               Email: email,
             },
           ],
-          Subject: "Verify your email — PINUS",
+          Subject: "Verify your email - PINUS",
           HTMLPart: `
 <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:0;padding:0;background-color:#eef1f8;">
   <tr>
@@ -323,7 +323,7 @@ export const sendVerificationEmail = async (
 </table>
           `,
           TextPart: `
-Verify your email — PINUS
+Verify your email - PINUS
 
 Hello,
 

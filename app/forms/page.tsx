@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import Link from "next/link";
-import { Input } from "@/app/components/ui/input";
 import { Button } from "@/app/components/ui/button";
 
 interface Form {
@@ -32,6 +31,7 @@ interface Form {
     email: string;
   }>;
   userHasSubmitted?: boolean;
+  slug?: string | null;
   userPermissions?: {
     canEdit: boolean;
     canViewResponses: boolean;
@@ -45,7 +45,9 @@ export default function FormsPage() {
   const [error, setError] = useState<string | null>(null);
   const [shareTarget, setShareTarget] = useState<Form | null>(null);
   const [shareBusy, setShareBusy] = useState(false);
-  const [copyDone, setCopyDone] = useState(false);
+  const [shareCopiedKind, setShareCopiedKind] = useState<
+    "long" | "short" | null
+  >(null);
 
   const { user, loading: authLoading, canCreateForms } = useAuth();
 
@@ -77,6 +79,16 @@ export default function FormsPage() {
     fetchForms();
   }, [user, authLoading]);
 
+  useEffect(() => {
+    const msg = error?.trim().toLowerCase() ?? "";
+    if (!msg.includes("internal server error")) return;
+    if (typeof window === "undefined") return;
+    const key = "pinus-forms-ise-retry";
+    if (sessionStorage.getItem(key)) return;
+    sessionStorage.setItem(key, "1");
+    window.location.reload();
+  }, [error]);
+
   const fetchForms = async () => {
     try {
       setLoading(true);
@@ -85,6 +97,9 @@ export default function FormsPage() {
       if (response.ok) {
         const data = await response.json();
         setForms(data.forms);
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem("pinus-forms-ise-retry");
+        }
       } else {
         const errorData = await response.json();
         setError(errorData.error || "Failed to fetch forms");
@@ -121,28 +136,11 @@ export default function FormsPage() {
     }
   };
 
-  const openShareModal = (form: Form) => {
-    setShareTarget(form);
-    setCopyDone(false);
-  };
-
-  const closeShareModal = () => {
-    setShareTarget(null);
-    setShareBusy(false);
-    setCopyDone(false);
-  };
-
-  const shareUrl =
-    typeof window !== "undefined" && shareTarget
-      ? `${window.location.origin}/forms/${shareTarget.id}`
-      : "";
-
-  const handleCopyShareLink = useCallback(async () => {
-    if (!shareTarget) return;
+  const openShareModal = async (form: Form) => {
     setShareBusy(true);
-    setCopyDone(false);
+    setShareCopiedKind(null);
     try {
-      const patch = await fetch(`/api/forms/${shareTarget.id}`, {
+      const patch = await fetch(`/api/forms/${form.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isShared: true }),
@@ -155,25 +153,42 @@ export default function FormsPage() {
       const data = await patch.json();
       const updated = data.form as Form;
       setForms((prev) =>
-        prev.map((f) =>
-          f.id === updated.id ? { ...f, isShared: updated.isShared ?? true } : f
-        )
+        prev.map((f) => (f.id === updated.id ? { ...f, ...updated } : f))
       );
-      setShareTarget((t) =>
-        t && t.id === updated.id
-          ? { ...t, isShared: updated.isShared ?? true }
-          : t
-      );
-      await navigator.clipboard.writeText(
-        `${window.location.origin}/forms/${shareTarget.id}`
-      );
-      setCopyDone(true);
+      setShareTarget(updated);
     } catch {
-      alert("Could not copy link");
+      alert("Could not enable sharing");
     } finally {
       setShareBusy(false);
     }
-  }, [shareTarget]);
+  };
+
+  const closeShareModal = () => {
+    setShareTarget(null);
+    setShareBusy(false);
+    setShareCopiedKind(null);
+  };
+
+  const copyShareUrl = useCallback(
+    async (kind: "long" | "short") => {
+      if (!shareTarget) return;
+      const origin = window.location.origin;
+      const longUrl = `${origin}/forms/${shareTarget.id}`;
+      const shortUrl = shareTarget.slug
+        ? `${origin}/f/${shareTarget.slug}`
+        : null;
+      const text = kind === "long" ? longUrl : shortUrl;
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text);
+        setShareCopiedKind(kind);
+        window.setTimeout(() => setShareCopiedKind(null), 2500);
+      } catch {
+        alert("Could not copy to clipboard");
+      }
+    },
+    [shareTarget]
+  );
 
   if (authLoading) {
     return (
@@ -372,32 +387,105 @@ export default function FormsPage() {
       </div>
 
       {shareTarget && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="share-form-title"
-        >
-          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/40"
+            aria-label="Close share dialog"
+            onClick={closeShareModal}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="share-form-title"
+            className="relative z-10 w-full max-w-lg rounded-xl border border-gray-200 bg-white p-6 shadow-xl"
+          >
             <h2
               id="share-form-title"
-              className="text-lg font-semibold text-gray-900 mb-2"
+              className="text-lg font-semibold text-gray-900"
             >
-              Share form with participants
+              Share this form
             </h2>
-            <p className="text-sm text-gray-600 mb-4">
-              Copy the link below and send it to participants. The form will be
-              opened for submissions when you copy (if it was not open yet).
+            <p className="mt-2 text-sm text-gray-600">
+              Participants can use either link. The short link redirects to the
+              same form.
             </p>
-            <div className="flex gap-2 mb-4">
-              <Input
-                readOnly
-                className="flex-1 bg-gray-50"
-                value={shareUrl}
-                aria-label="Shareable form URL"
-              />
+
+            <div className="mt-5 space-y-4">
+              <div>
+                <label className="block text-xs font-medium uppercase tracking-wide text-gray-500 mb-1.5">
+                  Long link
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    readOnly
+                    className="flex-1 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 font-mono"
+                    value={
+                      typeof window !== "undefined"
+                        ? `${window.location.origin}/forms/${shareTarget.id}`
+                        : `/forms/${shareTarget.id}`
+                    }
+                    onFocus={(e) => e.target.select()}
+                    aria-label="Long form URL"
+                  />
+                  <Button
+                    type="button"
+                    variant="blue"
+                    size="sm"
+                    disabled={shareBusy}
+                    onClick={() => copyShareUrl("long")}
+                  >
+                    {shareCopiedKind === "long" ? "Copied!" : "Copy"}
+                  </Button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium uppercase tracking-wide text-gray-500 mb-1.5">
+                  Short link
+                </label>
+                {shareTarget.slug ? (
+                  <div className="flex gap-2">
+                    <input
+                      readOnly
+                      className="flex-1 rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-900 font-mono"
+                      value={
+                        typeof window !== "undefined"
+                          ? `${window.location.origin}/f/${shareTarget.slug}`
+                          : `/f/${shareTarget.slug}`
+                      }
+                      onFocus={(e) => e.target.select()}
+                      aria-label="Short form URL"
+                    />
+                    <Button
+                      type="button"
+                      variant="blue"
+                      size="sm"
+                      disabled={shareBusy}
+                      onClick={() => copyShareUrl("short")}
+                    >
+                      {shareCopiedKind === "short" ? "Copied!" : "Copy"}
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-600 rounded-md border border-dashed border-gray-200 bg-gray-50 px-3 py-2">
+                    No short link yet. Use{" "}
+                    <Link
+                      href={`/forms/${shareTarget.id}`}
+                      className="font-medium text-blue-700 underline"
+                      onClick={closeShareModal}
+                    >
+                      Edit Form
+                    </Link>{" "}
+                    to set an optional short path (e.g.{" "}
+                    <code className="rounded bg-gray-100 px-1">/f/my-form</code>
+                    ).
+                  </p>
+                )}
+              </div>
             </div>
-            <div className="flex justify-end gap-2">
+
+            <div className="mt-6 flex justify-end gap-2">
               <Button
                 type="button"
                 variant="black"
@@ -405,16 +493,7 @@ export default function FormsPage() {
                 size="sm"
                 onClick={closeShareModal}
               >
-                Close
-              </Button>
-              <Button
-                type="button"
-                variant="blue"
-                size="sm"
-                disabled={shareBusy}
-                onClick={handleCopyShareLink}
-              >
-                {shareBusy ? "Working…" : copyDone ? "Copied!" : "Copy link"}
+                Done
               </Button>
             </div>
           </div>

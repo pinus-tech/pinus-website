@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 /**
  * Indicative SGD → IDR using a public rates API (server-side to avoid CORS).
- * Data is provided by ExchangeRate-API via open.er-api.com — not an OCBC/Google endpoint.
+ * Data is provided by ExchangeRate-API via open.er-api.com - not an OCBC/Google endpoint.
  */
 export async function GET() {
   try {
@@ -53,7 +53,7 @@ export async function GET() {
       documentationUrl: data.documentation ?? null,
       termsUrl: data.terms_of_use ?? null,
       sourceLabel:
-        "ExchangeRate-API (open.er-api.com) — indicative mid-market style rates",
+        "ExchangeRate-API (open.er-api.com) - indicative mid-market style rates",
     });
   } catch (e) {
     console.error("fx/sgd-idr:", e);

@@ -4,7 +4,7 @@ import { getStorage, type FirebaseStorage } from "firebase/storage";
 function requireEnv(name: string): string {
   const v = process.env[name];
   if (!v) {
-    throw new Error(`Missing ${name} — set FIREBASE_* in .env (mapped via next.config) or NEXT_PUBLIC_FIREBASE_*`);
+    throw new Error(`Missing ${name} - set FIREBASE_* in .env (mapped via next.config) or NEXT_PUBLIC_FIREBASE_*`);
   }
   return v;
 }

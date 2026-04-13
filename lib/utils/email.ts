@@ -1,4 +1,4 @@
-/** Lowercase trimmed email — canonical form stored in the database. */
+/** Lowercase trimmed email - canonical form stored in the database. */
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }

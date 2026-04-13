@@ -160,7 +160,7 @@ function VerifyEmailContent() {
         <p className="mt-4 max-w-md mx-auto text-center text-sm text-gray-600 leading-relaxed px-2">
           Can&apos;t see the message? Check your{" "}
           <span className="font-medium text-[#232E6E]">spam</span> or{" "}
-          <span className="font-medium text-[#232E6E]">junk</span> folder —
+          <span className="font-medium text-[#232E6E]">junk</span> folder -
           automated emails are sometimes filtered there.
         </p>
       </div>
