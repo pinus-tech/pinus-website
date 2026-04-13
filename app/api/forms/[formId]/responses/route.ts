@@ -65,15 +65,15 @@ export async function GET(
 
     // Get all responses for this form
     const responses = await Response.find({ formId })
-      .populate('respondent', 'name email')
+      .populate("respondent", "name email telegram phoneNumber")
       .sort({ submittedAt: -1 });
 
     return NextResponse.json({
-      responses: responses.map(response => ({
+      responses: responses.map((response) => ({
         id: response._id,
         respondent: response.respondent,
         responses: response.responses,
-        submittedAt: response.submittedAt
+        submittedAt: response.submittedAt,
       })),
       totalResponses: responses.length
     });

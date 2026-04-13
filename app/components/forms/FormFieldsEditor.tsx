@@ -14,12 +14,12 @@ import { FormSelect } from "@/app/components/forms/FormSelect";
 type FormField = FormFieldDefinition;
 
 const FIELD_TYPE_OPTIONS: { value: FormFieldType; label: string }[] = [
-  { value: "text", label: "Text input" },
+  { value: "text", label: "Short answer (text)" },
   { value: "number", label: "Number" },
   { value: "date", label: "Date / time" },
-  { value: "checkbox", label: "Checkbox (yes/no)" },
-  { value: "dropdown", label: "Dropdown (single choice)" },
-  { value: "multiple_choice", label: "Multiple choice" },
+  { value: "checkbox", label: "Yes / No" },
+  { value: "dropdown", label: "Drop-down (choose one)" },
+  { value: "multiple_choice", label: "Checkboxes (choose several)" },
   { value: "segmented_text", label: "Path / structured text" },
   { value: "section", label: "Section (title / description only)" },
 ];
@@ -56,6 +56,7 @@ export function FormFieldsEditor({
         label: "",
         type: "text",
         required: false,
+        description: "",
         options: [],
       },
     ]);
@@ -108,13 +109,23 @@ export function FormFieldsEditor({
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center mb-4">
+    <div className="relative space-y-4 pb-24">
+      <div className="mb-4">
         <h2 className="text-xl font-semibold text-gray-900">Form Fields</h2>
-        <Button type="button" variant="blue" onClick={addField}>
-          Add Field
-        </Button>
+        <p className="text-sm text-gray-500 mt-1">
+          All questions are optional unless you mark them as required. Add a
+          description to help respondents.
+        </p>
       </div>
+
+      <Button
+        type="button"
+        variant="blue"
+        onClick={addField}
+        className="fixed bottom-6 right-6 z-40 shadow-lg"
+      >
+        Add Field
+      </Button>
 
       {fields.length === 0 ? (
         <p className="text-gray-500 text-center py-8">
@@ -188,6 +199,22 @@ export function FormFieldsEditor({
                 </div>
               </div>
 
+              {field.type !== "section" && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description (optional)
+                  </label>
+                  <Textarea
+                    value={field.description ?? ""}
+                    onChange={(e) =>
+                      updateField(index, { description: e.target.value })
+                    }
+                    rows={2}
+                    placeholder="Help text shown under the question title"
+                  />
+                </div>
+              )}
+
               <div className="mt-4 flex items-center gap-2">
                 <Checkbox
                   id={`required-${index}`}
@@ -201,7 +228,7 @@ export function FormFieldsEditor({
                   htmlFor={`required-${index}`}
                   className="text-sm font-medium text-gray-700 cursor-pointer"
                 >
-                  Required field
+                  Required
                 </label>
               </div>
 
@@ -275,6 +302,55 @@ export function FormFieldsEditor({
                 </div>
               )}
 
+              {(field.type === "text" || field.type === "segmented_text") && (
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Min length (characters)
+                    </label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={
+                        field.minLength === undefined
+                          ? ""
+                          : String(field.minLength)
+                      }
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        updateField(index, {
+                          minLength:
+                            v === "" ? undefined : Math.max(0, parseInt(v, 10) || 0),
+                        });
+                      }}
+                      placeholder="No minimum"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Max length (characters)
+                    </label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={
+                        field.maxLength === undefined
+                          ? ""
+                          : String(field.maxLength)
+                      }
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        updateField(index, {
+                          maxLength:
+                            v === "" ? undefined : Math.max(0, parseInt(v, 10) || 0),
+                        });
+                      }}
+                      placeholder="No maximum"
+                    />
+                  </div>
+                </div>
+              )}
+
               {field.type === "segmented_text" && (
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -341,6 +417,55 @@ export function FormFieldsEditor({
                     >
                       + Add Option
                     </Button>
+                  </div>
+                </div>
+              )}
+
+              {field.type === "multiple_choice" && (
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Minimum selections
+                    </label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={
+                        field.minSelections === undefined
+                          ? ""
+                          : String(field.minSelections)
+                      }
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        updateField(index, {
+                          minSelections:
+                            v === "" ? undefined : Math.max(0, parseInt(v, 10) || 0),
+                        });
+                      }}
+                      placeholder="0 = no minimum"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Maximum selections
+                    </label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={
+                        field.maxSelections === undefined
+                          ? ""
+                          : String(field.maxSelections)
+                      }
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        updateField(index, {
+                          maxSelections:
+                            v === "" ? undefined : Math.max(0, parseInt(v, 10) || 0),
+                        });
+                      }}
+                      placeholder="Empty = unlimited"
+                    />
                   </div>
                 </div>
               )}

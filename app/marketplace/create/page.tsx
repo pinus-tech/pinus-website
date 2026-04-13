@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { MARKETPLACE_CATEGORIES } from "@/lib/constants/marketplace-categories";
 import { uploadMarketplaceImage } from "@/lib/firebase/upload-marketplace-image";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/app/components/ui/select";
 
 interface ItemData {
   title: string;
@@ -14,6 +21,14 @@ interface ItemData {
   meetupLocation: string;
   imageUrl: string;
 }
+
+type SgdIdrQuote = {
+  idrPerSgd: number;
+  updatedAt: string | null;
+  providerUrl: string;
+  documentationUrl: string | null;
+  sourceLabel: string;
+};
 
 export default function CreateMarketplaceItemPage() {
   const [loading, setLoading] = useState(false);
@@ -30,6 +45,9 @@ export default function CreateMarketplaceItemPage() {
     imageUrl: ''
   });
   const [error, setError] = useState<string | null>(null);
+  const [sgdIdrQuote, setSgdIdrQuote] = useState<SgdIdrQuote | null>(null);
+  const [sgdIdrError, setSgdIdrError] = useState<string | null>(null);
+  const [sgdIdrLoading, setSgdIdrLoading] = useState(true);
 
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -39,6 +57,42 @@ export default function CreateMarketplaceItemPage() {
       if (previewUrlRef.current) {
         URL.revokeObjectURL(previewUrlRef.current);
       }
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setSgdIdrLoading(true);
+      setSgdIdrError(null);
+      try {
+        const res = await fetch("/api/fx/sgd-idr");
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to load rates");
+        }
+        if (!cancelled) {
+          setSgdIdrQuote({
+            idrPerSgd: data.idrPerSgd,
+            updatedAt: data.updatedAt,
+            providerUrl: data.providerUrl,
+            documentationUrl: data.documentationUrl,
+            sourceLabel: data.sourceLabel,
+          });
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setSgdIdrError(
+            e instanceof Error ? e.message : "Could not load IDR estimate"
+          );
+          setSgdIdrQuote(null);
+        }
+      } finally {
+        if (!cancelled) setSgdIdrLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
     };
   }, []);
 
@@ -129,6 +183,19 @@ export default function CreateMarketplaceItemPage() {
     return <div>Redirecting to login...</div>;
   }
 
+  const formatIdr = (n: number) =>
+    new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(
+      Math.round(n)
+    );
+
+  const formatRate = (n: number) =>
+    new Intl.NumberFormat("en-SG", { maximumFractionDigits: 2 }).format(n);
+
+  const idrEquivalent =
+    sgdIdrQuote && Number.isFinite(itemData.price)
+      ? itemData.price * sgdIdrQuote.idrPerSgd
+      : null;
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
@@ -197,24 +264,115 @@ export default function CreateMarketplaceItemPage() {
                     required
                   />
                   <p className="text-sm text-gray-500 mt-1">Enter 0 for free items</p>
+                  <div className="mt-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                    {sgdIdrLoading && (
+                      <p className="text-gray-500">Loading IDR estimate…</p>
+                    )}
+                    {!sgdIdrLoading && sgdIdrError && (
+                      <p className="text-amber-800">
+                        {sgdIdrError}. Your listing is still saved in SGD only.
+                      </p>
+                    )}
+                    {!sgdIdrLoading && sgdIdrQuote && (
+                      <>
+                        <p className="font-medium text-gray-900">
+                          ≈ Rp{" "}
+                          {idrEquivalent !== null
+                            ? formatIdr(idrEquivalent)
+                            : "—"}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-600 leading-relaxed">
+                          1 SGD ≈ {formatRate(sgdIdrQuote.idrPerSgd)} IDR
+                          {sgdIdrQuote.updatedAt
+                            ? ` · Rate data: ${sgdIdrQuote.updatedAt}`
+                            : ""}
+                          . {sgdIdrQuote.sourceLabel}. Bank counters (e.g.{" "}
+                          <a
+                            href="https://www.ocbc.com/personal-banking/fx-rates.page"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-700 underline"
+                          >
+                            OCBC
+                          </a>
+                          ) or apps like{" "}
+                          <a
+                            href="https://www.google.com/finance/quote/SGD-IDR"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-700 underline"
+                          >
+                            Google Finance
+                          </a>{" "}
+                          may differ — this is an indicative figure only.
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Source:{" "}
+                          <a
+                            href={sgdIdrQuote.providerUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-700 underline"
+                          >
+                            ExchangeRate-API
+                          </a>
+                          {sgdIdrQuote.documentationUrl ? (
+                            <>
+                              {" "}
+                              (
+                              <a
+                                href={sgdIdrQuote.documentationUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-700 underline"
+                              >
+                                docs
+                              </a>
+                              )
+                            </>
+                          ) : null}
+                        </p>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Category *
                   </label>
-                  <select
+                  <Select
                     value={itemData.category}
-                    onChange={(e) => setItemData(prev => ({ ...prev, category: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
+                    onValueChange={(value) =>
+                      setItemData((prev) => ({ ...prev, category: value }))
+                    }
                   >
-                    {MARKETPLACE_CATEGORIES.map((category) => (
-                      <option key={category.value} value={category.value}>
-                        {category.label}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger
+                      variant="blue"
+                      outline
+                      rounding="lg"
+                      className="w-full"
+                    >
+                      <SelectValue placeholder="Choose a category" />
+                    </SelectTrigger>
+                    <SelectContent variant="blue" outline rounding="lg">
+                      {MARKETPLACE_CATEGORIES.map((category) => (
+                        <SelectItem key={category.value} value={category.value}>
+                          {category.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {(() => {
+                    const cat = MARKETPLACE_CATEGORIES.find(
+                      (c) => c.value === itemData.category
+                    );
+                    return cat?.description ? (
+                      <p className="text-xs text-gray-500 mt-2">
+                        {cat.description}
+                      </p>
+                    ) : null;
+                  })()}
                 </div>
               </div>
 
@@ -256,7 +414,7 @@ export default function CreateMarketplaceItemPage() {
                   className="w-full text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-blue-50 file:text-blue-700"
                 />
                 <p className="text-sm text-gray-500 mt-1">
-                  Uploads to Firebase Storage (max 8 MB). Ensure Storage rules allow writes for your project.
+                  Uploads to Firebase Storage (max 8 MB).
                 </p>
                 {imagePreview && (
                   <div className="mt-3">

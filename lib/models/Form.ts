@@ -21,16 +21,23 @@ export interface IForm extends mongoose.Document {
     type: (typeof FIELD_TYPES)[number];
     options?: string[];
     required: boolean;
+    description?: string;
     dateMode?: 'date' | 'datetime' | 'time';
     sectionTitle?: string;
     sectionDescription?: string;
     sectionDisplay?: 'both' | 'title_only' | 'description_only';
     segmentDelimiter?: string;
+    minSelections?: number;
+    maxSelections?: number;
+    minLength?: number;
+    maxLength?: number;
   }[];
   responses: mongoose.Types.ObjectId[];
   isActive: boolean;
   /** When false, only staff (admins / creators / managers) can open or fill; participants need this enabled (Share). */
   isShared: boolean;
+  /** Optional short path: /f/{slug} → /forms/{id} */
+  slug?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -61,6 +68,11 @@ const formSchema = new mongoose.Schema({
     sectionDescription: { type: String },
     sectionDisplay: { type: String, enum: ['both', 'title_only', 'description_only'] },
     segmentDelimiter: { type: String },
+    description: { type: String },
+    minSelections: { type: Number },
+    maxSelections: { type: Number },
+    minLength: { type: Number },
+    maxLength: { type: Number },
   }],
   responses: [{ 
     type: mongoose.Schema.Types.ObjectId, 
@@ -68,6 +80,13 @@ const formSchema = new mongoose.Schema({
   }],
   isActive: { type: Boolean, default: true },
   isShared: { type: Boolean, default: false },
+  slug: {
+    type: String,
+    sparse: true,
+    unique: true,
+    trim: true,
+    maxlength: 80,
+  },
 }, {
   timestamps: true,
 });

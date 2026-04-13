@@ -4,6 +4,10 @@ import Form from "@/lib/models/Form";
 import Response from "@/lib/models/Response";
 import { serializeFormUser } from "@/lib/serialize-form-users";
 import { validateFormFieldsArray } from "@/lib/forms/validate-form-fields";
+import {
+  assignUniqueFormSlug,
+  normalizeFormSlugInput,
+} from "@/lib/forms/form-slug";
 import { verifyToken } from "@/lib/utils/auth";
 
 // Middleware to check if user is logged in
@@ -76,10 +80,15 @@ export async function GET(
         (manager: { _id: string }) => manager._id === user.userId
       );
 
-    const hasSubmitted = !!(await Response.exists({
+    const existingResponseDoc = await Response.findOne({
       formId: form._id,
       respondent: user.userId,
-    }));
+    }).lean<{
+      responses: Array<{ fieldLabel: string; value: unknown }>;
+      submittedAt: Date;
+    } | null>();
+
+    const hasSubmitted = !!existingResponseDoc;
 
     const shared = form.isShared ?? true;
     const canViewForm = shared || isStaff || hasSubmitted;
@@ -112,7 +121,14 @@ export async function GET(
         createdAt: form.createdAt,
         updatedAt: form.updatedAt,
         responseCount: form.responses.length,
+        slug: form.slug ?? null,
         userHasSubmitted: hasSubmitted,
+        mySubmission: hasSubmitted && existingResponseDoc
+          ? {
+              responses: existingResponseDoc.responses,
+              submittedAt: existingResponseDoc.submittedAt,
+            }
+          : null,
         userPermissions: {
           canEdit,
           canViewResponses,
@@ -146,7 +162,7 @@ export async function PATCH(
     await dbConnect();
 
     const { formId } = await params;
-    const body = await req.json();
+    const body = (await req.json()) as Record<string, unknown>;
 
     // Find form by ID
     const form = await Form.findById(formId);
@@ -181,10 +197,54 @@ export async function PATCH(
       }
     }
 
+    const setDoc: Record<string, unknown> = {};
+
+    if (typeof body.title === "string") setDoc.title = body.title;
+    if (body.description !== undefined) setDoc.description = body.description;
+    if (body.fields && Array.isArray(body.fields))
+      setDoc.fields = body.fields;
+    if (typeof body.isActive === "boolean") setDoc.isActive = body.isActive;
+    if (typeof body.isShared === "boolean") setDoc.isShared = body.isShared;
+    if (Array.isArray(body.managers)) setDoc.managers = body.managers;
+
+    const unsetDoc: Record<string, 1> = {};
+
+    if ("slug" in body) {
+      const raw = body.slug;
+      if (raw === null || raw === "") {
+        unsetDoc.slug = 1;
+      } else {
+        const normalized = normalizeFormSlugInput(raw);
+        if (!normalized) {
+          return NextResponse.json(
+            {
+              error:
+                "Short link must be 2–80 characters: letters, numbers, and hyphens only (e.g. form1).",
+            },
+            { status: 400 }
+          );
+        }
+        const unique = await assignUniqueFormSlug(normalized, formId);
+        setDoc.slug = unique;
+      }
+    }
+
+    const updateQuery: { $set?: Record<string, unknown>; $unset?: Record<string, 1> } =
+      {};
+    if (Object.keys(setDoc).length) updateQuery.$set = setDoc;
+    if (Object.keys(unsetDoc).length) updateQuery.$unset = unsetDoc;
+
+    if (!updateQuery.$set && !updateQuery.$unset) {
+      return NextResponse.json(
+        { error: "No valid fields to update" },
+        { status: 400 }
+      );
+    }
+
     // Update form
     const updatedForm = await Form.findByIdAndUpdate(
       formId,
-      { ...body },
+      updateQuery,
       { new: true }
     ).populate('createdBy', 'name email').populate('managers', 'name email');
 
@@ -220,10 +280,15 @@ export async function PATCH(
       managersU.some(
         (manager: { _id: string }) => manager._id === user.userId
       );
-    const hasSubmittedU = !!(await Response.exists({
+    const existingAfterPatch = await Response.findOne({
       formId: updatedForm._id,
       respondent: user.userId,
-    }));
+    }).lean<{
+      responses: Array<{ fieldLabel: string; value: unknown }>;
+      submittedAt: Date;
+    } | null>();
+
+    const hasSubmittedU = !!existingAfterPatch;
     const sharedU = updatedForm.isShared ?? true;
     const canFillU =
       updatedForm.isActive &&
@@ -245,7 +310,14 @@ export async function PATCH(
         createdAt: updatedForm.createdAt,
         updatedAt: updatedForm.updatedAt,
         responseCount: updatedForm.responses.length,
+        slug: updatedForm.slug ?? null,
         userHasSubmitted: hasSubmittedU,
+        mySubmission: hasSubmittedU && existingAfterPatch
+          ? {
+              responses: existingAfterPatch.responses,
+              submittedAt: existingAfterPatch.submittedAt,
+            }
+          : null,
         userPermissions: {
           canEdit: canEditU,
           canViewResponses: canViewResponsesU,

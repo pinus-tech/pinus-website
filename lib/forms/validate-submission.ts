@@ -43,17 +43,54 @@ export function validateFieldValue(
     }
     case "multiple_choice": {
       if (!Array.isArray(value)) return "Expected a list of options";
-      if (value.length === 0) return null;
-      for (const v of value) {
+      const arr = value as string[];
+      if (arr.length === 0) return null;
+      const seen = new Set<string>();
+      for (const v of arr) {
         if (typeof v !== "string" || !field.options?.includes(v)) {
           return "Invalid option in selection";
         }
+        if (seen.has(v)) return "Each option can only be selected once";
+        seen.add(v);
+      }
+      const min = field.minSelections ?? 0;
+      const max = field.maxSelections;
+      if (min > 0 && arr.length < min) {
+        return `Select at least ${min} option(s)`;
+      }
+      if (max !== undefined && arr.length > max) {
+        return `Select at most ${max} option(s)`;
       }
       return null;
     }
-    case "segmented_text":
+    case "segmented_text": {
       if (typeof value !== "string") return "Expected text";
+      const s = value;
+      if (s.trim() === "") return null;
+      const min = field.minLength ?? 0;
+      const max = field.maxLength;
+      if (min > 0 && s.length < min) {
+        return `Enter at least ${min} character(s)`;
+      }
+      if (max !== undefined && s.length > max) {
+        return `Enter at most ${max} character(s)`;
+      }
       return null;
+    }
+    case "text": {
+      if (typeof value !== "string") return "Expected text";
+      const s = value;
+      if (s.trim() === "") return null;
+      const min = field.minLength ?? 0;
+      const max = field.maxLength;
+      if (min > 0 && s.length < min) {
+        return `Enter at least ${min} character(s)`;
+      }
+      if (max !== undefined && s.length > max) {
+        return `Enter at most ${max} character(s)`;
+      }
+      return null;
+    }
     default:
       if (typeof value !== "string") return "Expected text";
       return null;

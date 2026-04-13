@@ -5,6 +5,10 @@ import Response from "@/lib/models/Response";
 import User from "@/lib/models/User";
 import { serializeFormUser } from "@/lib/serialize-form-users";
 import { validateFormFieldsArray } from "@/lib/forms/validate-form-fields";
+import {
+  assignUniqueFormSlug,
+  normalizeFormSlugInput,
+} from "@/lib/forms/form-slug";
 import { verifyToken, canCreateForms } from "@/lib/utils/auth";
 
 // Middleware to check form creation permission
@@ -141,6 +145,7 @@ export async function GET(req: NextRequest) {
             createdAt: form.createdAt,
             updatedAt: form.updatedAt,
             responseCount: form.responses.length,
+            slug: form.slug ?? null,
             userHasSubmitted: hasSubmitted,
             userPermissions: {
               canEdit,
@@ -174,7 +179,7 @@ export async function POST(req: NextRequest) {
     await dbConnect();
 
     const body = await req.json();
-    const { title, description, fields, managers } = body;
+    const { title, description, fields, managers, shortLink } = body;
 
     // Validate required fields
     if (!title || !fields || !Array.isArray(fields)) {
@@ -187,6 +192,21 @@ export async function POST(req: NextRequest) {
     const fieldsError = validateFormFieldsArray(fields);
     if (fieldsError) {
       return NextResponse.json({ error: fieldsError }, { status: 400 });
+    }
+
+    let resolvedSlug: string | undefined;
+    if (shortLink !== undefined && shortLink !== null && shortLink !== "") {
+      const normalized = normalizeFormSlugInput(shortLink);
+      if (!normalized) {
+        return NextResponse.json(
+          {
+            error:
+              "Short link must be 2–80 characters: letters, numbers, and hyphens only (e.g. form1).",
+          },
+          { status: 400 }
+        );
+      }
+      resolvedSlug = await assignUniqueFormSlug(normalized);
     }
 
     // Validate managers if provided
@@ -218,6 +238,7 @@ export async function POST(req: NextRequest) {
       responses: [],
       isActive: true,
       isShared: false,
+      ...(resolvedSlug ? { slug: resolvedSlug } : {}),
     });
 
     await newForm.save();
@@ -239,6 +260,7 @@ export async function POST(req: NextRequest) {
         fields: newForm.fields,
         responses: newForm.responses,
         isActive: newForm.isActive,
+        slug: newForm.slug ?? null,
         createdAt: newForm.createdAt,
         updatedAt: newForm.updatedAt
       }

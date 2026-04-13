@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/contexts/AuthContext";
 import Link from "next/link";
 import type { FormFieldDefinition } from "@/lib/form-field-types";
 import { isDataField } from "@/lib/form-field-types";
-import { isEmptyValue } from "@/lib/forms/validate-submission";
+import { isEmptyValue, validateFieldValue } from "@/lib/forms/validate-submission";
 import { FormDateField } from "@/app/components/forms/FormDateField";
 import { FormFieldsEditor } from "@/app/components/forms/FormFieldsEditor";
 import { FormSelect } from "@/app/components/forms/FormSelect";
@@ -15,6 +15,7 @@ import { Textarea } from "@/app/components/ui/textarea";
 import { Button } from "@/app/components/ui/button";
 import { Checkbox } from "@/app/components/ui/checkbox";
 import { validateFormFieldsArray } from "@/lib/forms/validate-form-fields";
+import { format, parseISO } from "date-fns";
 
 type FormField = FormFieldDefinition;
 
@@ -37,8 +38,13 @@ interface Form {
   isActive: boolean;
   isShared?: boolean;
   userHasSubmitted?: boolean;
+  mySubmission?: {
+    responses: Array<{ fieldLabel: string; value: unknown }>;
+    submittedAt: string;
+  } | null;
   createdAt: string;
   updatedAt: string;
+  slug?: string | null;
   userPermissions?: {
     canEdit: boolean;
     canViewResponses: boolean;
@@ -62,6 +68,35 @@ function defaultValueForField(field: FormField): FormResponse["value"] {
   }
 }
 
+function formatSubmittedAnswer(field: FormField, value: unknown): string {
+  if (value === null || value === undefined) return "—";
+  switch (field.type) {
+    case "checkbox":
+      return value ? "Yes" : "No";
+    case "multiple_choice":
+      return Array.isArray(value) ? (value as string[]).join(", ") : String(value);
+    case "date": {
+      const mode = field.dateMode ?? "date";
+      const s = String(value);
+      if (mode === "time") return s;
+      if (mode === "date") {
+        try {
+          return format(parseISO(`${s}T12:00:00`), "PPP");
+        } catch {
+          return s;
+        }
+      }
+      try {
+        return format(parseISO(s), "PPP p");
+      } catch {
+        return s;
+      }
+    }
+    default:
+      return String(value);
+  }
+}
+
 export default function FormDetailPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -75,6 +110,7 @@ export default function FormDetailPage() {
     description?: string;
     fields?: FormField[];
     isActive?: boolean;
+    shortLink?: string;
   }>({});
   const [potentialManagers, setPotentialManagers] = useState<Array<{
     id: string;
@@ -112,12 +148,21 @@ export default function FormDetailPage() {
       if (response.ok) {
         const data = await response.json();
         setForm(data.form);
-        
+
+        const map = new Map<string, unknown>();
+        if (data.form.mySubmission?.responses?.length) {
+          for (const r of data.form.mySubmission.responses) {
+            map.set(r.fieldLabel, r.value);
+          }
+        }
+
         const initialResponses: FormResponse[] = data.form.fields
           .filter((field: FormField) => isDataField(field))
           .map((field: FormField) => ({
             fieldLabel: field.label,
-            value: defaultValueForField(field),
+            value: map.has(field.label)
+              ? (map.get(field.label) as FormResponse["value"])
+              : defaultValueForField(field),
           }));
         setResponses(initialResponses);
         
@@ -173,6 +218,12 @@ export default function FormDetailPage() {
     option: string,
     checked: boolean
   ) => {
+    const fieldDef = form?.fields.find((f) => f.label === fieldLabel);
+    const max =
+      fieldDef?.type === "multiple_choice"
+        ? fieldDef.maxSelections
+        : undefined;
+
     setResponses((prev) =>
       prev.map((response) => {
         if (response.fieldLabel !== fieldLabel) return response;
@@ -180,6 +231,16 @@ export default function FormDetailPage() {
           ? (response.value as string[])
           : [];
         if (checked) {
+          if (
+            max !== undefined &&
+            cur.length >= max &&
+            !cur.includes(option)
+          ) {
+            setError(
+              `You can select at most ${max} option(s) for "${fieldLabel}"`
+            );
+            return response;
+          }
           return { ...response, value: [...cur, option] };
         }
         return {
@@ -204,6 +265,16 @@ export default function FormDetailPage() {
       }
     }
 
+    for (const field of form.fields) {
+      if (!isDataField(field)) continue;
+      const response = responses.find((r) => r.fieldLabel === field.label);
+      const err = validateFieldValue(field, response?.value);
+      if (err) {
+        setError(`${field.label}: ${err}`);
+        return;
+      }
+    }
+
     setSubmitting(true);
     setError(null);
 
@@ -217,15 +288,7 @@ export default function FormDetailPage() {
       });
 
       if (response.ok) {
-        setSuccess('Form submitted successfully!');
-        // Reset form
-        const initialResponses: FormResponse[] = form.fields
-          .filter((field) => isDataField(field))
-          .map((field) => ({
-            fieldLabel: field.label,
-            value: defaultValueForField(field),
-          }));
-        setResponses(initialResponses);
+        router.push(`/forms/${formId}/thank-you`);
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Failed to submit form');
@@ -244,6 +307,7 @@ export default function FormDetailPage() {
       description: form.description ?? "",
       fields: JSON.parse(JSON.stringify(form.fields)) as FormField[],
       isActive: form.isActive,
+      shortLink: form.slug ?? "",
     });
     setSelectedManagers(
       (form.managers ?? []).map((m) => String(m._id ?? m.id ?? "")).filter(Boolean)
@@ -282,6 +346,10 @@ export default function FormDetailPage() {
           fields,
           isActive: editData.isActive ?? form.isActive,
           managers: selectedManagers,
+          slug:
+            (editData.shortLink ?? "").trim() === ""
+              ? null
+              : editData.shortLink,
         }),
       });
 
@@ -291,11 +359,19 @@ export default function FormDetailPage() {
         setIsEditing(false);
         setEditData({});
         setSuccess("Form updated successfully!");
+        const map = new Map<string, unknown>();
+        if (data.form.mySubmission?.responses?.length) {
+          for (const r of data.form.mySubmission.responses) {
+            map.set(r.fieldLabel, r.value);
+          }
+        }
         const initialResponses: FormResponse[] = data.form.fields
           .filter((field: FormField) => isDataField(field))
           .map((field: FormField) => ({
             fieldLabel: field.label,
-            value: defaultValueForField(field),
+            value: map.has(field.label)
+              ? (map.get(field.label) as FormResponse["value"])
+              : defaultValueForField(field),
           }));
         setResponses(initialResponses);
         if (data.form.managers) {
@@ -355,9 +431,10 @@ export default function FormDetailPage() {
       }
       const data = await patch.json();
       setForm(data.form);
-      await navigator.clipboard.writeText(
-        `${window.location.origin}/forms/${formId}`
-      );
+      const path = data.form.slug
+        ? `/f/${data.form.slug}`
+        : `/forms/${formId}`;
+      await navigator.clipboard.writeText(`${window.location.origin}${path}`);
       setSuccess("Participant link copied. The form is open for submissions.");
     } catch {
       setError("Could not copy link");
@@ -407,6 +484,14 @@ export default function FormDetailPage() {
             <h1 className="text-3xl font-bold text-gray-900">{form.title}</h1>
             {form.description && (
               <p className="text-gray-600 mt-2">{form.description}</p>
+            )}
+            {form.slug && (
+              <p className="text-gray-500 mt-2 text-sm">
+                Short link:{" "}
+                <code className="rounded bg-gray-100 px-1.5 py-0.5 text-gray-800">
+                  /f/{form.slug}
+                </code>
+              </p>
             )}
             {isFormFiller && (
               <p className="text-blue-600 mt-1 text-sm">You can fill out this form</p>
@@ -572,6 +657,36 @@ export default function FormDetailPage() {
                   rows={3}
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Short link (optional)
+                </label>
+                <p className="text-xs text-gray-500 mb-2">
+                  Public URL:{" "}
+                  <code className="rounded bg-gray-100 px-1 py-0.5 text-gray-800">
+                    /f/&lt;slug&gt;
+                  </code>{" "}
+                  redirects to this form. Letters, numbers, and hyphens only.
+                </p>
+                <Input
+                  type="text"
+                  value={editData.shortLink ?? ""}
+                  onChange={(e) =>
+                    setEditData((prev) => ({
+                      ...prev,
+                      shortLink: e.target.value,
+                    }))
+                  }
+                  placeholder="e.g. form1"
+                  className="font-mono"
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  If the slug is taken, a numeric suffix is added (e.g.{" "}
+                  <span className="font-mono">form1-2</span>). Clear the field
+                  to remove the short link. The long <span className="font-mono">/forms/…</span>{" "}
+                  URL always works.
+                </p>
+              </div>
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="edit-form-active"
@@ -663,6 +778,69 @@ export default function FormDetailPage() {
           </div>
         )}
 
+        {form.userHasSubmitted &&
+          !form.userPermissions?.canFill &&
+          form.mySubmission &&
+          !isEditing && (
+          <div className="bg-white p-6 rounded-lg shadow mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-1">
+              Your responses
+            </h2>
+            {form.mySubmission?.submittedAt && (
+              <p className="text-sm text-gray-500 mb-6">
+                Submitted{" "}
+                {format(
+                  new Date(form.mySubmission.submittedAt),
+                  "PPP p"
+                )}
+              </p>
+            )}
+            <div className="space-y-6">
+              {form.fields.map((field, index) => (
+                <div key={index} className="space-y-2">
+                  {field.type === "section" ? (
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                      {(field.sectionDisplay ?? "both") !==
+                        "description_only" &&
+                        (field.sectionTitle?.trim() || field.label) && (
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            {field.sectionTitle?.trim() || field.label}
+                          </h3>
+                        )}
+                      {(field.sectionDisplay ?? "both") !== "title_only" &&
+                        field.sectionDescription?.trim() && (
+                          <p className="mt-1 text-sm text-gray-600 whitespace-pre-wrap">
+                            {field.sectionDescription}
+                          </p>
+                        )}
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <span className="block text-sm font-medium text-gray-900">
+                          {field.label}
+                        </span>
+                        {field.description?.trim() && (
+                          <p className="text-sm text-gray-500 mt-1 whitespace-pre-wrap">
+                            {field.description}
+                          </p>
+                        )}
+                      </div>
+                      <p className="text-gray-900 border border-gray-100 rounded-md bg-gray-50 px-3 py-2 text-sm">
+                        {formatSubmittedAnswer(
+                          field,
+                          responses.find((r) => r.fieldLabel === field.label)
+                            ?.value
+                        )}
+                      </p>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {form.isActive && canFillForm && !isEditing ? (
           <div className="bg-white p-6 rounded-lg shadow">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">
@@ -688,25 +866,65 @@ export default function FormDetailPage() {
                     </div>
                   ) : (
                     <>
-                      <label className="block text-sm font-medium text-gray-700">
-                        {field.label}
-                        {field.required && (
-                          <span className="text-red-500 ml-1">*</span>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          {field.label}
+                          {field.required && (
+                            <span className="text-red-500 ml-1">*</span>
+                          )}
+                        </label>
+                        {field.description?.trim() && (
+                          <p className="text-sm text-gray-500 mt-1 whitespace-pre-wrap">
+                            {field.description}
+                          </p>
                         )}
-                      </label>
+                      </div>
+
+                      {field.type === "multiple_choice" &&
+                        (field.minSelections != null ||
+                          field.maxSelections != null) && (
+                          <p className="text-xs text-gray-500 -mt-1">
+                            {field.minSelections != null &&
+                            field.minSelections > 0
+                              ? `Choose at least ${field.minSelections}. `
+                              : ""}
+                            {field.maxSelections != null
+                              ? `Choose at most ${field.maxSelections}.`
+                              : ""}
+                          </p>
+                        )}
 
                       {field.type === "text" && (
-                        <Input
-                          type="text"
-                          value={
-                            (responses.find((r) => r.fieldLabel === field.label)
-                              ?.value as string) || ""
-                          }
-                          onChange={(e) =>
-                            handleResponseChange(field.label, e.target.value)
-                          }
-                          required={field.required}
-                        />
+                        <div>
+                          <Input
+                            type="text"
+                            value={
+                              (responses.find((r) => r.fieldLabel === field.label)
+                                ?.value as string) || ""
+                            }
+                            onChange={(e) =>
+                              handleResponseChange(field.label, e.target.value)
+                            }
+                            required={field.required}
+                            minLength={
+                              field.minLength != null && field.minLength > 0
+                                ? field.minLength
+                                : undefined
+                            }
+                            maxLength={field.maxLength}
+                          />
+                          {(field.minLength != null ||
+                            field.maxLength != null) && (
+                            <p className="mt-1 text-xs text-gray-500">
+                              {field.minLength != null && field.minLength > 0
+                                ? `Min ${field.minLength} characters. `
+                                : ""}
+                              {field.maxLength != null
+                                ? `Max ${field.maxLength} characters.`
+                                : ""}
+                            </p>
+                          )}
+                        </div>
                       )}
 
                       {field.type === "segmented_text" && (
@@ -723,6 +941,12 @@ export default function FormDetailPage() {
                             className="font-mono text-sm"
                             placeholder={`Parts separated by "${field.segmentDelimiter ?? "/"}"`}
                             required={field.required}
+                            minLength={
+                              field.minLength != null && field.minLength > 0
+                                ? field.minLength
+                                : undefined
+                            }
+                            maxLength={field.maxLength}
                           />
                           <p className="mt-1 text-xs text-gray-500">
                             Use the separator{" "}
@@ -730,6 +954,18 @@ export default function FormDetailPage() {
                               {field.segmentDelimiter ?? "/"}
                             </span>{" "}
                             between segments.
+                            {(field.minLength != null ||
+                              field.maxLength != null) && (
+                              <>
+                                {" "}
+                                {field.minLength != null && field.minLength > 0
+                                  ? `Min ${field.minLength} characters. `
+                                  : ""}
+                                {field.maxLength != null
+                                  ? `Max ${field.maxLength} characters.`
+                                  : ""}
+                              </>
+                            )}
                           </p>
                         </div>
                       )}
@@ -859,17 +1095,11 @@ export default function FormDetailPage() {
           <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg">
             This form is currently inactive and not accepting responses.
           </div>
-        ) : !canFillForm ? (
-          form.userHasSubmitted ? (
-            <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg">
-              You have already submitted a response to this form. Thank you.
-            </div>
-          ) : (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              You don&apos;t have permission to fill this form, or it is not open
-              for submissions yet.
-            </div>
-          )
+        ) : !canFillForm && !form.userHasSubmitted ? (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            You don&apos;t have permission to fill this form, or it is not open
+            for submissions yet.
+          </div>
         ) : null}
 
         {/* Management Links */}
