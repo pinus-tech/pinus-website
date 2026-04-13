@@ -17,6 +17,7 @@ import {
 interface ItemData {
   title: string;
   description: string;
+  descriptionMarkdown: boolean;
   price: number;
   category: string;
   meetupLocation: string;
@@ -42,6 +43,7 @@ export default function CreateMarketplaceItemPage() {
   const [itemData, setItemData] = useState<ItemData>({
     title: '',
     description: '',
+    descriptionMarkdown: false,
     price: 0,
     category: 'Other',
     meetupLocation: '',
@@ -291,6 +293,22 @@ export default function CreateMarketplaceItemPage() {
                   rows={4}
                   placeholder="Describe your item (condition, features, etc.)"
                 />
+                <label className="mt-2 flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300"
+                    checked={itemData.descriptionMarkdown}
+                    onChange={(e) =>
+                      setItemData((prev) => ({
+                        ...prev,
+                        descriptionMarkdown: e.target.checked,
+                      }))
+                    }
+                  />
+                  <span className="text-sm text-gray-700">
+                    Format description as Markdown (headings, lists, links, etc.)
+                  </span>
+                </label>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

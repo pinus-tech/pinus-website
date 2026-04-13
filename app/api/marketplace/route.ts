@@ -83,6 +83,7 @@ export async function GET(req: NextRequest) {
         id: item._id,
         title: item.title,
         description: item.description,
+        descriptionMarkdown: !!item.descriptionMarkdown,
         price: item.price,
         seller: toMarketplaceSellerPayload(item.seller),
         status: item.status,
@@ -117,7 +118,15 @@ export async function POST(req: NextRequest) {
     await dbConnect();
 
     const body = await req.json();
-    const { title, description, price, category, meetupLocation, imageUrl } = body;
+    const {
+      title,
+      description,
+      price,
+      category,
+      meetupLocation,
+      imageUrl,
+      descriptionMarkdown,
+    } = body;
 
     // Validate required fields
     if (!title || price === undefined) {
@@ -156,6 +165,7 @@ export async function POST(req: NextRequest) {
     const newItem = new Item({
       title,
       description,
+      descriptionMarkdown: descriptionMarkdown === true,
       price,
       seller: user.userId,
       status: 'available',
@@ -175,6 +185,7 @@ export async function POST(req: NextRequest) {
         id: newItem._id,
         title: newItem.title,
         description: newItem.description,
+        descriptionMarkdown: !!newItem.descriptionMarkdown,
         price: newItem.price,
         seller: toMarketplaceSellerPayload(newItem.seller),
         status: newItem.status,

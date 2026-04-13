@@ -26,6 +26,8 @@ export type MarketplaceCategory = typeof MARKETPLACE_CATEGORIES[number];
 export interface IItem extends mongoose.Document {
   title: string;
   description?: string;
+  /** When true, `description` is rendered as Markdown instead of plain text. */
+  descriptionMarkdown?: boolean;
   price: number;
   seller: mongoose.Types.ObjectId;
   status: "available" | "sold";
@@ -41,6 +43,7 @@ const itemSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     description: { type: String },
+    descriptionMarkdown: { type: Boolean, default: false },
     price: { type: Number, required: true },
     seller: {
       type: mongoose.Schema.Types.ObjectId,

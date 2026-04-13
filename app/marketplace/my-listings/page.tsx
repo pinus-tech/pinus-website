@@ -5,11 +5,13 @@ import { useRouter, usePathname } from "next/navigation";
 import { buildLoginUrl } from "@/lib/login-callback";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import Link from "next/link";
+import { descriptionCardPreview } from "@/lib/description-preview";
 
 interface MarketplaceItem {
   id: string;
   title: string;
   description?: string;
+  descriptionMarkdown?: boolean;
   price: number;
   seller: {
     name: string;
@@ -267,7 +269,10 @@ export default function MyListingsPage() {
                     
                     {item.description && (
                       <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                        {item.description}
+                        {descriptionCardPreview(
+                          item.description,
+                          !!item.descriptionMarkdown
+                        )}
                       </p>
                     )}
 

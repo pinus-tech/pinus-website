@@ -1,13 +1,17 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import Link from "next/link";
+import { useRouter, useParams, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
+import { buildLoginUrl } from "@/lib/login-callback";
+import { DescriptionContent } from "@/app/components/DescriptionContent";
 
 interface MarketplaceItem {
   id: string;
   title: string;
   description?: string;
+  descriptionMarkdown?: boolean;
   price: number;
   seller: {
     name: string;
@@ -33,8 +37,10 @@ export default function MarketplaceItemDetailPage() {
 
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const params = useParams();
   const itemId = params.itemId as string;
+  const loginHref = buildLoginUrl(pathname);
 
   useEffect(() => {
     // Wait for auth to complete before checking user
@@ -68,6 +74,7 @@ export default function MarketplaceItemDetailPage() {
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!item) return;
 
     setSubmitting(true);
     setError(null);
@@ -78,7 +85,13 @@ export default function MarketplaceItemDetailPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(editData),
+        body: JSON.stringify({
+          ...editData,
+          descriptionMarkdown:
+            editData.descriptionMarkdown ??
+            item.descriptionMarkdown ??
+            false,
+        }),
       });
 
       if (response.ok) {
@@ -260,6 +273,26 @@ export default function MarketplaceItemDetailPage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={3}
                 />
+                <label className="mt-2 flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300"
+                    checked={
+                      editData.descriptionMarkdown ??
+                      item.descriptionMarkdown ??
+                      false
+                    }
+                    onChange={(e) =>
+                      setEditData((prev) => ({
+                        ...prev,
+                        descriptionMarkdown: e.target.checked,
+                      }))
+                    }
+                  />
+                  <span className="text-sm text-gray-700">
+                    Format description as Markdown (headings, lists, links, etc.)
+                  </span>
+                </label>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -372,9 +405,11 @@ export default function MarketplaceItemDetailPage() {
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
                   Description
                 </h3>
-                <p className="text-gray-700 whitespace-pre-wrap">
-                  {item.description}
-                </p>
+                <DescriptionContent
+                  text={item.description}
+                  asMarkdown={!!item.descriptionMarkdown}
+                  className="text-gray-700"
+                />
               </div>
             )}
 
@@ -435,9 +470,15 @@ export default function MarketplaceItemDetailPage() {
                     </div>
                   )}
                   {!user && (
-                    <div className="text-gray-500 italic">
-                      Login to see contact information
-                    </div>
+                    <p className="text-gray-500">
+                      <Link
+                        href={loginHref}
+                        className="font-medium text-blue-600 underline underline-offset-2 hover:text-blue-800"
+                      >
+                        Log in
+                      </Link>{" "}
+                      to see contact information
+                    </p>
                   )}
                 </div>
               </div>
@@ -479,8 +520,15 @@ export default function MarketplaceItemDetailPage() {
 
             {!user && item.status === "available" && (
               <div className="border-t pt-6">
-                <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg">
-                  Please log in to contact the seller.
+                <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg">
+                  Please{" "}
+                  <Link
+                    href={loginHref}
+                    className="font-semibold text-blue-700 underline underline-offset-2 hover:text-blue-900"
+                  >
+                    log in
+                  </Link>{" "}
+                  to contact the seller.
                 </div>
               </div>
             )}

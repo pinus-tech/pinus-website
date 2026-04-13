@@ -4,11 +4,13 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import Link from "next/link";
 import { MARKETPLACE_CATEGORIES } from "@/lib/constants/marketplace-categories";
+import { descriptionCardPreview } from "@/lib/description-preview";
 
 interface MarketplaceItem {
   id: string;
   title: string;
   description?: string;
+  descriptionMarkdown?: boolean;
   price: number;
   seller: {
     name: string;
@@ -427,7 +429,10 @@ export default function MarketplacePage() {
 
                   {item.description && (
                     <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                      {item.description}
+                      {descriptionCardPreview(
+                        item.description,
+                        !!item.descriptionMarkdown
+                      )}
                     </p>
                   )}
 
