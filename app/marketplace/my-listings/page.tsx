@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import { buildLoginUrl } from "@/lib/login-callback";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import Link from "next/link";
 
@@ -32,17 +33,18 @@ export default function MyListingsPage() {
 
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (authLoading) return;
 
     if (!user) {
-      router.push("/login");
+      router.push(buildLoginUrl(pathname));
       return;
     }
 
     fetchMyListings();
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, pathname]);
 
   const fetchMyListings = async () => {
     try {

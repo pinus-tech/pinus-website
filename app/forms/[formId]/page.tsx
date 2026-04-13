@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, usePathname } from "next/navigation";
+import { buildLoginUrl } from "@/lib/login-callback";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import Link from "next/link";
 import type { FormFieldDefinition } from "@/lib/form-field-types";
@@ -126,6 +127,7 @@ export default function FormDetailPage() {
 
   const { user, loading: authLoading, canCreateForms } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const params = useParams();
   const formId = params.formId as string;
 
@@ -135,14 +137,14 @@ export default function FormDetailPage() {
 
     // Redirect to login if not authenticated
     if (!user) {
-      router.push("/login");
+      router.push(buildLoginUrl(pathname));
       return;
     }
 
     // Fetch form details and potential managers
     fetchForm();
     fetchPotentialManagers();
-  }, [user, authLoading, router, formId]);
+  }, [user, authLoading, router, formId, pathname]);
 
   useEffect(() => {
     if (!shareModalOpen) return;

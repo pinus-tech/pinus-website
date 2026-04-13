@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import { buildLoginUrl } from "@/lib/login-callback";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
@@ -72,10 +73,11 @@ export default function AdminDashboard() {
 
   const { user, logout, canManageUsers } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (user === null) {
-      router.push("/login");
+      router.push(buildLoginUrl(pathname));
       return;
     }
 
@@ -87,7 +89,7 @@ export default function AdminDashboard() {
     if (user && user.isAdmin) {
       fetchUsers();
     }
-  }, [user, router]);
+  }, [user, router, pathname]);
 
   useEffect(() => {
     filterAndSortUsers();

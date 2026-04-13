@@ -2,20 +2,22 @@
 
 import React, { useEffect } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, usePathname } from "next/navigation";
+import { buildLoginUrl } from "@/lib/login-callback";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { Button } from "@/app/components/ui/button";
 
 export default function FormThankYouPage() {
   const params = useParams();
   const router = useRouter();
+  const pathname = usePathname();
   const formId = params.formId as string;
   const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
     if (authLoading) return;
-    if (!user) router.push("/login");
-  }, [user, authLoading, router]);
+    if (!user) router.push(buildLoginUrl(pathname));
+  }, [user, authLoading, router, pathname]);
 
   if (authLoading || !user) {
     return (

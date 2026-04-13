@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import { buildLoginUrl } from "@/lib/login-callback";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { MARKETPLACE_CATEGORIES } from "@/lib/constants/marketplace-categories";
 import { uploadMarketplaceImage } from "@/lib/firebase/upload-marketplace-image";
@@ -54,6 +55,7 @@ export default function CreateMarketplaceItemPage() {
 
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     return () => {
@@ -121,10 +123,10 @@ export default function CreateMarketplaceItemPage() {
 
     // Redirect to login if not authenticated
     if (!user) {
-      router.push("/login");
+      router.push(buildLoginUrl(pathname));
       return;
     }
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, pathname]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
