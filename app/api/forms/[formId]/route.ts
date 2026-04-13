@@ -45,16 +45,19 @@ export async function GET(
       );
     }
 
+    const managers = (form.managers ?? []).filter(
+      (m: unknown): m is { _id: { toString: () => string } } => m != null
+    );
     // Determine user permissions for this form
     const canEdit = user.isSuperAdmin || 
                    user.isAdmin || 
                    form.createdBy._id.toString() === user.userId ||
-                   form.managers.some((manager: { _id: { toString: () => string } }) => manager._id.toString() === user.userId);
+                   managers.some((manager: { _id: { toString: () => string } }) => manager._id.toString() === user.userId);
     
     const canViewResponses = user.isSuperAdmin || 
                            user.isAdmin || 
                            form.createdBy._id.toString() === user.userId ||
-                           form.managers.some((manager: { _id: { toString: () => string } }) => manager._id.toString() === user.userId);
+                           managers.some((manager: { _id: { toString: () => string } }) => manager._id.toString() === user.userId);
 
     return NextResponse.json({
       form: {
@@ -62,7 +65,7 @@ export async function GET(
         title: form.title,
         description: form.description,
         createdBy: form.createdBy,
-        managers: form.managers || [],
+        managers,
         fields: form.fields,
         responses: form.responses,
         isActive: form.isActive,
@@ -114,11 +117,14 @@ export async function PATCH(
       );
     }
 
+    const managerIds = (form.managers ?? []).map((id: { toString: () => string }) =>
+      id.toString()
+    );
     // Check if user can edit this form
     const canEdit = user.isSuperAdmin || 
                    user.isAdmin || 
                    form.createdBy.toString() === user.userId ||
-                   form.managers.includes(user.userId);
+                   managerIds.includes(user.userId);
 
     if (!canEdit) {
       return NextResponse.json(
@@ -161,6 +167,10 @@ export async function PATCH(
       { new: true }
     ).populate('createdBy', 'name email').populate('managers', 'name email');
 
+    const updatedManagers = (updatedForm.managers ?? []).filter(
+      (m: unknown): m is { _id: { toString: () => string } } => m != null
+    );
+
     return NextResponse.json({
       message: "Form updated successfully",
       form: {
@@ -168,7 +178,7 @@ export async function PATCH(
         title: updatedForm.title,
         description: updatedForm.description,
         createdBy: updatedForm.createdBy,
-        managers: updatedForm.managers || [],
+        managers: updatedManagers,
         fields: updatedForm.fields,
         responses: updatedForm.responses,
         isActive: updatedForm.isActive,

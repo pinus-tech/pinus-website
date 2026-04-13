@@ -58,23 +58,26 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       forms: forms.map(form => {
+        const managers = (form.managers ?? []).filter(
+          (m: unknown): m is { _id: { toString: () => string } } => m != null
+        );
         // Determine user permissions for this form
         const canEdit = user.isSuperAdmin || 
                        user.isAdmin || 
                        form.createdBy._id.toString() === user.userId ||
-                       form.managers.some((manager: { _id: { toString: () => string } }) => manager._id.toString() === user.userId);
+                       managers.some((manager: { _id: { toString: () => string } }) => manager._id.toString() === user.userId);
         
         const canViewResponses = user.isSuperAdmin || 
                                user.isAdmin || 
                                form.createdBy._id.toString() === user.userId ||
-                               form.managers.some((manager: { _id: { toString: () => string } }) => manager._id.toString() === user.userId);
+                               managers.some((manager: { _id: { toString: () => string } }) => manager._id.toString() === user.userId);
 
         return {
           id: form._id,
           title: form.title,
           description: form.description,
           createdBy: form.createdBy,
-          managers: form.managers || [],
+          managers,
           fields: form.fields,
           responses: form.responses,
           isActive: form.isActive,

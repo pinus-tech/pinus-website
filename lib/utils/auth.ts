@@ -35,6 +35,34 @@ function getMailjetClient() : Client | null {
   return mailjetClient;
 }
 
+/** Best-effort parse of node-mailjet / axios errors so we can log and surface real API messages. */
+function formatMailjetError(error: unknown): string {
+  if (error && typeof error === "object") {
+    const o = error as {
+      response?: { data?: unknown; status?: number };
+      message?: string;
+      statusCode?: number;
+    };
+    if (o.response?.data != null) {
+      try {
+        const d = o.response.data;
+        return typeof d === "string" ? d : JSON.stringify(d);
+      } catch {
+        /* fall through */
+      }
+    }
+    if (typeof o.message === "string" && o.message.length > 0) {
+      return o.message;
+    }
+  }
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
+export type SendVerificationEmailResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
 // Define proper types for permissions and user
 interface UserPermissions {
   canCreateForms: boolean;
@@ -216,33 +244,41 @@ export const sendApprovalEmail = async (
   }
 };
 
-export const sendVerificationEmail = async (email: string, verificationCode: string): Promise<boolean> => {
+export const sendVerificationEmail = async (
+  email: string,
+  verificationCode: string
+): Promise<SendVerificationEmailResult> => {
   try {
     const mailjetClient = getMailjetClient();
 
     if (!mailjetClient) {
-      throw new Error(
-        "Mailjet is not configured (missing MAILJET_API_KEY / MAILJET_SECRET_KEY)"
-      );
+      return {
+        ok: false,
+        error:
+          "Mailjet is not configured (missing MAILJET_API_KEY / MAILJET_SECRET_KEY)",
+      };
     }
 
     if (!MAILJET_FROM_EMAIL) {
-      throw new Error("Mailjet is not configured (missing MAILJET_FROM_EMAIL)");
+      return {
+        ok: false,
+        error: "Mailjet is not configured (missing MAILJET_FROM_EMAIL)",
+      };
     }
 
-    const request = mailjetClient.post('send', { version: 'v3.1' }).request({
+    const request = mailjetClient.post("send", { version: "v3.1" }).request({
       Messages: [
         {
           From: {
             Email: MAILJET_FROM_EMAIL,
-            Name: 'PINUS Team',
+            Name: "PINUS Team",
           },
           To: [
             {
               Email: email,
             },
           ],
-          Subject: 'Email Verification - PINUS Website',
+          Subject: "Email Verification - PINUS Website",
           HTMLPart: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2 style="color: #2563eb;">Email Verification</h2>
@@ -278,10 +314,11 @@ export const sendVerificationEmail = async (email: string, verificationCode: str
     });
 
     await request;
-    return true;
+    return { ok: true };
   } catch (error) {
-    console.error('Error sending verification email:', error);
-    return false;
+    const detail = formatMailjetError(error);
+    console.error("Error sending verification email:", detail, error);
+    return { ok: false, error: detail };
   }
 };
 

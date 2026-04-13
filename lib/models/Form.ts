@@ -4,6 +4,7 @@ export interface IForm extends mongoose.Document {
   title: string;
   description?: string;
   createdBy: mongoose.Types.ObjectId;
+  managers: mongoose.Types.ObjectId[];
   fields: {
     label: string;
     type: 'text' | 'number' | 'date' | 'checkbox' | 'dropdown';
@@ -24,6 +25,10 @@ const formSchema = new mongoose.Schema({
     ref: 'User', 
     required: true 
   },
+  managers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+  }],
   fields: [{
     label: { type: String, required: true },
     type: { 
