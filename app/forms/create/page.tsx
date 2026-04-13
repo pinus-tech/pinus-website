@@ -16,6 +16,8 @@ type FormField = FormFieldDefinition;
 interface FormData {
   title: string;
   description: string;
+  /** When true, description is rendered as Markdown on the form page. */
+  descriptionMarkdown: boolean;
   fields: FormField[];
   managers: string[];
   /** Optional short path segment for /f/{shortLink} */
@@ -27,6 +29,7 @@ export default function CreateFormPage() {
   const [formData, setFormData] = useState<FormData>({
     title: '',
     description: '',
+    descriptionMarkdown: false,
     fields: [],
     managers: [],
     shortLink: '',
@@ -138,6 +141,7 @@ export default function CreateFormPage() {
         body: JSON.stringify({
           title: formData.title,
           description: formData.description,
+          descriptionMarkdown: formData.descriptionMarkdown,
           fields: formData.fields,
           managers: formData.managers,
           ...(formData.shortLink.trim()
@@ -229,6 +233,20 @@ export default function CreateFormPage() {
                   rows={3}
                   placeholder="Enter form description (optional)"
                 />
+                <label className="mt-2 flex cursor-pointer items-center gap-2">
+                  <Checkbox
+                    checked={formData.descriptionMarkdown}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        descriptionMarkdown: checked === true,
+                      }))
+                    }
+                  />
+                  <span className="text-sm text-gray-700">
+                    Format description as Markdown (headings, lists, links, etc.)
+                  </span>
+                </label>
               </div>
 
               <div>

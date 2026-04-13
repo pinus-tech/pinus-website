@@ -140,9 +140,9 @@ export const hasPermission = (
 };
 
 export const canCreateForms = (user: User): boolean => {
-  return (
-    user.isSuperAdmin || (user.isAdmin && hasPermission(user, "canCreateForms"))
-  );
+  if (user.isSuperAdmin) return true;
+  if (user.isAdmin) return true;
+  return !!(user.permissions && user.permissions.canCreateForms);
 };
 
 export const canManageUsers = (user: User): boolean => {

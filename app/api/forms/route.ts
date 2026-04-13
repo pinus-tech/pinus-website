@@ -136,6 +136,7 @@ export async function GET(req: NextRequest) {
             id: form._id,
             title: form.title,
             description: form.description,
+            descriptionMarkdown: !!form.descriptionMarkdown,
             createdBy,
             managers,
             fields: form.fields,
@@ -179,7 +180,8 @@ export async function POST(req: NextRequest) {
     await dbConnect();
 
     const body = await req.json();
-    const { title, description, fields, managers, shortLink } = body;
+    const { title, description, fields, managers, shortLink, descriptionMarkdown } =
+      body;
 
     // Validate required fields
     if (!title || !fields || !Array.isArray(fields)) {
@@ -232,6 +234,7 @@ export async function POST(req: NextRequest) {
     const newForm = new Form({
       title,
       description,
+      descriptionMarkdown: descriptionMarkdown === true,
       createdBy: user.userId,
       managers: managers || [],
       fields,
@@ -253,6 +256,7 @@ export async function POST(req: NextRequest) {
         id: newForm._id,
         title: newForm.title,
         description: newForm.description,
+        descriptionMarkdown: !!newForm.descriptionMarkdown,
         createdBy: serializeFormUser(newForm.createdBy),
         managers: (newForm.managers ?? []).map((m: unknown) =>
           serializeFormUser(m)

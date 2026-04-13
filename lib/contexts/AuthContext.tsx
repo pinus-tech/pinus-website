@@ -175,8 +175,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return user.isAdmin && user.permissions[permission];
   };
 
+  /** Matches forms list access: super admin, org admin, or explicit form-creation permission. */
   const canCreateForms = (): boolean => {
-    return hasPermission('canCreateForms');
+    if (!user) return false;
+    if (user.isSuperAdmin) return true;
+    if (user.isAdmin) return true;
+    return user.permissions?.canCreateForms === true;
   };
 
   const canManageUsers = (): boolean => {

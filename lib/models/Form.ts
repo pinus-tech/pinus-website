@@ -14,6 +14,8 @@ const FIELD_TYPES = [
 export interface IForm extends mongoose.Document {
   title: string;
   description?: string;
+  /** When true, `description` is rendered as Markdown instead of plain text. */
+  descriptionMarkdown?: boolean;
   createdBy: mongoose.Types.ObjectId;
   managers: mongoose.Types.ObjectId[];
   fields: {
@@ -45,6 +47,7 @@ export interface IForm extends mongoose.Document {
 const formSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String },
+  descriptionMarkdown: { type: Boolean, default: false },
   createdBy: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User', 

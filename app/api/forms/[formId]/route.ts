@@ -112,6 +112,7 @@ export async function GET(
         id: form._id,
         title: form.title,
         description: form.description,
+        descriptionMarkdown: !!form.descriptionMarkdown,
         createdBy,
         managers,
         fields: form.fields,
@@ -201,6 +202,9 @@ export async function PATCH(
 
     if (typeof body.title === "string") setDoc.title = body.title;
     if (body.description !== undefined) setDoc.description = body.description;
+    if (typeof body.descriptionMarkdown === "boolean") {
+      setDoc.descriptionMarkdown = body.descriptionMarkdown;
+    }
     if (body.fields && Array.isArray(body.fields))
       setDoc.fields = body.fields;
     if (typeof body.isActive === "boolean") setDoc.isActive = body.isActive;
@@ -301,6 +305,7 @@ export async function PATCH(
         id: updatedForm._id,
         title: updatedForm.title,
         description: updatedForm.description,
+        descriptionMarkdown: !!updatedForm.descriptionMarkdown,
         createdBy: createdByU,
         managers: managersU,
         fields: updatedForm.fields,

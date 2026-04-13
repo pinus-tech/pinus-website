@@ -15,6 +15,7 @@ import { Input } from "@/app/components/ui/input";
 import { Textarea } from "@/app/components/ui/textarea";
 import { Button } from "@/app/components/ui/button";
 import { Checkbox } from "@/app/components/ui/checkbox";
+import { DescriptionContent } from "@/app/components/DescriptionContent";
 import { validateFormFieldsArray } from "@/lib/forms/validate-form-fields";
 import { format, parseISO } from "date-fns";
 
@@ -24,6 +25,7 @@ interface Form {
   id: string;
   title: string;
   description?: string;
+  descriptionMarkdown?: boolean;
   createdBy: {
     name: string;
     email: string;
@@ -109,6 +111,7 @@ export default function FormDetailPage() {
   const [editData, setEditData] = useState<{
     title?: string;
     description?: string;
+    descriptionMarkdown?: boolean;
     fields?: FormField[];
     isActive?: boolean;
     shortLink?: string;
@@ -325,6 +328,7 @@ export default function FormDetailPage() {
     setEditData({
       title: form.title,
       description: form.description ?? "",
+      descriptionMarkdown: form.descriptionMarkdown ?? false,
       fields: JSON.parse(JSON.stringify(form.fields)) as FormField[],
       isActive: form.isActive,
       shortLink: form.slug ?? "",
@@ -363,6 +367,8 @@ export default function FormDetailPage() {
         body: JSON.stringify({
           title: editData.title ?? form.title,
           description: editData.description,
+          descriptionMarkdown:
+            editData.descriptionMarkdown ?? form.descriptionMarkdown ?? false,
           fields,
           isActive: editData.isActive ?? form.isActive,
           managers: selectedManagers,
@@ -520,7 +526,12 @@ export default function FormDetailPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">{form.title}</h1>
             {form.description && (
-              <p className="text-gray-600 mt-2">{form.description}</p>
+              <div className="text-gray-600 mt-2 max-w-3xl">
+                <DescriptionContent
+                  text={form.description}
+                  asMarkdown={!!form.descriptionMarkdown}
+                />
+              </div>
             )}
             {form.slug && (
               <p className="text-gray-500 mt-2 text-sm">
@@ -693,6 +704,24 @@ export default function FormDetailPage() {
                   }
                   rows={3}
                 />
+                <label className="mt-2 flex cursor-pointer items-center gap-2">
+                  <Checkbox
+                    checked={
+                      editData.descriptionMarkdown ??
+                      form.descriptionMarkdown ??
+                      false
+                    }
+                    onCheckedChange={(checked) =>
+                      setEditData((prev) => ({
+                        ...prev,
+                        descriptionMarkdown: checked === true,
+                      }))
+                    }
+                  />
+                  <span className="text-sm text-gray-700">
+                    Format description as Markdown (headings, lists, links, etc.)
+                  </span>
+                </label>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">

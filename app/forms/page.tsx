@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/contexts/AuthContext";
 import Link from "next/link";
 import { Button } from "@/app/components/ui/button";
 import { buildLoginUrl, pathAndQueryFromWindow } from "@/lib/login-callback";
+import { DescriptionContent } from "@/app/components/DescriptionContent";
 
 interface Form {
   id: string;
@@ -24,6 +25,7 @@ interface Form {
   responseCount: number;
   isActive: boolean;
   isShared: boolean;
+  descriptionMarkdown?: boolean;
   createdAt: string;
   updatedAt: string;
   managers?: Array<{
@@ -50,7 +52,7 @@ export default function FormsPage() {
     "long" | "short" | null
   >(null);
 
-  const { user, loading: authLoading, canCreateForms } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const isSiteAdmin = !!(user?.isSuperAdmin || user?.isAdmin);
   const canManageFormsList =
@@ -208,7 +210,7 @@ export default function FormsPage() {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Forms Management</h1>
-          {(user.isSuperAdmin || canCreateForms()) && (
+          {canManageFormsList && (
             <Link
               href="/forms/create"
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
@@ -240,7 +242,7 @@ export default function FormsPage() {
                 ? "Create your first form to get started."
                 : "When you submit a form using a link shared by the organisers, it will appear here."}
             </p>
-            {(user.isSuperAdmin || canCreateForms()) && (
+            {canManageFormsList && (
               <Link
                 href="/forms/create"
                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors"
@@ -259,7 +261,12 @@ export default function FormsPage() {
                       {form.title}
                     </h3>
                     {form.description && (
-                      <p className="text-gray-600 mb-2">{form.description}</p>
+                      <div className="text-gray-600 mb-2 max-w-prose">
+                        <DescriptionContent
+                          text={form.description}
+                          asMarkdown={!!form.descriptionMarkdown}
+                        />
+                      </div>
                     )}
                     <div className="text-sm text-gray-500 space-y-1">
                       {showOrganiserMeta(form) && (
