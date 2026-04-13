@@ -3,6 +3,7 @@ import dbConnect from "@/lib/mongodb";
 import Form from "@/lib/models/Form";
 import User from "@/lib/models/User";
 import { serializeFormUser } from "@/lib/serialize-form-users";
+import { validateFormFieldsArray } from "@/lib/forms/validate-form-fields";
 import { verifyToken, canCreateForms } from "@/lib/utils/auth";
 
 // Middleware to check form creation permission
@@ -133,31 +134,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate fields structure
-    for (const field of fields) {
-      if (!field.label || !field.type) {
-        return NextResponse.json(
-          { error: "Each field must have a label and type" },
-          { status: 400 }
-        );
-      }
-
-      // Validate field type
-      const validTypes = ['text', 'number', 'date', 'checkbox', 'dropdown'];
-      if (!validTypes.includes(field.type)) {
-        return NextResponse.json(
-          { error: `Invalid field type: ${field.type}` },
-          { status: 400 }
-        );
-      }
-
-      // Validate dropdown options
-      if (field.type === 'dropdown' && (!field.options || !Array.isArray(field.options) || field.options.length === 0)) {
-        return NextResponse.json(
-          { error: "Dropdown fields must have options" },
-          { status: 400 }
-        );
-      }
+    const fieldsError = validateFormFieldsArray(fields);
+    if (fieldsError) {
+      return NextResponse.json({ error: fieldsError }, { status: 400 });
     }
 
     // Validate managers if provided

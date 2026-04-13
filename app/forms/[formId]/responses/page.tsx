@@ -4,12 +4,34 @@ import React, { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import Link from "next/link";
+import { format, parseISO } from "date-fns";
+import type { FormFieldDefinition } from "@/lib/form-field-types";
+import { isDataField } from "@/lib/form-field-types";
+import { maxSegmentCount, splitSegments } from "@/lib/segmented-text";
 
-interface FormField {
-  label: string;
-  type: 'text' | 'number' | 'date' | 'checkbox' | 'dropdown';
-  required: boolean;
-  options?: string[];
+type FormField = FormFieldDefinition;
+
+function formatCellForCsv(
+  value: string | number | boolean | string[] | null | undefined,
+  field: FormField
+): string {
+  if (value === null || value === undefined) return "";
+  if (field.type === "multiple_choice" && Array.isArray(value)) {
+    return (value as string[]).join("; ");
+  }
+  if (field.type === "checkbox") return value ? "Yes" : "No";
+  if (field.type === "date") {
+    const mode = field.dateMode ?? "date";
+    const s = String(value);
+    if (mode === "time") return s;
+    if (mode === "date") return s;
+    try {
+      return format(parseISO(s), "yyyy-MM-dd HH:mm");
+    } catch {
+      return s;
+    }
+  }
+  return String(value);
 }
 
 interface Form {
@@ -39,7 +61,7 @@ interface FormResponse {
   };
   responses: Array<{
     fieldLabel: string;
-    value: string | number | boolean;
+    value: string | number | boolean | string[];
   }>;
   submittedAt: string;
 }
@@ -110,57 +132,157 @@ export default function FormResponsesPage() {
     setExportLoading(true);
 
     try {
-      // Create CSV header
-      const headers = ['Respondent Name', 'Respondent Email', 'Submitted At'];
-      form.fields.forEach(field => {
-        headers.push(field.label);
-      });
+      const escapeCell = (v: string) =>
+        `"${String(v).replace(/"/g, '""')}"`;
 
-      // Create CSV rows
-      const csvRows = [headers.join(',')];
-      
-      responses.forEach(response => {
-        const row = [
-          `"${response.respondent.name}"`,
-          `"${response.respondent.email}"`,
-          `"${new Date(response.submittedAt).toLocaleString()}"`
+      const headers: string[] = [
+        "Respondent Name",
+        "Respondent Email",
+        "Submitted At",
+      ];
+
+      const dataFields = form.fields.filter((f) => isDataField(f));
+      const segmentedMax = new Map<string, number>();
+      for (const field of dataFields) {
+        if (field.type !== "segmented_text") continue;
+        const delim = field.segmentDelimiter ?? "/";
+        const vals = responses.map((r) => {
+          const fr = r.responses.find((x) => x.fieldLabel === field.label);
+          return fr ? String(fr.value ?? "") : "";
+        });
+        segmentedMax.set(field.label, maxSegmentCount(vals, delim));
+      }
+
+      for (const field of dataFields) {
+        if (field.type === "segmented_text") {
+          const n = segmentedMax.get(field.label) ?? 0;
+          const count = Math.max(1, n);
+          for (let i = 0; i < count; i++) {
+            headers.push(`${field.label} (${i + 1})`);
+          }
+        } else {
+          headers.push(field.label);
+        }
+      }
+
+      const csvRows: string[] = [headers.map(escapeCell).join(",")];
+
+      for (const response of responses) {
+        const row: string[] = [
+          escapeCell(response.respondent.name),
+          escapeCell(response.respondent.email),
+          escapeCell(new Date(response.submittedAt).toLocaleString()),
         ];
 
-        form.fields.forEach(field => {
-          const fieldResponse = response.responses.find(r => r.fieldLabel === field.label);
-          const value = fieldResponse ? String(fieldResponse.value) : '';
-          row.push(`"${value}"`);
-        });
+        for (const field of dataFields) {
+          const fr = response.responses.find(
+            (r) => r.fieldLabel === field.label
+          );
+          const raw = fr?.value;
 
-        csvRows.push(row.join(','));
-      });
+          if (field.type === "segmented_text") {
+            const delim = field.segmentDelimiter ?? "/";
+            const parts = splitSegments(
+              fr ? String(raw ?? "") : "",
+              delim
+            );
+            const count = segmentedMax.get(field.label) ?? parts.length;
+            const target = Math.max(count, 1);
+            for (let i = 0; i < target; i++) {
+              row.push(escapeCell(parts[i] ?? ""));
+            }
+          } else if (field.type === "multiple_choice") {
+            row.push(
+              escapeCell(
+                Array.isArray(raw) ? (raw as string[]).join("; ") : String(raw ?? "")
+              )
+            );
+          } else {
+            row.push(escapeCell(formatCellForCsv(raw, field)));
+          }
+        }
 
-      // Create and download CSV file
-      const csvContent = csvRows.join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
+        csvRows.push(row.join(","));
+      }
+
+      const csvContent = csvRows.join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `${form.title}_responses.csv`);
-      link.style.visibility = 'hidden';
+      link.setAttribute("href", url);
+      link.setAttribute("download", `${form.title}_responses.csv`);
+      link.style.visibility = "hidden";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    } catch (error) {
-      setError('Failed to export CSV');
+    } catch {
+      setError("Failed to export CSV");
     } finally {
       setExportLoading(false);
     }
   };
 
-  const formatResponseValue = (value: string | number | boolean | null | undefined, fieldType: string) => {
-    if (value === null || value === undefined) return 'N/A';
-    
-    switch (fieldType) {
-      case 'checkbox':
-        return value ? 'Yes' : 'No';
-      case 'date':
-        return new Date(String(value)).toLocaleDateString();
+  const formatResponseValue = (
+    value: string | number | boolean | string[] | null | undefined,
+    field: FormField
+  ) => {
+    if (value === null || value === undefined) return "—";
+
+    switch (field.type) {
+      case "checkbox":
+        return value ? "Yes" : "No";
+      case "date": {
+        const mode = field.dateMode ?? "date";
+        const s = String(value);
+        if (mode === "time") return s;
+        if (mode === "date") {
+          try {
+            return format(parseISO(`${s}T12:00:00`), "PPP");
+          } catch {
+            return s;
+          }
+        }
+        try {
+          return format(parseISO(s), "PPP p");
+        } catch {
+          return s;
+        }
+      }
+      case "multiple_choice":
+        return Array.isArray(value) ? (value as string[]).join(", ") : String(value);
+      case "segmented_text": {
+        const delim = field.segmentDelimiter ?? "/";
+        const parts = splitSegments(String(value), delim);
+        if (parts.length === 0) return "—";
+        return (
+          <table className="mt-1 min-w-[240px] border-collapse border border-gray-200 text-sm">
+            <thead>
+              <tr>
+                {parts.map((_, i) => (
+                  <th
+                    key={i}
+                    className="border border-gray-200 bg-gray-100 px-2 py-1 text-left font-medium text-gray-700"
+                  >
+                    Part {i + 1}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                {parts.map((p, i) => (
+                  <td
+                    key={i}
+                    className="border border-gray-200 px-2 py-1 text-gray-900"
+                  >
+                    {p || "—"}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        );
+      }
       default:
         return String(value);
     }
@@ -299,17 +421,51 @@ export default function FormResponsesPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {form.fields.map((field, fieldIndex) => {
-                    const fieldResponse = response.responses.find(r => r.fieldLabel === field.label);
+                    if (field.type === "section") {
+                      return (
+                        <div
+                          key={fieldIndex}
+                          className="md:col-span-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3"
+                        >
+                          {(field.sectionDisplay ?? "both") !==
+                            "description_only" &&
+                            (field.sectionTitle?.trim() || field.label) && (
+                              <h4 className="text-base font-semibold text-gray-900">
+                                {field.sectionTitle?.trim() || field.label}
+                              </h4>
+                            )}
+                          {(field.sectionDisplay ?? "both") !== "title_only" &&
+                            field.sectionDescription?.trim() && (
+                              <p className="mt-1 text-sm text-gray-600 whitespace-pre-wrap">
+                                {field.sectionDescription}
+                              </p>
+                            )}
+                        </div>
+                      );
+                    }
+
+                    const fieldResponse = response.responses.find(
+                      (r) => r.fieldLabel === field.label
+                    );
                     const value = fieldResponse ? fieldResponse.value : null;
 
                     return (
-                      <div key={fieldIndex} className="space-y-2">
+                      <div
+                        key={fieldIndex}
+                        className={
+                          field.type === "segmented_text"
+                            ? "space-y-2 md:col-span-2"
+                            : "space-y-2"
+                        }
+                      >
                         <label className="block text-sm font-medium text-gray-700">
                           {field.label}
-                          {field.required && <span className="text-red-500 ml-1">*</span>}
+                          {field.required && (
+                            <span className="text-red-500 ml-1">*</span>
+                          )}
                         </label>
-                        <div className="text-sm text-gray-900 bg-gray-50 p-3 rounded border">
-                          {formatResponseValue(value, field.type)}
+                        <div className="text-sm text-gray-900 bg-gray-50 p-3 rounded border overflow-x-auto">
+                          {formatResponseValue(value, field)}
                         </div>
                       </div>
                     );

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
 import Form from "@/lib/models/Form";
 import { serializeFormUser } from "@/lib/serialize-form-users";
+import { validateFormFieldsArray } from "@/lib/forms/validate-form-fields";
 import { verifyToken } from "@/lib/utils/auth";
 
 // Middleware to check if user is logged in
@@ -140,30 +141,10 @@ export async function PATCH(
       );
     }
 
-    // Validate fields if they're being updated
     if (body.fields && Array.isArray(body.fields)) {
-      for (const field of body.fields) {
-        if (!field.label || !field.type) {
-          return NextResponse.json(
-            { error: "Each field must have a label and type" },
-            { status: 400 }
-          );
-        }
-
-        const validTypes = ['text', 'number', 'date', 'checkbox', 'dropdown'];
-        if (!validTypes.includes(field.type)) {
-          return NextResponse.json(
-            { error: `Invalid field type: ${field.type}` },
-            { status: 400 }
-          );
-        }
-
-        if (field.type === 'dropdown' && (!field.options || !Array.isArray(field.options) || field.options.length === 0)) {
-          return NextResponse.json(
-            { error: "Dropdown fields must have options" },
-            { status: 400 }
-          );
-        }
+      const fieldsError = validateFormFieldsArray(body.fields);
+      if (fieldsError) {
+        return NextResponse.json({ error: fieldsError }, { status: 400 });
       }
     }
 
