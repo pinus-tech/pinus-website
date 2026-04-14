@@ -1,4 +1,9 @@
 import type { FormFieldDefinition } from "@/lib/form-field-types";
+import {
+  parseSegmentPathTemplate,
+  splitSegmentInputLines,
+  splitSegments,
+} from "@/lib/segmented-text";
 
 function isValidYmd(v: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(`${v}T12:00:00`));
@@ -67,6 +72,13 @@ export function validateFieldValue(
       if (typeof value !== "string") return "Expected text";
       const s = value;
       if (s.trim() === "") return null;
+      const delim = field.segmentDelimiter ?? "/";
+      const templateParts = parseSegmentPathTemplate(
+        field.segmentPathTemplate,
+        delim
+      );
+      const expected = templateParts.length;
+      const lines = splitSegmentInputLines(s);
       const min = field.minLength ?? 0;
       const max = field.maxLength;
       if (min > 0 && s.length < min) {
@@ -74,6 +86,18 @@ export function validateFieldValue(
       }
       if (max !== undefined && s.length > max) {
         return `Enter at most ${max} character(s)`;
+      }
+      if (expected > 0) {
+        for (let i = 0; i < lines.length; i++) {
+          const parts = splitSegments(lines[i]!, delim);
+          if (parts.length < expected) {
+            const need = expected - parts.length;
+            return `Line ${i + 1}: needs ${need} more segment${need === 1 ? "" : "s"} (use "${delim}" between ${expected} parts: ${templateParts.join(` ${delim} `)})`;
+          }
+          if (parts.length > expected) {
+            return `Line ${i + 1}: too many segments (expected ${expected} parts)`;
+          }
+        }
       }
       return null;
     }

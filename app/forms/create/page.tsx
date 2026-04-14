@@ -60,10 +60,12 @@ export default function CreateFormPage() {
   const [headerCropSrc, setHeaderCropSrc] = useState<string | null>(null);
   const headerCropSrcRef = useRef<string | null>(null);
   const headerFileInputRef = useRef<HTMLInputElement>(null);
-  /** Local preview blob URL while uploading or immediately after crop (revoked when replaced). */
-  const [headerBlobPreviewUrl, setHeaderBlobPreviewUrl] = useState<string | null>(
+  /** Object URL for the cropped image (shown immediately; revoked when replaced or cleared). */
+  const [headerLocalPreviewUrl, setHeaderLocalPreviewUrl] = useState<string | null>(
     null
   );
+  /** Cropped file; uploaded when you submit “Create Form”, not when the crop modal closes. */
+  const [headerPendingFile, setHeaderPendingFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [potentialManagers, setPotentialManagers] = useState<Array<{
     id: string;
@@ -157,6 +159,32 @@ export default function CreateFormPage() {
     setLoading(true);
     setError(null);
 
+    let headerImageUrlForCreate = formData.headerImageUrl.trim();
+    if (headerPendingFile && user) {
+      setHeaderUploading(true);
+      try {
+        const prepared = await prepareFormFileForUpload(headerPendingFile, {
+          acceptedTypes: ["jpeg", "png", "gif", "webp"],
+        });
+        headerImageUrlForCreate = await uploadFormHeaderImage(
+          prepared.blob,
+          prepared.filename,
+          prepared.contentType,
+          "draft",
+          user.id
+        );
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Could not upload header image"
+        );
+        setLoading(false);
+        setHeaderUploading(false);
+        return;
+      } finally {
+        setHeaderUploading(false);
+      }
+    }
+
     try {
       const response = await fetch('/api/forms', {
         method: 'POST',
@@ -170,8 +198,8 @@ export default function CreateFormPage() {
           fields: formData.fields,
           pages: formData.pages,
           theme: formData.theme,
-          ...(formData.headerImageUrl.trim()
-            ? { headerImageUrl: formData.headerImageUrl.trim() }
+          ...(headerImageUrlForCreate
+            ? { headerImageUrl: headerImageUrlForCreate }
             : {}),
           managers: formData.managers,
           ...(formData.shortLink.trim()
@@ -209,7 +237,7 @@ export default function CreateFormPage() {
   }
 
   const headerPreviewSrc =
-    headerBlobPreviewUrl || formData.headerImageUrl.trim();
+    headerLocalPreviewUrl || formData.headerImageUrl.trim();
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -401,10 +429,11 @@ export default function CreateFormPage() {
                           headerUploading || !user || headerCropOpen
                         }
                         onClick={() => {
-                          if (headerBlobPreviewUrl) {
-                            URL.revokeObjectURL(headerBlobPreviewUrl);
-                            setHeaderBlobPreviewUrl(null);
-                          }
+                          setHeaderLocalPreviewUrl((prev) => {
+                            if (prev) URL.revokeObjectURL(prev);
+                            return null;
+                          });
+                          setHeaderPendingFile(null);
                           setFormData((prev) => ({
                             ...prev,
                             headerImageUrl: "",
@@ -543,47 +572,20 @@ export default function CreateFormPage() {
           }
           setHeaderCropSrc(null);
         }}
-        onComplete={async (file) => {
+        onComplete={(file) => {
           setHeaderCropOpen(false);
           if (headerCropSrcRef.current) {
             URL.revokeObjectURL(headerCropSrcRef.current);
             headerCropSrcRef.current = null;
           }
           setHeaderCropSrc(null);
-          if (!user) return;
-          let pendingBlobUrl: string | null = URL.createObjectURL(file);
-          setHeaderBlobPreviewUrl(pendingBlobUrl);
-          setHeaderUploading(true);
           setError(null);
-          try {
-            const prepared = await prepareFormFileForUpload(file, {
-              acceptedTypes: ["jpeg", "png", "gif", "webp"],
-            });
-            const url = await uploadFormHeaderImage(
-              prepared.blob,
-              prepared.filename,
-              prepared.contentType,
-              "draft",
-              user.id
-            );
-            setFormData((prev) => ({ ...prev, headerImageUrl: url }));
-            if (pendingBlobUrl) {
-              URL.revokeObjectURL(pendingBlobUrl);
-              pendingBlobUrl = null;
-            }
-            setHeaderBlobPreviewUrl(null);
-          } catch (err) {
-            if (pendingBlobUrl) {
-              URL.revokeObjectURL(pendingBlobUrl);
-              pendingBlobUrl = null;
-            }
-            setHeaderBlobPreviewUrl(null);
-            setError(
-              err instanceof Error ? err.message : "Upload failed"
-            );
-          } finally {
-            setHeaderUploading(false);
-          }
+          setHeaderLocalPreviewUrl((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return URL.createObjectURL(file);
+          });
+          setHeaderPendingFile(file);
+          setFormData((prev) => ({ ...prev, headerImageUrl: "" }));
         }}
       />
     </div>

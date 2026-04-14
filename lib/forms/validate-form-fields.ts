@@ -113,6 +113,13 @@ function validateOneFormField(raw: unknown): string | null {
       ) {
         return "Path delimiter must be at most 8 characters";
       }
+      if (
+        field.segmentPathTemplate !== undefined &&
+        field.segmentPathTemplate !== "" &&
+        field.segmentPathTemplate.length > 500
+      ) {
+        return "Path format template is too long";
+      }
       {
         const lenErr = validateLengthBounds(field.minLength, field.maxLength);
         if (lenErr) return lenErr;

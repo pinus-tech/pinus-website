@@ -31,6 +31,7 @@ export interface IForm extends mongoose.Document {
     sectionDescriptionMarkdown?: boolean;
     sectionDisplay?: 'both' | 'title_only' | 'description_only';
     segmentDelimiter?: string;
+    segmentPathTemplate?: string;
     minSelections?: number;
     maxSelections?: number;
     minLength?: number;
@@ -89,6 +90,7 @@ const formSchema = new mongoose.Schema({
     sectionDescriptionMarkdown: { type: Boolean, default: false },
     sectionDisplay: { type: String, enum: ['both', 'title_only', 'description_only'] },
     segmentDelimiter: { type: String },
+    segmentPathTemplate: { type: String },
     description: { type: String },
     minSelections: { type: Number },
     maxSelections: { type: Number },
