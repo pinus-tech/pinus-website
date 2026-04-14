@@ -930,7 +930,7 @@ export default function FormDetailPage() {
                   onChange={(e) =>
                     setEditData((prev) => ({ ...prev, title: e.target.value }))
                   }
-                  placeholder="Optional — shown to respondents"
+                  placeholder="Optional - shown to respondents"
                 />
               </div>
               <div>
@@ -1486,7 +1486,7 @@ export default function FormDetailPage() {
                             className="font-mono text-sm"
                             placeholder={
                               field.segmentPathTemplate?.trim()
-                                ? `One path per line, e.g.\npart1${field.segmentDelimiter ?? "/"}part2${field.segmentDelimiter ?? "/"}part3`
+                                ? `One path per line`
                                 : `Parts separated by "${field.segmentDelimiter ?? "/"}" (one path per line optional)`
                             }
                             required={field.required}

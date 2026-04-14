@@ -274,7 +274,7 @@ export default function CreateFormPage() {
                   onChange={(e) =>
                     setFormData((prev) => ({ ...prev, title: e.target.value }))
                   }
-                  placeholder="Optional — shown to respondents"
+                  placeholder="Optional - shown to respondents"
                 />
               </div>
 
