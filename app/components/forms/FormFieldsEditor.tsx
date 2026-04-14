@@ -254,7 +254,7 @@ export function FormFieldsEditor({
                 )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Field Label *
+                    Field label
                   </label>
                   <Input
                     type="text"
@@ -263,13 +263,12 @@ export function FormFieldsEditor({
                       updateField(index, { label: e.target.value })
                     }
                     placeholder="Enter field label"
-                    required
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Field Type *
+                    Field type
                   </label>
                   <FormSelect
                     value={field.type}
@@ -322,22 +321,23 @@ export function FormFieldsEditor({
                 </div>
               )}
 
-              <div className="mt-4 flex items-center gap-2">
-                <Checkbox
-                  id={`required-${index}`}
-                  checked={field.required}
-                  disabled={field.type === "section"}
-                  onCheckedChange={(c) =>
-                    updateField(index, { required: c === true })
-                  }
-                />
-                <label
-                  htmlFor={`required-${index}`}
-                  className="text-sm font-medium text-gray-700 cursor-pointer"
-                >
-                  Required
-                </label>
-              </div>
+              {field.type !== "section" && (
+                <div className="mt-4 flex items-center gap-2">
+                  <Checkbox
+                    id={`required-${index}`}
+                    checked={field.required}
+                    onCheckedChange={(c) =>
+                      updateField(index, { required: c === true })
+                    }
+                  />
+                  <label
+                    htmlFor={`required-${index}`}
+                    className="text-sm font-medium text-gray-700 cursor-pointer"
+                  >
+                    Required
+                  </label>
+                </div>
+              )}
 
               {field.type === "date" && (
                 <div className="mt-4">
@@ -553,7 +553,7 @@ export function FormFieldsEditor({
                 field.type === "multiple_choice") && (
                 <div className="mt-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Options *
+                    Options
                   </label>
                   {pages.length > 1 &&
                     (field.type === "dropdown" ||
@@ -581,7 +581,6 @@ export function FormFieldsEditor({
                             }
                             className="flex-1 min-w-0"
                             placeholder={`Option ${optionIndex + 1}`}
-                            required
                           />
                           <Button
                             type="button"

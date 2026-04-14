@@ -59,6 +59,11 @@ export default function CreateFormPage() {
   const [headerCropOpen, setHeaderCropOpen] = useState(false);
   const [headerCropSrc, setHeaderCropSrc] = useState<string | null>(null);
   const headerCropSrcRef = useRef<string | null>(null);
+  const headerFileInputRef = useRef<HTMLInputElement>(null);
+  /** Local preview blob URL while uploading or immediately after crop (revoked when replaced). */
+  const [headerBlobPreviewUrl, setHeaderBlobPreviewUrl] = useState<string | null>(
+    null
+  );
   const [error, setError] = useState<string | null>(null);
   const [potentialManagers, setPotentialManagers] = useState<Array<{
     id: string;
@@ -203,6 +208,9 @@ export default function CreateFormPage() {
     return <div>Redirecting...</div>;
   }
 
+  const headerPreviewSrc =
+    headerBlobPreviewUrl || formData.headerImageUrl.trim();
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
@@ -320,31 +328,21 @@ export default function CreateFormPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+              <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/80 p-5 shadow-sm">
+                <label className="block text-sm font-semibold text-gray-900 mb-1">
                   Header image (optional)
                 </label>
-                <p className="text-xs text-gray-500 mb-2">
-                  Shown at the top of the form. Paste an HTTPS URL, or upload -
-                  you&apos;ll crop a wide banner (21∶9), same rules as marketplace
-                  photos: up to 1 MB as-is; larger (up to 3 MB) compressed.
+                <p className="text-sm text-gray-500 mb-4">
+                  21∶9 wide banner. After you choose a file, the crop tool opens.
+                  Source files up to 3 MB; images over 1 MB are compressed so the
+                  stored image stays within 1 MB.
                 </p>
-                <Input
-                  type="url"
-                  value={formData.headerImageUrl}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      headerImageUrl: e.target.value,
-                    }))
-                  }
-                  placeholder="https://…"
-                  className="mb-2"
-                />
                 <input
+                  ref={headerFileInputRef}
                   type="file"
                   accept="image/jpeg,image/png,image/gif,image/webp"
-                  className="text-sm text-gray-600"
+                  className="sr-only"
+                  tabIndex={-1}
                   disabled={headerUploading || !user || headerCropOpen}
                   onChange={(e) => {
                     const f = e.target.files?.[0];
@@ -371,8 +369,67 @@ export default function CreateFormPage() {
                     setHeaderCropOpen(true);
                   }}
                 />
-                {headerUploading && (
-                  <p className="text-xs text-gray-500 mt-1">Uploading…</p>
+                {headerPreviewSrc ? (
+                  <div className="mb-4">
+                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+                      Header preview
+                    </p>
+                    <div className="aspect-[21/9] w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+                      <img
+                        src={headerPreviewSrc}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="blue"
+                        outline
+                        disabled={
+                          headerUploading || !user || headerCropOpen
+                        }
+                        onClick={() => headerFileInputRef.current?.click()}
+                      >
+                        {headerUploading ? "Uploading…" : "Change image"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="red"
+                        outline
+                        disabled={
+                          headerUploading || !user || headerCropOpen
+                        }
+                        onClick={() => {
+                          if (headerBlobPreviewUrl) {
+                            URL.revokeObjectURL(headerBlobPreviewUrl);
+                            setHeaderBlobPreviewUrl(null);
+                          }
+                          setFormData((prev) => ({
+                            ...prev,
+                            headerImageUrl: "",
+                          }));
+                          if (headerFileInputRef.current) {
+                            headerFileInputRef.current.value = "";
+                          }
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="blue"
+                    outline
+                    disabled={
+                      headerUploading || !user || headerCropOpen
+                    }
+                    onClick={() => headerFileInputRef.current?.click()}
+                  >
+                    {headerUploading ? "Uploading…" : "Choose header image"}
+                  </Button>
                 )}
               </div>
             </div>
@@ -475,7 +532,7 @@ export default function CreateFormPage() {
         open={headerCropOpen}
         aspect={FORM_HEADER_IMAGE_CROP_ASPECT}
         title="Adjust header banner"
-        description="Wide banner (21∶9). Drag to position and zoom. Same rules as marketplace listing photos."
+        description="21∶9 banner. Drag to reposition and zoom. Stored file is kept within 1 MB after processing."
         outputFileName="form-header.jpg"
         completeLabel="Use this image"
         onCancel={() => {
@@ -494,6 +551,8 @@ export default function CreateFormPage() {
           }
           setHeaderCropSrc(null);
           if (!user) return;
+          let pendingBlobUrl: string | null = URL.createObjectURL(file);
+          setHeaderBlobPreviewUrl(pendingBlobUrl);
           setHeaderUploading(true);
           setError(null);
           try {
@@ -508,7 +567,17 @@ export default function CreateFormPage() {
               user.id
             );
             setFormData((prev) => ({ ...prev, headerImageUrl: url }));
+            if (pendingBlobUrl) {
+              URL.revokeObjectURL(pendingBlobUrl);
+              pendingBlobUrl = null;
+            }
+            setHeaderBlobPreviewUrl(null);
           } catch (err) {
+            if (pendingBlobUrl) {
+              URL.revokeObjectURL(pendingBlobUrl);
+              pendingBlobUrl = null;
+            }
+            setHeaderBlobPreviewUrl(null);
             setError(
               err instanceof Error ? err.message : "Upload failed"
             );
