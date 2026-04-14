@@ -552,7 +552,7 @@ export function FormFieldsEditor({
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Path format (optional — for column names & validation)
+                      Path format (optional - for column names & validation)
                     </label>
                     <Input
                       type="text"
