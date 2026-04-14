@@ -35,7 +35,9 @@ import { ImageCropModal } from "@/app/components/ImageCropModal";
 import type { FormPageDefinition, FormTheme } from "@/lib/forms/form-pages";
 import {
   createDefaultPage,
+  collectVisitedPageIdsAlongPath,
   fieldsOnPage,
+  getFieldPageId,
   resolveNextPageIndex,
   FORM_THEMES,
 } from "@/lib/forms/form-pages";
@@ -615,6 +617,19 @@ export default function FormDetailPage() {
   const atLastFillStep =
     !multiPageFill || fillStep >= pagesList.length - 1;
 
+  const firstFillPageId = pagesList[0]!.id;
+  const fieldOnVisitedFillPath = (field: FormFieldDefinition): boolean => {
+    if (!multiPageFill) return true;
+    const map = new Map(responses.map((r) => [r.fieldLabel, r.value]));
+    const visited = collectVisitedPageIdsAlongPath(
+      pagesList,
+      form.fields,
+      map,
+      fillStep
+    );
+    return new Set(visited).has(getFieldPageId(field, firstFillPageId));
+  };
+
   const validateFillStepFields = (): string | null => {
     for (const field of fieldsForFillStep) {
       if (!isDataField(field)) continue;
@@ -686,6 +701,7 @@ export default function FormDetailPage() {
 
     for (const field of form.fields) {
       if (!isDataField(field) || !field.required) continue;
+      if (!fieldOnVisitedFillPath(field)) continue;
       const response = responses.find((r) => r.fieldLabel === field.label);
       if (field.type === "file_upload") {
         const hasUrl =
@@ -706,6 +722,7 @@ export default function FormDetailPage() {
 
     for (const field of form.fields) {
       if (!isDataField(field)) continue;
+      if (!fieldOnVisitedFillPath(field)) continue;
       const response = responses.find((r) => r.fieldLabel === field.label);
       if (field.type === "file_upload" && pendingFiles[field.label]) {
         continue;
@@ -750,6 +767,7 @@ export default function FormDetailPage() {
 
       for (const field of form.fields) {
         if (!isDataField(field)) continue;
+        if (!fieldOnVisitedFillPath(field)) continue;
         const payload = responsesPayload.find(
           (r) => r.fieldLabel === field.label
         );
@@ -761,12 +779,34 @@ export default function FormDetailPage() {
         }
       }
 
+      const mapAfterUpload = new Map(
+        responsesPayload.map((r) => [r.fieldLabel, r.value])
+      );
+      const visitedPageIds = collectVisitedPageIdsAlongPath(
+        pagesList,
+        form.fields,
+        mapAfterUpload,
+        fillStep
+      );
+      if (multiPageFill) {
+        const visitedSet = new Set(visitedPageIds);
+        responsesPayload = responsesPayload.filter((r) => {
+          const field = form.fields.find((f) => f.label === r.fieldLabel);
+          if (!field || !isDataField(field)) return false;
+          return visitedSet.has(getFieldPageId(field, firstFillPageId));
+        });
+      }
+
       const response = await fetch(`/api/forms/${formId}/responses`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ responses: responsesPayload }),
+        body: JSON.stringify(
+          multiPageFill
+            ? { responses: responsesPayload, visitedPageIds }
+            : { responses: responsesPayload }
+        ),
       });
 
       if (response.ok) {

@@ -8,6 +8,11 @@ import {
   isEmptyValue,
   validateFieldValue,
 } from "@/lib/forms/validate-submission";
+import {
+  collectVisitedPageIdsAlongPath,
+  getFieldPageId,
+} from "@/lib/forms/form-pages";
+import type { FormPageDefinition } from "@/lib/forms/form-pages";
 import { verifyToken } from "@/lib/utils/auth";
 import { serializeFormRespondent } from "@/lib/serialize-form-users";
 
@@ -66,7 +71,10 @@ export async function GET(
 
     // Get all responses for this form
     const responses = await Response.find({ formId })
-      .populate("respondent", "name email telegram phoneNumber")
+      .populate(
+        "respondent",
+        "name email telegram phoneNumber city highSchool major intakeYear yearOfStudy career"
+      )
       .sort({ submittedAt: -1 });
 
     return NextResponse.json({
@@ -105,7 +113,7 @@ export async function POST(
 
     const { formId } = await params;
     const body = await req.json();
-    const { responses } = body;
+    const { responses, visitedPageIds: rawVisitedPageIds } = body;
 
     // Find form by ID
     const form = await Form.findById(formId);
@@ -169,9 +177,74 @@ export async function POST(
       }
     }
 
+    const pagesList: FormPageDefinition[] =
+      form.pages && form.pages.length > 0
+        ? (form.pages as FormPageDefinition[])
+        : [{ id: "_default", title: "", description: "", order: 0 }];
+    const multiPage = pagesList.length > 1;
+    const firstPageId = pagesList[0]!.id;
+
+    const responseMap = new Map<string, unknown>(
+      responses.map((r: { fieldLabel: string; value: unknown }) => [
+        r.fieldLabel,
+        r.value,
+      ])
+    );
+
+    let visitedPageIds: string[];
+    if (multiPage) {
+      if (!Array.isArray(rawVisitedPageIds) || rawVisitedPageIds.length === 0) {
+        return NextResponse.json(
+          {
+            error:
+              "visitedPageIds is required for multi-page forms (re-submit from the latest app version).",
+          },
+          { status: 400 }
+        );
+      }
+      visitedPageIds = rawVisitedPageIds.map((id: unknown) => String(id));
+      const finalStepIndex = visitedPageIds.length - 1;
+      const recomputed = collectVisitedPageIdsAlongPath(
+        pagesList,
+        formFields,
+        responseMap,
+        finalStepIndex
+      );
+      const same =
+        recomputed.length === visitedPageIds.length &&
+        recomputed.every((id, i) => id === visitedPageIds[i]);
+      if (!same) {
+        return NextResponse.json(
+          {
+            error:
+              "Page path does not match your answers. Go back and continue through the form, then submit again.",
+          },
+          { status: 400 }
+        );
+      }
+    } else {
+      visitedPageIds = [firstPageId];
+    }
+
+    const visitedSet = new Set(visitedPageIds);
+
+    const fieldOnVisitedPath = (field: FormFieldDefinition) => {
+      if (!isDataField(field)) return false;
+      if (!multiPage) return true;
+      return visitedSet.has(getFieldPageId(field, firstPageId));
+    };
+
+    const filteredResponses = responses.filter((r: { fieldLabel: string }) => {
+      const formField = formFields.find((f) => f.label === r.fieldLabel);
+      if (!formField || !isDataField(formField)) return false;
+      if (!multiPage) return true;
+      return visitedSet.has(getFieldPageId(formField, firstPageId));
+    });
+
     for (const field of formFields) {
       if (!isDataField(field) || !field.required) continue;
-      const resp = responses.find((x) => x.fieldLabel === field.label);
+      if (!fieldOnVisitedPath(field)) continue;
+      const resp = filteredResponses.find((x) => x.fieldLabel === field.label);
       if (!resp || isEmptyValue(field, resp.value)) {
         return NextResponse.json(
           { error: `Required field '${field.label}' is missing` },
@@ -180,7 +253,7 @@ export async function POST(
       }
     }
 
-    for (const response of responses) {
+    for (const response of filteredResponses) {
       const formField = formFields.find((f) => f.label === response.fieldLabel);
       if (!formField || !isDataField(formField)) continue;
       const err = validateFieldValue(formField, response.value);
@@ -209,7 +282,7 @@ export async function POST(
     const newResponse = new Response({
       formId,
       respondent: user.userId,
-      responses,
+      responses: filteredResponses,
       submittedAt: new Date()
     });
 

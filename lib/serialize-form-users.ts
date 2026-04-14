@@ -38,10 +38,25 @@ export function serializeFormRespondent(ref: unknown): {
   email: string;
   telegram?: string;
   phoneNumber?: string;
+  city?: string;
+  highSchool?: string;
+  major?: string;
+  intakeYear?: number;
+  yearOfStudy?: number;
+  career?: string;
 } {
   const base = serializeFormUser(ref);
   if (ref && typeof ref === "object" && ref !== null) {
-    const o = ref as { telegram?: string; phoneNumber?: string };
+    const o = ref as {
+      telegram?: string;
+      phoneNumber?: string;
+      city?: string;
+      highSchool?: string;
+      major?: string;
+      intakeYear?: number;
+      yearOfStudy?: number;
+      career?: string;
+    };
     return {
       ...base,
       telegram:
@@ -51,6 +66,30 @@ export function serializeFormRespondent(ref: unknown): {
       phoneNumber:
         typeof o.phoneNumber === "string" && o.phoneNumber.trim().length > 0
           ? o.phoneNumber
+          : undefined,
+      city:
+        typeof o.city === "string" && o.city.trim().length > 0
+          ? o.city
+          : undefined,
+      highSchool:
+        typeof o.highSchool === "string" && o.highSchool.trim().length > 0
+          ? o.highSchool
+          : undefined,
+      major:
+        typeof o.major === "string" && o.major.trim().length > 0
+          ? o.major
+          : undefined,
+      intakeYear:
+        typeof o.intakeYear === "number" && Number.isFinite(o.intakeYear)
+          ? o.intakeYear
+          : undefined,
+      yearOfStudy:
+        typeof o.yearOfStudy === "number" && Number.isFinite(o.yearOfStudy)
+          ? o.yearOfStudy
+          : undefined,
+      career:
+        typeof o.career === "string" && o.career.trim().length > 0
+          ? o.career
           : undefined,
     };
   }

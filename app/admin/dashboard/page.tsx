@@ -78,8 +78,19 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all"); // all, pending, approved, admin
   const [filterRole, setFilterRole] = useState("all"); // all, user, admin, superadmin
-  const [sortBy, setSortBy] = useState("createdAt"); // name, email, createdAt
-  const [sortOrder, setSortOrder] = useState("desc"); // asc, desc
+  const [sortBy, setSortBy] = useState<
+    | "name"
+    | "email"
+    | "createdAt"
+    | "city"
+    | "intakeYear"
+    | "yearOfStudy"
+    | "career"
+    | "major"
+    | "highSchool"
+    | "registrationYear"
+  >("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
@@ -184,24 +195,75 @@ export default function AdminDashboard() {
       }
     }
 
-    // Apply sorting
-    filtered.sort((a, b) => {
-      let aValue = a[sortBy as keyof User];
-      let bValue = b[sortBy as keyof User];
+    const compareUsers = (a: User, b: User): number => {
+      const mul = sortOrder === "asc" ? 1 : -1;
 
-      // Handle undefined values
-      if (aValue === undefined) aValue = "";
-      if (bValue === undefined) bValue = "";
+      const numOrNull = (u: User): number | null => {
+        switch (sortBy) {
+          case "intakeYear":
+            return u.intakeYear != null && Number.isFinite(u.intakeYear)
+              ? u.intakeYear
+              : null;
+          case "yearOfStudy":
+            return u.yearOfStudy != null && Number.isFinite(u.yearOfStudy)
+              ? u.yearOfStudy
+              : null;
+          case "registrationYear": {
+            const y = new Date(u.createdAt).getFullYear();
+            return Number.isFinite(y) ? y : null;
+          }
+          default:
+            return null;
+        }
+      };
 
-      if (typeof aValue === "string") aValue = aValue.toLowerCase();
-      if (typeof bValue === "string") bValue = bValue.toLowerCase();
+      const strOrEmpty = (u: User): string => {
+        switch (sortBy) {
+          case "name":
+            return (u.name ?? "").toLowerCase();
+          case "email":
+            return (u.email ?? "").toLowerCase();
+          case "city":
+            return (u.city ?? "").toLowerCase();
+          case "career":
+            return (u.career ?? "").toLowerCase();
+          case "major":
+            return (u.major ?? "").toLowerCase();
+          case "highSchool":
+            return (u.highSchool ?? "").toLowerCase();
+          default:
+            return "";
+        }
+      };
 
-      if (sortOrder === "asc") {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
+      if (
+        sortBy === "intakeYear" ||
+        sortBy === "yearOfStudy" ||
+        sortBy === "registrationYear"
+      ) {
+        const va = numOrNull(a);
+        const vb = numOrNull(b);
+        if (va === null && vb === null) return 0;
+        if (va === null) return 1;
+        if (vb === null) return -1;
+        if (va === vb) return 0;
+        return va < vb ? -mul : mul;
       }
-    });
+
+      if (sortBy === "createdAt") {
+        const ta = new Date(a.createdAt).getTime();
+        const tb = new Date(b.createdAt).getTime();
+        if (ta === tb) return 0;
+        return ta < tb ? -mul : mul;
+      }
+
+      const sa = strOrEmpty(a);
+      const sb = strOrEmpty(b);
+      if (sa === sb) return 0;
+      return sa < sb ? -mul : mul;
+    };
+
+    filtered.sort(compareUsers);
 
     setFilteredUsers(filtered);
     setCurrentPage(1); // Reset to first page when filters change
@@ -659,7 +721,14 @@ export default function AdminDashboard() {
                   Sort By
                 </label>
                 <div className="flex space-x-2">
-                  <Select value={sortBy} onValueChange={setSortBy}>
+                  <Select
+                    value={sortBy}
+                    onValueChange={(v) =>
+                      setSortBy(
+                        v as typeof sortBy
+                      )
+                    }
+                  >
                     <SelectTrigger variant="blue" outline className="flex-1">
                       <SelectValue placeholder="Sort by..." />
                     </SelectTrigger>
@@ -667,12 +736,25 @@ export default function AdminDashboard() {
                       <SelectItem value="name">Name</SelectItem>
                       <SelectItem value="email">Email</SelectItem>
                       <SelectItem value="createdAt">
-                        Registration Date
+                        Registration date & time
+                      </SelectItem>
+                      <SelectItem value="registrationYear">
+                        Registration year
                       </SelectItem>
                       <SelectItem value="city">City</SelectItem>
+                      <SelectItem value="intakeYear">Intake year</SelectItem>
+                      <SelectItem value="yearOfStudy">Year of study</SelectItem>
+                      <SelectItem value="career">Career level</SelectItem>
+                      <SelectItem value="major">Major</SelectItem>
+                      <SelectItem value="highSchool">High school</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Select value={sortOrder} onValueChange={setSortOrder}>
+                  <Select
+                    value={sortOrder}
+                    onValueChange={(v) =>
+                      setSortOrder(v as "asc" | "desc")
+                    }
+                  >
                     <SelectTrigger variant="blue" outline>
                       <SelectValue placeholder="Order" />
                     </SelectTrigger>
