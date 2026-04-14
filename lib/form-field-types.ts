@@ -45,6 +45,12 @@ export interface FormFieldDefinition {
   sectionDisplay?: SectionDisplayMode;
   /** Used when type === "segmented_text" - delimiter for splitting (e.g. / or -) */
   segmentDelimiter?: string;
+  /**
+   * Optional path shape for labels and validation, e.g. `name/stay/phone` (same delimiter).
+   * Responses table / CSV use `{label}-{partLabel}` columns. Each non-empty line must
+   * have exactly as many segments as this template.
+   */
+  segmentPathTemplate?: string;
   /** When type === "multiple_choice": minimum number of options to select (default 0). */
   minSelections?: number;
   /** When type === "multiple_choice": maximum number of options (omit = unlimited). */

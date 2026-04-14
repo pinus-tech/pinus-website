@@ -292,6 +292,8 @@ export function FormFieldsEditor({
                       }
                       if (t === "segmented_text") {
                         patch.segmentDelimiter = field.segmentDelimiter ?? "/";
+                        patch.segmentPathTemplate =
+                          field.segmentPathTemplate ?? "";
                       }
                       if (t === "file_upload") {
                         patch.options = undefined;
@@ -526,26 +528,57 @@ export function FormFieldsEditor({
               )}
 
               {field.type === "segmented_text" && (
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Path separator (split on this character)
-                  </label>
-                  <Input
-                    type="text"
-                    value={field.segmentDelimiter ?? "/"}
-                    onChange={(e) =>
-                      updateField(index, {
-                        segmentDelimiter: e.target.value || "/",
-                      })
-                    }
-                    className="max-w-xs font-mono"
-                    placeholder="/"
-                    maxLength={8}
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Example: <code>cilla/off-camp/1234/message</code> with
-                    &quot;/&quot;
-                  </p>
+                <div className="mt-4 space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Path separator (split on this character)
+                    </label>
+                    <Input
+                      type="text"
+                      value={field.segmentDelimiter ?? "/"}
+                      onChange={(e) =>
+                        updateField(index, {
+                          segmentDelimiter: e.target.value || "/",
+                        })
+                      }
+                      className="max-w-xs font-mono"
+                      placeholder="/"
+                      maxLength={8}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Example: <code>cilla/off-camp/1234/message</code> with
+                      &quot;/&quot;
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Path format (optional — for column names & validation)
+                    </label>
+                    <Input
+                      type="text"
+                      value={field.segmentPathTemplate ?? ""}
+                      onChange={(e) =>
+                        updateField(index, {
+                          segmentPathTemplate: e.target.value,
+                        })
+                      }
+                      className="max-w-lg font-mono text-sm"
+                      placeholder="e.g. name/stay/phone"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Use the same separator as above. Responses and CSV show
+                      columns as{" "}
+                      <span className="font-medium">
+                        {field.label || "Field"}-name
+                      </span>
+                      ,{" "}
+                      <span className="font-medium">
+                        {field.label || "Field"}-stay
+                      </span>
+                      , … Each line must have that many segments. Multiple lines =
+                      multiple rows in the table.
+                    </p>
+                  </div>
                 </div>
               )}
 

@@ -147,13 +147,19 @@ export default function FormDetailPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [fillStep, setFillStep] = useState(0);
+  /** Stack of page indices for Back (follows branching, not linear order). */
+  const [fillPageHistory, setFillPageHistory] = useState<number[]>([]);
   const [headerUploading, setHeaderUploading] = useState(false);
   const [headerCropOpen, setHeaderCropOpen] = useState(false);
   const [headerCropSrc, setHeaderCropSrc] = useState<string | null>(null);
   const headerCropSrcRef = useRef<string | null>(null);
   const headerFileInputRef = useRef<HTMLInputElement>(null);
-  /** Local preview blob URL while uploading or right after crop (revoked when replaced). */
-  const [headerBlobPreviewUrl, setHeaderBlobPreviewUrl] = useState<string | null>(
+  /** Object URL for a newly cropped header (shown before Save; revoked when cleared). */
+  const [headerLocalPreviewUrl, setHeaderLocalPreviewUrl] = useState<string | null>(
+    null
+  );
+  /** Cropped file uploaded when you click Save all changes, not when the crop modal closes. */
+  const [headerPendingCropFile, setHeaderPendingCropFile] = useState<File | null>(
     null
   );
   const [editData, setEditData] = useState<{
@@ -199,6 +205,11 @@ export default function FormDetailPage() {
     fetchForm();
     fetchPotentialManagers();
   }, [user, authLoading, router, formId, pathname]);
+
+  useEffect(() => {
+    setFillStep(0);
+    setFillPageHistory([]);
+  }, [formId]);
 
   useEffect(() => {
     if (!shareModalOpen) return;
@@ -358,6 +369,11 @@ export default function FormDetailPage() {
 
   const startEditing = () => {
     if (!form) return;
+    setHeaderLocalPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setHeaderPendingCropFile(null);
     setEditData({
       title: form.title,
       description: form.description ?? "",
@@ -396,6 +412,36 @@ export default function FormDetailPage() {
     setSubmitting(true);
     setError(null);
 
+    let resolvedHeaderUrl: string | null =
+      (editData.headerImageUrl ?? "").trim() === ""
+        ? null
+        : (editData.headerImageUrl ?? "").trim();
+
+    if (headerPendingCropFile && user?.id) {
+      setHeaderUploading(true);
+      try {
+        const prepared = await prepareFormFileForUpload(headerPendingCropFile, {
+          acceptedTypes: ["jpeg", "png", "gif", "webp"],
+        });
+        resolvedHeaderUrl = await uploadFormHeaderImage(
+          prepared.blob,
+          prepared.filename,
+          prepared.contentType,
+          formId,
+          user.id
+        );
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : "Could not upload header image"
+        );
+        setSubmitting(false);
+        setHeaderUploading(false);
+        return;
+      } finally {
+        setHeaderUploading(false);
+      }
+    }
+
     try {
       const response = await fetch(`/api/forms/${formId}`, {
         method: "PATCH",
@@ -410,10 +456,7 @@ export default function FormDetailPage() {
           fields,
           pages: editData.pages ?? form.pages,
           theme: editData.theme ?? form.theme ?? "blue",
-          headerImageUrl:
-            (editData.headerImageUrl ?? "").trim() === ""
-              ? null
-              : editData.headerImageUrl?.trim(),
+          headerImageUrl: resolvedHeaderUrl,
           isActive: editData.isActive ?? form.isActive,
           managers: selectedManagers,
           slug:
@@ -426,10 +469,11 @@ export default function FormDetailPage() {
       if (response.ok) {
         const data = await response.json();
         setForm(data.form);
-        setHeaderBlobPreviewUrl((prev) => {
+        setHeaderLocalPreviewUrl((prev) => {
           if (prev) URL.revokeObjectURL(prev);
           return null;
         });
+        setHeaderPendingCropFile(null);
         setIsEditing(false);
         setEditData({});
         setSuccess("Form updated successfully!");
@@ -573,21 +617,25 @@ export default function FormDetailPage() {
 
   const validateFillStepFields = (): string | null => {
     for (const field of fieldsForFillStep) {
-      if (!isDataField(field) || !field.required) continue;
+      if (!isDataField(field)) continue;
       const response = responses.find((r) => r.fieldLabel === field.label);
-      if (field.type === "file_upload") {
-        const hasUrl =
-          typeof response?.value === "string" &&
-          response.value.trim().length > 0;
-        const hasPending = !!pendingFiles[field.label];
-        if (!hasUrl && !hasPending) {
+      if (field.required) {
+        if (field.type === "file_upload") {
+          const hasUrl =
+            typeof response?.value === "string" &&
+            response.value.trim().length > 0;
+          const hasPending = !!pendingFiles[field.label];
+          if (!hasUrl && !hasPending) {
+            return `Field "${field.label}" is required`;
+          }
+          continue;
+        }
+        if (!response || isEmptyValue(field, response.value)) {
           return `Field "${field.label}" is required`;
         }
-        continue;
       }
-      if (!response || isEmptyValue(field, response.value)) {
-        return `Field "${field.label}" is required`;
-      }
+      const fmtErr = validateFieldValue(field, response?.value);
+      if (fmtErr) return `${field.label}: ${fmtErr}`;
     }
     return null;
   };
@@ -606,6 +654,7 @@ export default function FormDetailPage() {
       fieldsOnPage(form.fields, activeFillPageId),
       map
     );
+    setFillPageHistory((h) => [...h, fillStep]);
     setFillStep(nextIdx);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -629,6 +678,7 @@ export default function FormDetailPage() {
         fieldsOnPage(form.fields, activeFillPageId),
         map
       );
+      setFillPageHistory((h) => [...h, fillStep]);
       setFillStep(nextIdx);
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
@@ -740,14 +790,15 @@ export default function FormDetailPage() {
   const formDisplayTitle = form.title?.trim() || "Untitled form";
 
   const editHeaderPreviewSrc =
-    headerBlobPreviewUrl ||
+    headerLocalPreviewUrl ||
     (editData.headerImageUrl ?? form.headerImageUrl ?? "").trim();
 
-  const revokeHeaderBlobPreview = () => {
-    setHeaderBlobPreviewUrl((prev) => {
+  const clearHeaderLocalPreview = () => {
+    setHeaderLocalPreviewUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return null;
     });
+    setHeaderPendingCropFile(null);
   };
 
   const topBarActions =
@@ -769,7 +820,7 @@ export default function FormDetailPage() {
             variant="blue"
             onClick={() => {
               if (isEditing) {
-                revokeHeaderBlobPreview();
+                clearHeaderLocalPreview();
                 setIsEditing(false);
                 setEditData({});
               } else {
@@ -950,7 +1001,7 @@ export default function FormDetailPage() {
                   Colour theme
                 </label>
                 <p className="text-xs text-gray-500 mb-2">
-                  Accent for participants (PINUS logo palette).
+                  Color accent theme for the form.
                 </p>
                 <FormSelect
                   value={editData.theme ?? form.theme ?? "blue"}
@@ -1040,7 +1091,7 @@ export default function FormDetailPage() {
                           headerUploading || !user || headerCropOpen
                         }
                         onClick={() => {
-                          revokeHeaderBlobPreview();
+                          clearHeaderLocalPreview();
                           setEditData((prev) => ({
                             ...prev,
                             headerImageUrl: "",
@@ -1180,7 +1231,7 @@ export default function FormDetailPage() {
                   variant="black"
                   outline
                   onClick={() => {
-                    revokeHeaderBlobPreview();
+                    clearHeaderLocalPreview();
                     setIsEditing(false);
                     setEditData({});
                   }}
@@ -1423,8 +1474,7 @@ export default function FormDetailPage() {
 
                       {field.type === "segmented_text" && (
                         <div>
-                          <Input
-                            type="text"
+                          <Textarea
                             value={
                               (responses.find((r) => r.fieldLabel === field.label)
                                 ?.value as string) || ""
@@ -1432,8 +1482,13 @@ export default function FormDetailPage() {
                             onChange={(e) =>
                               handleResponseChange(field.label, e.target.value)
                             }
+                            rows={4}
                             className="font-mono text-sm"
-                            placeholder={`Parts separated by "${field.segmentDelimiter ?? "/"}"`}
+                            placeholder={
+                              field.segmentPathTemplate?.trim()
+                                ? `One path per line, e.g.\npart1${field.segmentDelimiter ?? "/"}part2${field.segmentDelimiter ?? "/"}part3`
+                                : `Parts separated by "${field.segmentDelimiter ?? "/"}" (one path per line optional)`
+                            }
                             required={field.required}
                             minLength={
                               field.minLength != null && field.minLength > 0
@@ -1443,11 +1498,22 @@ export default function FormDetailPage() {
                             maxLength={field.maxLength}
                           />
                           <p className="mt-1 text-xs text-gray-500">
-                            Use the separator{" "}
+                            Use{" "}
                             <span className="font-mono">
                               {field.segmentDelimiter ?? "/"}
                             </span>{" "}
                             between segments.
+                            {field.segmentPathTemplate?.trim() ? (
+                              <>
+                                {" "}
+                                Expected shape:{" "}
+                                <span className="font-mono">
+                                  {field.segmentPathTemplate}
+                                </span>
+                                . Press Enter for another path (extra table
+                                rows).
+                              </>
+                            ) : null}
                             {(field.minLength != null ||
                               field.maxLength != null) && (
                               <>
@@ -1728,9 +1794,17 @@ export default function FormDetailPage() {
                     variant="black"
                     outline
                     onClick={() => {
-                      setFillStep((s) => Math.max(0, s - 1));
                       setError(null);
                       window.scrollTo({ top: 0, behavior: "smooth" });
+                      setFillPageHistory((h) => {
+                        if (h.length === 0) {
+                          setFillStep((s) => Math.max(0, s - 1));
+                          return h;
+                        }
+                        const prevIdx = h[h.length - 1]!;
+                        setFillStep(prevIdx);
+                        return h.slice(0, -1);
+                      });
                     }}
                   >
                     Back
@@ -1896,47 +1970,23 @@ export default function FormDetailPage() {
           }
           setHeaderCropSrc(null);
         }}
-        onComplete={async (file) => {
+        onComplete={(file) => {
           setHeaderCropOpen(false);
           if (headerCropSrcRef.current) {
             URL.revokeObjectURL(headerCropSrcRef.current);
             headerCropSrcRef.current = null;
           }
           setHeaderCropSrc(null);
-          if (!user?.id || !formId) return;
-          let pendingBlobUrl: string | null = URL.createObjectURL(file);
-          setHeaderBlobPreviewUrl(pendingBlobUrl);
-          setHeaderUploading(true);
           setError(null);
-          try {
-            const prepared = await prepareFormFileForUpload(file, {
-              acceptedTypes: ["jpeg", "png", "gif", "webp"],
-            });
-            const url = await uploadFormHeaderImage(
-              prepared.blob,
-              prepared.filename,
-              prepared.contentType,
-              formId,
-              user.id
-            );
-            setEditData((prev) => ({ ...prev, headerImageUrl: url }));
-            if (pendingBlobUrl) {
-              URL.revokeObjectURL(pendingBlobUrl);
-              pendingBlobUrl = null;
-            }
-            setHeaderBlobPreviewUrl(null);
-          } catch (err) {
-            if (pendingBlobUrl) {
-              URL.revokeObjectURL(pendingBlobUrl);
-              pendingBlobUrl = null;
-            }
-            setHeaderBlobPreviewUrl(null);
-            setError(
-              err instanceof Error ? err.message : "Upload failed"
-            );
-          } finally {
-            setHeaderUploading(false);
-          }
+          setHeaderLocalPreviewUrl((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return URL.createObjectURL(file);
+          });
+          setHeaderPendingCropFile(file);
+          setEditData((prev) => ({
+            ...prev,
+            headerImageUrl: "",
+          }));
         }}
       />
 

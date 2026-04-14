@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { format, parseISO } from "date-fns";
+import { format, parse, parseISO } from "date-fns";
 import type { DateFieldMode } from "@/lib/form-field-types";
 import { Calendar } from "@/app/components/ui/calendar";
 import {
@@ -9,8 +9,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/app/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/app/components/ui/select";
 import { cn } from "@/app/components/lib/utils";
-import { Input } from "@/app/components/ui/input";
 import { Button } from "@/app/components/ui/button";
 
 function parseYmd(value: string): Date | undefined {
@@ -21,6 +27,121 @@ function parseYmd(value: string): Date | undefined {
 
 function ymdFromDate(d: Date): string {
   return format(d, "yyyy-MM-dd");
+}
+
+function isValidHm(s: string): boolean {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(s);
+}
+
+const HOURS = Array.from({ length: 24 }, (_, i) =>
+  String(i).padStart(2, "0")
+);
+const MINUTES = Array.from({ length: 60 }, (_, i) =>
+  String(i).padStart(2, "0")
+);
+
+interface TimePickerFieldProps {
+  value: string;
+  onChange: (hhmm: string) => void;
+  disabled?: boolean;
+  id?: string;
+  required?: boolean;
+}
+
+/** Shadcn-style time control: popover + hour/minute selects (matches date picker trigger). */
+function TimePickerField({
+  value,
+  onChange,
+  disabled,
+  id,
+  required,
+}: TimePickerFieldProps) {
+  const [open, setOpen] = React.useState(false);
+
+  const hourStr =
+    value && isValidHm(value) ? value.slice(0, 2) : "12";
+  const minuteStr =
+    value && isValidHm(value) ? value.slice(3, 5) : "00";
+
+  const label =
+    value && isValidHm(value)
+      ? format(parse(value, "HH:mm", new Date()), "p")
+      : "Pick a time";
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          id={id}
+          type="button"
+          variant="black"
+          outline
+          disabled={disabled}
+          rounding="md"
+          aria-required={required}
+          className={cn(
+            "w-full max-w-md justify-start font-normal text-left h-auto py-2 px-3 text-sm",
+            !value && "text-gray-500"
+          )}
+        >
+          {label}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-3" align="start">
+        <div className="flex items-center justify-center gap-2">
+          <Select
+            value={hourStr}
+            onValueChange={(h) => {
+              onChange(`${h}:${minuteStr}`);
+            }}
+            disabled={disabled}
+          >
+            <SelectTrigger
+              variant="black"
+              outline
+              size="sm"
+              rounding="md"
+              className="w-[5.25rem]"
+            >
+              <SelectValue placeholder="Hour" />
+            </SelectTrigger>
+            <SelectContent variant="black" outline position="popper">
+              {HOURS.map((h) => (
+                <SelectItem key={h} value={h} variant="blue">
+                  {h}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <span className="text-sm text-gray-500 tabular-nums">:</span>
+          <Select
+            value={minuteStr}
+            onValueChange={(m) => {
+              onChange(`${hourStr}:${m}`);
+            }}
+            disabled={disabled}
+          >
+            <SelectTrigger
+              variant="black"
+              outline
+              size="sm"
+              rounding="md"
+              className="w-[5.25rem]"
+            >
+              <SelectValue placeholder="Min" />
+            </SelectTrigger>
+            <SelectContent variant="black" outline position="popper">
+              {MINUTES.map((m) => (
+                <SelectItem key={m} value={m} variant="blue">
+                  {m}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 interface FormDateFieldProps {
@@ -65,14 +186,12 @@ export function FormDateField({
 
   if (mode === "time") {
     return (
-      <Input
+      <TimePickerField
         id={id}
-        type="time"
         value={value || ""}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={onChange}
         required={required}
         disabled={disabled}
-        className="max-w-xs"
       />
     );
   }
@@ -151,11 +270,9 @@ export function FormDateField({
           />
         </PopoverContent>
       </Popover>
-      <Input
-        type="time"
+      <TimePickerField
         value={timePart}
-        onChange={(e) => {
-          const t = e.target.value;
+        onChange={(t) => {
           if (!datePart) {
             const base = new Date();
             base.setHours(0, 0, 0, 0);
@@ -170,7 +287,6 @@ export function FormDateField({
           onChange(next.toISOString());
         }}
         disabled={disabled}
-        className="max-w-xs"
       />
     </div>
   );

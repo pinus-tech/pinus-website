@@ -8,7 +8,14 @@ import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import type { FormFieldDefinition } from "@/lib/form-field-types";
 import { isDataField } from "@/lib/form-field-types";
-import { maxSegmentCount, splitSegments } from "@/lib/segmented-text";
+import {
+  maxSegmentCount,
+  parseSegmentPathTemplate,
+  segmentPartAtLine,
+  splitSegments,
+  splitSegmentInputLines,
+  subRowsForResponse,
+} from "@/lib/segmented-text";
 import { FormAttachmentViewer } from "@/app/components/forms/FormAttachmentViewer";
 import { DescriptionContent } from "@/app/components/DescriptionContent";
 
@@ -155,10 +162,15 @@ function FormResponsesPageContent() {
 
   const segmentedMaxByLabel = useMemo(() => {
     const m = new Map<string, number>();
-    if (!form || responses.length === 0) return m;
+    if (!form) return m;
     for (const field of dataFields) {
       if (field.type !== "segmented_text") continue;
       const delim = field.segmentDelimiter ?? "/";
+      const tpl = parseSegmentPathTemplate(field.segmentPathTemplate, delim);
+      if (tpl.length > 0) {
+        m.set(field.label, tpl.length);
+        continue;
+      }
       const vals = responses.map((r) => {
         const fr = r.responses.find((x) => x.fieldLabel === field.label);
         return fr ? String(fr.value ?? "") : "";
@@ -173,11 +185,20 @@ function FormResponsesPageContent() {
       [];
     for (const field of dataFields) {
       if (field.type === "segmented_text") {
-        const n = Math.max(1, segmentedMaxByLabel.get(field.label) ?? 1);
+        const delim = field.segmentDelimiter ?? "/";
+        const tpl = parseSegmentPathTemplate(field.segmentPathTemplate, delim);
+        const n = Math.max(
+          1,
+          tpl.length > 0
+            ? tpl.length
+            : segmentedMaxByLabel.get(field.label) ?? 1
+        );
         for (let i = 0; i < n; i++) {
+          const partLabel =
+            tpl[i] != null ? `${field.label}-${tpl[i]}` : `${field.label} (${i + 1})`;
           cols.push({
             key: `${field.label}::${i}`,
-            label: `${field.label} (${i + 1})`,
+            label: partLabel,
             field,
             partIndex: i,
           });
@@ -188,6 +209,21 @@ function FormResponsesPageContent() {
     }
     return cols;
   }, [dataFields, segmentedMaxByLabel]);
+
+  const tableRowEntries = useMemo(() => {
+    const rows: {
+      response: FormResponse;
+      responseIndex: number;
+      subRow: number;
+    }[] = [];
+    responses.forEach((response, responseIndex) => {
+      const k = subRowsForResponse(response, dataFields);
+      for (let sub = 0; sub < k; sub++) {
+        rows.push({ response, responseIndex, subRow: sub });
+      }
+    });
+    return rows;
+  }, [responses, dataFields]);
 
   const fetchFormAndResponses = async () => {
     try {
@@ -282,6 +318,11 @@ function FormResponsesPageContent() {
       for (const field of dataFields) {
         if (field.type !== "segmented_text") continue;
         const delim = field.segmentDelimiter ?? "/";
+        const tpl = parseSegmentPathTemplate(field.segmentPathTemplate, delim);
+        if (tpl.length > 0) {
+          segmentedMax.set(field.label, tpl.length);
+          continue;
+        }
         const vals = responses.map((r) => {
           const fr = r.responses.find((x) => x.fieldLabel === field.label);
           return fr ? String(fr.value ?? "") : "";
@@ -291,10 +332,20 @@ function FormResponsesPageContent() {
 
       for (const field of dataFields) {
         if (field.type === "segmented_text") {
-          const n = segmentedMax.get(field.label) ?? 0;
-          const count = Math.max(1, n);
-          for (let i = 0; i < count; i++) {
-            headers.push(`${field.label} (${i + 1})`);
+          const delim = field.segmentDelimiter ?? "/";
+          const tpl = parseSegmentPathTemplate(field.segmentPathTemplate, delim);
+          const n = Math.max(
+            1,
+            tpl.length > 0
+              ? tpl.length
+              : segmentedMax.get(field.label) ?? 1
+          );
+          for (let i = 0; i < n; i++) {
+            const partLabel =
+              tpl[i] != null
+                ? `${field.label}-${tpl[i]}`
+                : `${field.label} (${i + 1})`;
+            headers.push(partLabel);
           }
         } else {
           headers.push(field.label);
@@ -304,43 +355,56 @@ function FormResponsesPageContent() {
       const csvRows: string[] = [headers.map(escapeCell).join(",")];
 
       for (const response of responses) {
-        const row: string[] = [
-          escapeCell(response.respondent?.name ?? ""),
-          escapeCell(response.respondent?.email ?? ""),
-          escapeCell(response.respondent?.phoneNumber ?? ""),
-          escapeCell(response.respondent?.telegram ?? ""),
-          escapeCell(new Date(response.submittedAt).toLocaleString()),
-        ];
+        const subCount = subRowsForResponse(response, dataFields);
+        for (let subRow = 0; subRow < subCount; subRow++) {
+          const row: string[] = [
+            subRow === 0 ? escapeCell(response.respondent?.name ?? "") : '""',
+            subRow === 0 ? escapeCell(response.respondent?.email ?? "") : '""',
+            subRow === 0 ? escapeCell(response.respondent?.phoneNumber ?? "") : '""',
+            subRow === 0 ? escapeCell(response.respondent?.telegram ?? "") : '""',
+            subRow === 0
+              ? escapeCell(new Date(response.submittedAt).toLocaleString())
+              : '""',
+          ];
 
-        for (const field of dataFields) {
-          const fr = response.responses.find(
-            (r) => r.fieldLabel === field.label
-          );
-          const raw = fr?.value;
-
-          if (field.type === "segmented_text") {
-            const delim = field.segmentDelimiter ?? "/";
-            const parts = splitSegments(
-              fr ? String(raw ?? "") : "",
-              delim
+          for (const field of dataFields) {
+            const fr = response.responses.find(
+              (r) => r.fieldLabel === field.label
             );
-            const count = segmentedMax.get(field.label) ?? parts.length;
-            const target = Math.max(count, 1);
-            for (let i = 0; i < target; i++) {
-              row.push(escapeCell(parts[i] ?? ""));
+            const raw = fr?.value;
+
+            if (field.type === "segmented_text") {
+              const delim = field.segmentDelimiter ?? "/";
+              const target =
+                segmentedMax.get(field.label) ?? 1;
+              for (let i = 0; i < target; i++) {
+                const cell = segmentPartAtLine(
+                  fr ? String(raw ?? "") : "",
+                  delim,
+                  i,
+                  subRow
+                );
+                row.push(escapeCell(cell));
+              }
+            } else if (subRow === 0) {
+              if (field.type === "multiple_choice") {
+                row.push(
+                  escapeCell(
+                    Array.isArray(raw)
+                      ? (raw as string[]).join("; ")
+                      : String(raw ?? "")
+                  )
+                );
+              } else {
+                row.push(escapeCell(formatCellForCsv(raw, field)));
+              }
+            } else {
+              row.push('""');
             }
-          } else if (field.type === "multiple_choice") {
-            row.push(
-              escapeCell(
-                Array.isArray(raw) ? (raw as string[]).join("; ") : String(raw ?? "")
-              )
-            );
-          } else {
-            row.push(escapeCell(formatCellForCsv(raw, field)));
           }
-        }
 
-        csvRows.push(row.join(","));
+          csvRows.push(row.join(","));
+        }
       }
 
       const csvContent = csvRows.join("\n");
@@ -395,35 +459,51 @@ function FormResponsesPageContent() {
       }
       case "segmented_text": {
         const delim = field.segmentDelimiter ?? "/";
-        const parts = splitSegments(String(value), delim);
-        if (parts.length === 0) return "-";
+        const tpl = parseSegmentPathTemplate(field.segmentPathTemplate, delim);
+        const lines = splitSegmentInputLines(String(value));
+        if (lines.length === 0) return "-";
         return (
-          <table className="mt-1 min-w-[240px] border-collapse border border-gray-200 text-sm">
-            <thead>
-              <tr>
-                {parts.map((_, i) => (
-                  <th
-                    key={i}
-                    className="border border-gray-200 bg-gray-100 px-2 py-1 text-left font-medium text-gray-700"
-                  >
-                    Part {i + 1}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                {parts.map((p, i) => (
-                  <td
-                    key={i}
-                    className="border border-gray-200 px-2 py-1 text-gray-900"
-                  >
-                    {p || "-"}
-                  </td>
-                ))}
-              </tr>
-            </tbody>
-          </table>
+          <div className="space-y-3">
+            {lines.map((line, lineIdx) => {
+              const parts = splitSegments(line, delim);
+              const heads =
+                tpl.length > 0
+                  ? tpl.map((t) => `${field.label}-${t}`)
+                  : parts.map((_, i) => `Part ${i + 1}`);
+              const n = Math.max(heads.length, parts.length);
+              return (
+                <table
+                  key={lineIdx}
+                  className="min-w-[240px] border-collapse border border-gray-200 text-sm"
+                >
+                  <thead>
+                    <tr>
+                      {Array.from({ length: n }, (_, i) => (
+                        <th
+                          key={i}
+                          className="border border-gray-200 bg-gray-100 px-2 py-1 text-left font-medium text-gray-700"
+                        >
+                          {heads[i] ?? `Part ${i + 1}`}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      {Array.from({ length: n }, (_, i) => (
+                        <td
+                          key={i}
+                          className="border border-gray-200 px-2 py-1 text-gray-900"
+                        >
+                          {(parts[i] ?? "") || "-"}
+                        </td>
+                      ))}
+                    </tr>
+                  </tbody>
+                </table>
+              );
+            })}
+          </div>
         );
       }
       default:
@@ -607,25 +687,35 @@ function FormResponsesPageContent() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {responses.map((response, index) => (
-                  <tr key={response.id} className="hover:bg-gray-50/80">
+                {tableRowEntries.map(
+                  ({ response, responseIndex, subRow }) => (
+                  <tr
+                    key={`${response.id}-${subRow}`}
+                    className="hover:bg-gray-50/80"
+                  >
                     <td className="sticky left-0 z-10 bg-white px-3 py-2 text-gray-600">
-                      {index + 1}
+                      {subRow === 0 ? responseIndex + 1 : ""}
                     </td>
                     <td className="px-3 py-2 text-gray-900 whitespace-nowrap">
-                      {response.respondent?.name ?? "-"}
+                      {subRow === 0 ? response.respondent?.name ?? "-" : ""}
                     </td>
                     <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
-                      {response.respondent?.email ?? "-"}
+                      {subRow === 0 ? response.respondent?.email ?? "-" : ""}
                     </td>
                     <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
-                      {response.respondent?.phoneNumber?.trim() || "-"}
+                      {subRow === 0
+                        ? response.respondent?.phoneNumber?.trim() || "-"
+                        : ""}
                     </td>
                     <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
-                      {response.respondent?.telegram?.trim() || "-"}
+                      {subRow === 0
+                        ? response.respondent?.telegram?.trim() || "-"
+                        : ""}
                     </td>
                     <td className="px-3 py-2 text-gray-600 whitespace-nowrap">
-                      {new Date(response.submittedAt).toLocaleString()}
+                      {subRow === 0
+                        ? new Date(response.submittedAt).toLocaleString()
+                        : ""}
                     </td>
                     {tableColumns.map((col) => {
                       const fr = response.responses.find(
@@ -634,7 +724,9 @@ function FormResponsesPageContent() {
                       const raw = fr?.value;
                       if (col.field.type === "file_upload") {
                         const u =
-                          raw != null ? String(raw).trim() : "";
+                          subRow === 0 && raw != null
+                            ? String(raw).trim()
+                            : "";
                         return (
                           <td
                             key={col.key}
@@ -649,34 +741,43 @@ function FormResponsesPageContent() {
                         );
                       }
                       let cell = "";
-                      if (col.partIndex !== undefined && col.field.type === "segmented_text") {
+                      if (
+                        col.partIndex !== undefined &&
+                        col.field.type === "segmented_text"
+                      ) {
                         const delim = col.field.segmentDelimiter ?? "/";
-                        const parts = splitSegments(
+                        cell = segmentPartAtLine(
                           raw != null ? String(raw) : "",
-                          delim
+                          delim,
+                          col.partIndex,
+                          subRow
                         );
-                        cell = parts[col.partIndex] ?? "";
-                      } else {
+                      } else if (subRow === 0) {
                         cell = formatPlainCell(raw, col.field);
                       }
                       return (
                         <td key={col.key} className="px-3 py-2 text-gray-900 max-w-[280px]">
-                          <span className="line-clamp-4 break-words">{cell || "-"}</span>
+                          <span className="line-clamp-4 break-words">
+                            {cell || "-"}
+                          </span>
                         </td>
                       );
                     })}
                     <td className="px-3 py-2 whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => deleteResponse(response.id)}
-                        disabled={deletingId === response.id}
-                        className="text-red-600 hover:text-red-800 hover:underline disabled:opacity-50 text-sm font-medium"
-                      >
-                        {deletingId === response.id ? "…" : "Delete"}
-                      </button>
+                      {subRow === 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => deleteResponse(response.id)}
+                          disabled={deletingId === response.id}
+                          className="text-red-600 hover:text-red-800 hover:underline disabled:opacity-50 text-sm font-medium"
+                        >
+                          {deletingId === response.id ? "…" : "Delete"}
+                        </button>
+                      ) : null}
                     </td>
                   </tr>
-                ))}
+                  )
+                )}
               </tbody>
             </table>
           </div>
