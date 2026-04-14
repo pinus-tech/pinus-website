@@ -107,8 +107,22 @@ export default function FormsPage() {
           sessionStorage.removeItem("pinus-forms-ise-retry");
         }
       } else {
-        const errorData = await response.json();
-        setError(errorData.error || "Failed to fetch forms");
+        if (
+          typeof window !== "undefined" &&
+          response.status >= 500 &&
+          response.status < 600
+        ) {
+          const key = "pinus-forms-ise-retry";
+          if (!sessionStorage.getItem(key)) {
+            sessionStorage.setItem(key, "1");
+            window.location.reload();
+            return;
+          }
+        }
+        const errorData = await response.json().catch(() => ({}));
+        setError(
+          (errorData as { error?: string }).error || "Failed to fetch forms"
+        );
       }
     } catch {
       setError("Network error occurred");

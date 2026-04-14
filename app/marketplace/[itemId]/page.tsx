@@ -57,6 +57,7 @@ export default function MarketplaceItemDetailPage() {
   const [sgdIdrQuote, setSgdIdrQuote] = useState<SgdIdrQuote | null>(null);
   const [sgdIdrError, setSgdIdrError] = useState<string | null>(null);
   const [sgdIdrLoading, setSgdIdrLoading] = useState(false);
+  const [fxModalOpen, setFxModalOpen] = useState(false);
 
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -221,6 +222,19 @@ export default function MarketplaceItemDetailPage() {
       minute: "2-digit",
     }).format(d);
   };
+
+  const formatFxDateLong = (utcString: string | null) => {
+    if (!utcString) return "-";
+    const d = new Date(utcString);
+    if (Number.isNaN(d.getTime())) return utcString;
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(d);
+  };
+
+  const formatRate = (n: number) =>
+    new Intl.NumberFormat("en-SG", { maximumFractionDigits: 2 }).format(n);
 
   const getCategoryLabel = (category: string) => {
     const categories = [
@@ -548,16 +562,23 @@ export default function MarketplaceItemDetailPage() {
                     {!sgdIdrLoading && sgdIdrError && (
                       <p className="text-xs text-amber-800">{sgdIdrError}</p>
                     )}
-                    {!sgdIdrLoading && idrEquivalent !== null && (
-                      <p>
-                        ≈ Rp {formatIdr(idrEquivalent)}
-                        {sgdIdrQuote?.updatedAt && (
-                          <span className="text-gray-500">
-                            {" "}
-                            (rate{" "}
-                            {formatFxDateShort(sgdIdrQuote.updatedAt)})
-                          </span>
-                        )}
+                    {!sgdIdrLoading && idrEquivalent !== null && sgdIdrQuote && (
+                      <p className="text-sm leading-snug">
+                        ≈ Rp {formatIdr(idrEquivalent)}{" "}
+                        <span className="text-gray-500">
+                          (ExchangeRate-API
+                          {sgdIdrQuote.updatedAt
+                            ? `, ${formatFxDateShort(sgdIdrQuote.updatedAt)}`
+                            : ""}
+                          )
+                        </span>{" "}
+                        <button
+                          type="button"
+                          onClick={() => setFxModalOpen(true)}
+                          className="text-blue-600 hover:text-blue-800 underline font-medium"
+                        >
+                          see more
+                        </button>
                       </p>
                     )}
                   </div>
@@ -601,9 +622,17 @@ export default function MarketplaceItemDetailPage() {
                       <span className="block">{formatPrice(item.price)}</span>
                       {item.price > 0 &&
                         !sgdIdrLoading &&
-                        idrEquivalent !== null && (
+                        idrEquivalent !== null &&
+                        sgdIdrQuote && (
                           <span className="block text-xs font-normal text-gray-600">
-                            ≈ Rp {formatIdr(idrEquivalent)}
+                            ≈ Rp {formatIdr(idrEquivalent)}{" "}
+                            <button
+                              type="button"
+                              onClick={() => setFxModalOpen(true)}
+                              className="text-blue-600 hover:text-blue-800 underline font-medium"
+                            >
+                              see more
+                            </button>
                           </span>
                         )}
                       {item.price > 0 && sgdIdrLoading && (
@@ -746,6 +775,88 @@ export default function MarketplaceItemDetailPage() {
           </div>
         </div>
       </div>
+
+      {fxModalOpen && sgdIdrQuote && idrEquivalent !== null && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/40"
+            aria-label="Close exchange details"
+            onClick={() => setFxModalOpen(false)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="fx-modal-title-item"
+            className="relative z-10 w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl"
+          >
+            <h2
+              id="fx-modal-title-item"
+              className="text-lg font-semibold text-gray-900"
+            >
+              IDR estimate details
+            </h2>
+            <div className="mt-4 space-y-3 text-sm text-gray-700">
+              <p>
+                <span className="font-medium text-gray-900">≈ Rp </span>
+                {formatIdr(idrEquivalent)}{" "}
+                <span className="text-gray-500">
+                  (from the listing price in SGD × rate)
+                </span>
+              </p>
+              <p>
+                <span className="font-medium text-gray-900">1 SGD ≈ </span>
+                {formatRate(sgdIdrQuote.idrPerSgd)} IDR
+              </p>
+              <p>
+                <span className="font-medium text-gray-900">
+                  Rate last updated (your time):
+                </span>{" "}
+                {formatFxDateLong(sgdIdrQuote.updatedAt)}
+              </p>
+              {sgdIdrQuote.nextUpdateAt && (
+                <p>
+                  <span className="font-medium text-gray-900">
+                    Next data refresh (your time):
+                  </span>{" "}
+                  {formatFxDateLong(sgdIdrQuote.nextUpdateAt)}
+                </p>
+              )}
+              <p className="text-gray-600">{sgdIdrQuote.sourceLabel}</p>
+              <p className="text-gray-600">
+                Bank counters (e.g.{" "}
+                <a
+                  href="https://www.ocbc.com/personal-banking/fx-rates.page"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-700 underline"
+                >
+                  OCBC
+                </a>
+                ) or{" "}
+                <a
+                  href="https://www.google.com/finance/quote/SGD-IDR"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-700 underline"
+                >
+                  Google Finance
+                </a>{" "}
+                may show different rates - this is indicative only.
+              </p>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setFxModalOpen(false)}
+                className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-200"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
