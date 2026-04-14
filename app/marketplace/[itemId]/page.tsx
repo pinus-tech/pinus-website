@@ -15,6 +15,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/app/components/ui/select";
+import { Button } from "@/app/components/ui/button";
+import { Checkbox } from "@/app/components/ui/checkbox";
+
+type SgdIdrQuote = {
+  idrPerSgd: number;
+  updatedAt: string | null;
+  nextUpdateAt?: string | null;
+  sourceLabel?: string;
+};
 
 interface MarketplaceItem {
   id: string;
@@ -45,6 +54,9 @@ export default function MarketplaceItemDetailPage() {
   const [success, setSuccess] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState<Partial<MarketplaceItem>>({});
+  const [sgdIdrQuote, setSgdIdrQuote] = useState<SgdIdrQuote | null>(null);
+  const [sgdIdrError, setSgdIdrError] = useState<string | null>(null);
+  const [sgdIdrLoading, setSgdIdrLoading] = useState(false);
 
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -63,6 +75,41 @@ export default function MarketplaceItemDetailPage() {
     // Fetch item details
     fetchItem();
   }, [authLoading, itemId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setSgdIdrLoading(true);
+      setSgdIdrError(null);
+      try {
+        const res = await fetch("/api/fx/sgd-idr");
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to load rates");
+        }
+        if (!cancelled) {
+          setSgdIdrQuote({
+            idrPerSgd: data.idrPerSgd,
+            updatedAt: data.updatedAt ?? null,
+            nextUpdateAt: data.nextUpdateAt ?? null,
+            sourceLabel: data.sourceLabel,
+          });
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setSgdIdrError(
+            e instanceof Error ? e.message : "Could not load IDR estimate"
+          );
+          setSgdIdrQuote(null);
+        }
+      } finally {
+        if (!cancelled) setSgdIdrLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const fetchItem = async () => {
     try {
@@ -157,6 +204,24 @@ export default function MarketplaceItemDetailPage() {
     return `$${price.toFixed(2)}`;
   };
 
+  const formatIdr = (n: number) =>
+    new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 }).format(
+      Math.round(n)
+    );
+
+  const formatFxDateShort = (utcString: string | null) => {
+    if (!utcString) return "";
+    const d = new Date(utcString);
+    if (Number.isNaN(d.getTime())) return utcString;
+    return new Intl.DateTimeFormat(undefined, {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(d);
+  };
+
   const getCategoryLabel = (category: string) => {
     const categories = [
       "Electronics",
@@ -211,30 +276,35 @@ export default function MarketplaceItemDetailPage() {
     );
   }
 
+  const idrEquivalent =
+    sgdIdrQuote && Number.isFinite(item.price) && item.price > 0
+      ? item.price * sgdIdrQuote.idrPerSgd
+      : null;
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <button
+          <Button
+            type="button"
+            variant="black"
+            outline
             onClick={() => router.push("/marketplace")}
-            className="text-gray-600 hover:text-gray-900 font-medium"
           >
             ← Back to Marketplace
-          </button>
+          </Button>
           {canEditItem && (
-            <div className="flex space-x-2">
-              <button
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="blue"
                 onClick={() => setIsEditing(!isEditing)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
               >
                 {isEditing ? "Cancel Edit" : "Edit Item"}
-              </button>
-              <button
-                onClick={handleDelete}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-              >
+              </Button>
+              <Button type="button" variant="red" onClick={handleDelete}>
                 Delete Item
-              </button>
+              </Button>
             </div>
           )}
         </div>
@@ -287,18 +357,16 @@ export default function MarketplaceItemDetailPage() {
                   rows={3}
                 />
                 <label className="mt-2 flex cursor-pointer items-center gap-2">
-                  <input
-                    type="checkbox"
-                    className="rounded border-gray-300"
+                  <Checkbox
                     checked={
                       editData.descriptionMarkdown ??
                       item.descriptionMarkdown ??
                       false
                     }
-                    onChange={(e) =>
+                    onCheckedChange={(c) =>
                       setEditData((prev) => ({
                         ...prev,
-                        descriptionMarkdown: e.target.checked,
+                        descriptionMarkdown: c === true,
                       }))
                     }
                   />
@@ -391,21 +459,18 @@ export default function MarketplaceItemDetailPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex space-x-4">
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-                >
+              <div className="flex flex-wrap gap-3">
+                <Button type="submit" variant="blue" disabled={submitting}>
                   {submitting ? "Saving..." : "Save Changes"}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  variant="black"
+                  outline
                   onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             </form>
           </div>
@@ -475,6 +540,28 @@ export default function MarketplaceItemDetailPage() {
                 <div className="text-3xl font-bold text-blue-600">
                   {formatPrice(item.price)}
                 </div>
+                {item.price > 0 && (
+                  <div className="mt-1 space-y-0.5 text-sm text-gray-600">
+                    {sgdIdrLoading && (
+                      <p className="text-gray-500">IDR estimate…</p>
+                    )}
+                    {!sgdIdrLoading && sgdIdrError && (
+                      <p className="text-xs text-amber-800">{sgdIdrError}</p>
+                    )}
+                    {!sgdIdrLoading && idrEquivalent !== null && (
+                      <p>
+                        ≈ Rp {formatIdr(idrEquivalent)}
+                        {sgdIdrQuote?.updatedAt && (
+                          <span className="text-gray-500">
+                            {" "}
+                            (rate{" "}
+                            {formatFxDateShort(sgdIdrQuote.updatedAt)})
+                          </span>
+                        )}
+                      </p>
+                    )}
+                  </div>
+                )}
                 <div className="text-sm text-gray-500">
                   Posted {new Date(item.createdAt).toLocaleDateString()}
                 </div>
@@ -508,10 +595,22 @@ export default function MarketplaceItemDetailPage() {
                       {getCategoryLabel(item.category || "Other")}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Price:</span>
-                    <span className="font-medium">
-                      {formatPrice(item.price)}
+                  <div className="flex justify-between gap-2">
+                    <span className="shrink-0 text-gray-600">Price:</span>
+                    <span className="text-right font-medium">
+                      <span className="block">{formatPrice(item.price)}</span>
+                      {item.price > 0 &&
+                        !sgdIdrLoading &&
+                        idrEquivalent !== null && (
+                          <span className="block text-xs font-normal text-gray-600">
+                            ≈ Rp {formatIdr(idrEquivalent)}
+                          </span>
+                        )}
+                      {item.price > 0 && sgdIdrLoading && (
+                        <span className="block text-xs font-normal text-gray-500">
+                          IDR estimate…
+                        </span>
+                      )}
                     </span>
                   </div>
                   <div className="flex justify-between">

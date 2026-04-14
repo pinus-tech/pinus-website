@@ -728,6 +728,8 @@ export default function FormDetailPage() {
   const showGoogleStyleFillCard =
     form.isActive && !!canFillForm && !isEditing;
 
+  const formDisplayTitle = form.title?.trim() || "Untitled form";
+
   const topBarActions =
     (canShareLink || canEditForm || form.userPermissions?.canViewResponses) && (
       <div className="flex flex-wrap gap-2 justify-end">
@@ -778,7 +780,9 @@ export default function FormDetailPage() {
         ) : (
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{form.title}</h1>
+              <h1 className="text-3xl font-bold text-gray-900">
+                {formDisplayTitle}
+              </h1>
               {form.description && (
                 <div className="text-gray-600 mt-2 max-w-3xl">
                   <DescriptionContent
@@ -854,7 +858,7 @@ export default function FormDetailPage() {
                   onChange={(e) =>
                     setEditData((prev) => ({ ...prev, title: e.target.value }))
                   }
-                  required
+                  placeholder="Optional — shown to respondents"
                 />
               </div>
               <div>
@@ -1231,7 +1235,7 @@ export default function FormDetailPage() {
               }}
             >
               <h2 className="text-[1.65rem] font-normal leading-tight tracking-tight text-gray-900">
-                {form.title}
+                {formDisplayTitle}
               </h2>
               {form.description?.trim() && (
                 <div className="mt-3 max-w-2xl text-base text-gray-600">
