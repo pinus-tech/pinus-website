@@ -104,6 +104,40 @@ export function resolveNextPageIndex(
   return Math.min(currentIndex + 1, Math.max(0, pages.length - 1));
 }
 
+/**
+ * Page ids the respondent reached when moving from page 0 to `finalStepIndex`
+ * using the same branching rules as Next (for required-field validation).
+ */
+export function collectVisitedPageIdsAlongPath(
+  pages: FormPageDefinition[],
+  fields: FormFieldDefinition[],
+  responseByLabel: Map<string, unknown>,
+  finalStepIndex: number
+): string[] {
+  if (pages.length === 0) return [];
+  const out: string[] = [pages[0]!.id];
+  let idx = 0;
+  while (idx < finalStepIndex) {
+    const nextIdx = resolveNextPageIndex(
+      pages,
+      idx,
+      fieldsOnPage(fields, pages[idx]!.id),
+      responseByLabel
+    );
+    idx = nextIdx;
+    out.push(pages[idx]!.id);
+  }
+  return out;
+}
+
+export function getFieldPageId(
+  field: FormFieldDefinition,
+  firstPageId: string
+): string {
+  const p = field.pageId;
+  return typeof p === "string" && p.trim().length > 0 ? p : firstPageId;
+}
+
 export const FORM_THEMES: { value: FormTheme; label: string }[] = [
   { value: "blue", label: "Blue" },
   { value: "red", label: "Red" },

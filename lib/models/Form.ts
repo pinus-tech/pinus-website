@@ -58,6 +58,10 @@ export interface IForm extends mongoose.Document {
     description?: string;
     order: number;
   }>;
+  /** Organiser preferences for responses list / CSV (respondent profile columns). */
+  responseSettings?: {
+    respondentColumns?: string[];
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -127,6 +131,9 @@ const formSchema = new mongoose.Schema({
     unique: true,
     trim: true,
     maxlength: 80,
+  },
+  responseSettings: {
+    respondentColumns: [{ type: String }],
   },
 }, {
   timestamps: true,

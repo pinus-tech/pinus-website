@@ -18,6 +18,16 @@ import {
 } from "@/lib/segmented-text";
 import { FormAttachmentViewer } from "@/app/components/forms/FormAttachmentViewer";
 import { DescriptionContent } from "@/app/components/DescriptionContent";
+import { Checkbox } from "@/app/components/ui/checkbox";
+import { Button } from "@/app/components/ui/button";
+import {
+  DEFAULT_RESPONDENT_COLUMNS,
+  formatRespondentColumnValue,
+  normalizeRespondentColumns,
+  RESPONDENT_COLUMN_KEYS,
+  RESPONDENT_COLUMN_LABELS,
+  type RespondentColumnKey,
+} from "@/lib/forms/response-settings";
 
 type FormField = FormFieldDefinition;
 
@@ -64,6 +74,13 @@ interface Form {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  responseSettings?: {
+    respondentColumns: RespondentColumnKey[];
+  };
+  userPermissions?: {
+    canEdit?: boolean;
+    canViewResponses?: boolean;
+  };
 }
 
 interface FormResponse {
@@ -74,6 +91,12 @@ interface FormResponse {
     email: string;
     telegram?: string;
     phoneNumber?: string;
+    city?: string;
+    highSchool?: string;
+    major?: string;
+    intakeYear?: number;
+    yearOfStudy?: number;
+    career?: string;
   } | null;
   responses: Array<{
     fieldLabel: string;
@@ -115,6 +138,10 @@ function FormResponsesPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [exportLoading, setExportLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [respondentColumnsDraft, setRespondentColumnsDraft] = useState<
+    RespondentColumnKey[]
+  >(DEFAULT_RESPONDENT_COLUMNS);
+  const [settingsSaving, setSettingsSaving] = useState(false);
 
   const { user, loading: authLoading } = useAuth();
   const isSiteAdmin = !!(user?.isSuperAdmin || user?.isAdmin);
@@ -154,6 +181,31 @@ function FormResponsesPageContent() {
     sessionStorage.setItem(key, "1");
     window.location.reload();
   }, [error, formId]);
+
+  useEffect(() => {
+    if (!form) return;
+    setRespondentColumnsDraft(
+      normalizeRespondentColumns(form.responseSettings?.respondentColumns)
+    );
+  }, [form?.id, form?.updatedAt]);
+
+  const respondentColumns = useMemo(
+    () =>
+      form
+        ? normalizeRespondentColumns(form.responseSettings?.respondentColumns)
+        : DEFAULT_RESPONDENT_COLUMNS,
+    [form, form?.responseSettings?.respondentColumns]
+  );
+
+  const respondentColumnsSignature = (cols: RespondentColumnKey[]) =>
+    RESPONDENT_COLUMN_KEYS.filter((k) => cols.includes(k)).join("|");
+
+  const responseColumnSettingsDirty = useMemo(
+    () =>
+      respondentColumnsSignature(respondentColumnsDraft) !==
+      respondentColumnsSignature(respondentColumns),
+    [respondentColumnsDraft, respondentColumns]
+  );
 
   const dataFields = useMemo(
     () => (form ? form.fields.filter((f) => isDataField(f)) : []),
@@ -296,6 +348,46 @@ function FormResponsesPageContent() {
     }
   };
 
+  const toggleRespondentColumn = (key: RespondentColumnKey) => {
+    setRespondentColumnsDraft((prev) => {
+      const set = new Set(prev);
+      if (set.has(key)) {
+        set.delete(key);
+      } else {
+        set.add(key);
+      }
+      const next = RESPONDENT_COLUMN_KEYS.filter((k) => set.has(k));
+      return next.length > 0 ? next : prev;
+    });
+  };
+
+  const saveResponseSettings = async () => {
+    if (!form?.userPermissions?.canEdit) return;
+    setSettingsSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/forms/${formId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          responseSettings: { respondentColumns: respondentColumnsDraft },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Failed to save");
+        return;
+      }
+      if (data.form) {
+        setForm(data.form);
+      }
+    } catch {
+      setError("Failed to save settings");
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
+
   const exportToCSV = () => {
     if (!form || responses.length === 0) return;
 
@@ -306,10 +398,7 @@ function FormResponsesPageContent() {
         `"${String(v).replace(/"/g, '""')}"`;
 
       const headers: string[] = [
-        "Respondent Name",
-        "Respondent Email",
-        "Phone",
-        "Telegram",
+        ...respondentColumns.map((k) => RESPONDENT_COLUMN_LABELS[k]),
         "Submitted At",
       ];
 
@@ -358,10 +447,16 @@ function FormResponsesPageContent() {
         const subCount = subRowsForResponse(response, dataFields);
         for (let subRow = 0; subRow < subCount; subRow++) {
           const row: string[] = [
-            subRow === 0 ? escapeCell(response.respondent?.name ?? "") : '""',
-            subRow === 0 ? escapeCell(response.respondent?.email ?? "") : '""',
-            subRow === 0 ? escapeCell(response.respondent?.phoneNumber ?? "") : '""',
-            subRow === 0 ? escapeCell(response.respondent?.telegram ?? "") : '""',
+            ...respondentColumns.map((key) =>
+              subRow === 0
+                ? escapeCell(
+                    formatRespondentColumnValue(
+                      key,
+                      response.respondent ?? undefined
+                    )
+                  )
+                : '""'
+            ),
             subRow === 0
               ? escapeCell(new Date(response.submittedAt).toLocaleString())
               : '""',
@@ -640,6 +735,46 @@ function FormResponsesPageContent() {
               </div>
             </div>
           )}
+          {form.userPermissions?.canEdit && (
+            <div className="mt-6 border-t border-gray-200 pt-4">
+              <h3 className="text-sm font-semibold text-gray-900 mb-1">
+                Respondent columns
+              </h3>
+              <p className="text-xs text-gray-500 mb-3 max-w-2xl">
+                Choose which profile fields appear for each submission. Default is
+                name, WhatsApp, and Telegram only. This applies to the table, cards,
+                and CSV export.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {RESPONDENT_COLUMN_KEYS.map((key) => (
+                  <label
+                    key={key}
+                    className="flex items-center gap-2 text-sm text-gray-800 cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={respondentColumnsDraft.includes(key)}
+                      onCheckedChange={() => toggleRespondentColumn(key)}
+                    />
+                    {RESPONDENT_COLUMN_LABELS[key]}
+                  </label>
+                ))}
+              </div>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="blue"
+                  size="sm"
+                  onClick={saveResponseSettings}
+                  disabled={settingsSaving || !responseColumnSettingsDirty}
+                >
+                  {settingsSaving ? "Saving…" : "Save column settings"}
+                </Button>
+                {responseColumnSettingsDirty && (
+                  <span className="text-xs text-amber-700">Unsaved changes</span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Responses */}
@@ -658,18 +793,14 @@ function FormResponsesPageContent() {
                   <th className="sticky left-0 z-10 bg-gray-50 px-3 py-2 text-left font-semibold text-gray-900">
                     #
                   </th>
-                  <th className="px-3 py-2 text-left font-semibold text-gray-900 whitespace-nowrap">
-                    Respondent
-                  </th>
-                  <th className="px-3 py-2 text-left font-semibold text-gray-900 whitespace-nowrap">
-                    Email
-                  </th>
-                  <th className="px-3 py-2 text-left font-semibold text-gray-900 whitespace-nowrap">
-                    Phone
-                  </th>
-                  <th className="px-3 py-2 text-left font-semibold text-gray-900 whitespace-nowrap">
-                    Telegram
-                  </th>
+                  {respondentColumns.map((key) => (
+                    <th
+                      key={key}
+                      className="px-3 py-2 text-left font-semibold text-gray-900 whitespace-nowrap"
+                    >
+                      {RESPONDENT_COLUMN_LABELS[key]}
+                    </th>
+                  ))}
                   <th className="px-3 py-2 text-left font-semibold text-gray-900 whitespace-nowrap">
                     Submitted
                   </th>
@@ -696,22 +827,19 @@ function FormResponsesPageContent() {
                     <td className="sticky left-0 z-10 bg-white px-3 py-2 text-gray-600">
                       {subRow === 0 ? responseIndex + 1 : ""}
                     </td>
-                    <td className="px-3 py-2 text-gray-900 whitespace-nowrap">
-                      {subRow === 0 ? response.respondent?.name ?? "-" : ""}
-                    </td>
-                    <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
-                      {subRow === 0 ? response.respondent?.email ?? "-" : ""}
-                    </td>
-                    <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
-                      {subRow === 0
-                        ? response.respondent?.phoneNumber?.trim() || "-"
-                        : ""}
-                    </td>
-                    <td className="px-3 py-2 text-gray-700 whitespace-nowrap">
-                      {subRow === 0
-                        ? response.respondent?.telegram?.trim() || "-"
-                        : ""}
-                    </td>
+                    {respondentColumns.map((key) => (
+                      <td
+                        key={key}
+                        className="px-3 py-2 text-gray-900 whitespace-nowrap"
+                      >
+                        {subRow === 0
+                          ? formatRespondentColumnValue(
+                              key,
+                              response.respondent ?? undefined
+                            ) || "-"
+                          : ""}
+                      </td>
+                    ))}
                     <td className="px-3 py-2 text-gray-600 whitespace-nowrap">
                       {subRow === 0
                         ? new Date(response.submittedAt).toLocaleString()
@@ -790,17 +918,17 @@ function FormResponsesPageContent() {
                     <h3 className="text-lg font-semibold text-gray-900">
                       Response #{index + 1}
                     </h3>
-                    <p className="text-sm text-gray-600">
-                      Submitted by {response.respondent?.name ?? "-"} (
-                      {response.respondent?.email ?? "-"})
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Phone: {response.respondent?.phoneNumber?.trim() || "-"}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      Telegram: {response.respondent?.telegram?.trim() || "-"}
-                    </p>
+                    {respondentColumns.map((key) => (
+                      <p key={key} className="text-sm text-gray-600">
+                        {RESPONDENT_COLUMN_LABELS[key]}:{" "}
+                        {formatRespondentColumnValue(
+                          key,
+                          response.respondent ?? undefined
+                        ) || "-"}
+                      </p>
+                    ))}
                     <p className="text-sm text-gray-500">
+                      Submitted:{" "}
                       {new Date(response.submittedAt).toLocaleString()}
                     </p>
                   </div>

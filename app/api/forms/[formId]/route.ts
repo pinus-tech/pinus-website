@@ -13,6 +13,10 @@ import {
   assignUniqueFormSlug,
   normalizeFormSlugInput,
 } from "@/lib/forms/form-slug";
+import {
+  normalizeRespondentColumns,
+  validateRespondentColumnsInput,
+} from "@/lib/forms/response-settings";
 import { verifyToken } from "@/lib/utils/auth";
 
 // Middleware to check if user is logged in
@@ -148,6 +152,15 @@ export async function GET(
           canViewResponses,
           canFill,
         },
+        ...(canViewResponses
+          ? {
+              responseSettings: {
+                respondentColumns: normalizeRespondentColumns(
+                  form.responseSettings?.respondentColumns
+                ),
+              },
+            }
+          : {}),
       },
     });
   } catch (error) {
@@ -280,6 +293,26 @@ export async function PATCH(
       }
     }
 
+    if (body.responseSettings !== undefined) {
+      if (
+        typeof body.responseSettings !== "object" ||
+        body.responseSettings === null
+      ) {
+        return NextResponse.json(
+          { error: "responseSettings must be an object" },
+          { status: 400 }
+        );
+      }
+      const rs = body.responseSettings as { respondentColumns?: unknown };
+      const colErr = validateRespondentColumnsInput(rs.respondentColumns);
+      if (colErr) {
+        return NextResponse.json({ error: colErr }, { status: 400 });
+      }
+      setDoc.responseSettings = {
+        respondentColumns: normalizeRespondentColumns(rs.respondentColumns),
+      };
+    }
+
     const updateQuery: { $set?: Record<string, unknown>; $unset?: Record<string, 1> } =
       {};
     if (Object.keys(setDoc).length) updateQuery.$set = setDoc;
@@ -383,6 +416,15 @@ export async function PATCH(
           canViewResponses: canViewResponsesU,
           canFill: canFillU,
         },
+        ...(canViewResponsesU
+          ? {
+              responseSettings: {
+                respondentColumns: normalizeRespondentColumns(
+                  updatedForm.responseSettings?.respondentColumns
+                ),
+              },
+            }
+          : {}),
       },
     });
   } catch (error) {
