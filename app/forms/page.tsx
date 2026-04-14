@@ -281,7 +281,7 @@ export default function FormsPage() {
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      {form.title}
+                      {form.title?.trim() || "Untitled form"}
                     </h3>
                     {form.description && (
                       <div className="text-gray-600 mb-2 max-w-prose">

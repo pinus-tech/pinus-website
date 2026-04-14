@@ -103,11 +103,6 @@ export default function CreateFormPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.title.trim()) {
-      setError('Form title is required');
-      return;
-    }
-
     if (formData.fields.length === 0) {
       setError('At least one field is required');
       return;
@@ -235,7 +230,7 @@ export default function CreateFormPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Form Title *
+                  Form title
                 </label>
                 <Input
                   type="text"
@@ -243,8 +238,7 @@ export default function CreateFormPage() {
                   onChange={(e) =>
                     setFormData((prev) => ({ ...prev, title: e.target.value }))
                   }
-                  placeholder="Enter form title"
-                  required
+                  placeholder="Optional — shown to respondents"
                 />
               </div>
 

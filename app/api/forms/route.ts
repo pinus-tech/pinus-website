@@ -199,13 +199,15 @@ export async function POST(req: NextRequest) {
       headerImageUrl: headerBody,
     } = body;
 
-    // Validate required fields
-    if (!title || !fields || !Array.isArray(fields)) {
+    if (!fields || !Array.isArray(fields)) {
       return NextResponse.json(
-        { error: "Title and fields are required" },
+        { error: "Fields are required" },
         { status: 400 }
       );
     }
+
+    const resolvedTitle =
+      typeof title === "string" ? title.trim() : "";
 
     const headerErr = assertOptionalHttpsUrl("Header image URL", headerBody);
     if (headerErr) {
@@ -255,9 +257,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Create new form
+    // Create new form (title and description are optional; empty title is allowed)
     const newForm = new Form({
-      title,
+      title: resolvedTitle,
       description,
       descriptionMarkdown: descriptionMarkdown === true,
       createdBy: user.userId,
