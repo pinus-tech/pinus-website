@@ -38,7 +38,7 @@ const COPYRIGHT_YEAR = 2026;
 const Footer = () => {
   const pathname = usePathname();
 
-  if (pathname?.startsWith("/admin")) {
+  if (pathname?.startsWith("/admin") || pathname?.startsWith("/u/")) {
     return null;
   }
 
