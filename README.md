@@ -34,6 +34,7 @@ All URLs below use the production host **`https://www.pinusonline.org`** unless 
 | **Blog post** | `https://www.pinusonline.org/blog/{slug}` | Individual article |
 | **FAQ** | [https://www.pinusonline.org/faq](https://www.pinusonline.org/faq) | Frequently asked questions |
 | **Contact us** | [https://www.pinusonline.org/contact-us](https://www.pinusonline.org/contact-us) | Contact form (submits via API) |
+| **Short URL (redirect)** | `https://www.pinusonline.org/u/{slug}` | Server redirect to a target URL. Works for anyone with the link; there is no public index. Slugs are created in **Admin → Short links** only. |
 
 ### Authentication & account
 
@@ -83,6 +84,7 @@ All URLs below use the production host **`https://www.pinusonline.org`** unless 
 | Feature | URL | Notes |
 |--------|-----|--------|
 | **Admin dashboard** | [https://www.pinusonline.org/admin/dashboard](https://www.pinusonline.org/admin/dashboard) | Super/admin user management, filters, roles (requires admin privileges) |
+| **Short links** | [https://www.pinusonline.org/admin/short-links](https://www.pinusonline.org/admin/short-links) | Admin-only UI to create, edit, copy, and delete site-wide short URLs (`/u/{slug}` → target). Not linked from the public site menu; reach it from the admin console nav or the dashboard CTA. Unauthenticated users are sent to login; non-admins are redirected home. |
 
 ### Dev / internal tools (often not linked in main nav)
 
@@ -157,6 +159,17 @@ These are **not** meant to be opened in a browser for browsing; they are JSON (o
 | GET/POST | `/api/admin/permissions` | Admin permissions |
 | GET/POST/PATCH/DELETE | `/api/admin/users` | User list / create |
 | GET/PATCH/DELETE | `/api/admin/users/{userId}` | Single user admin ops |
+
+### Admin short links (site-wide `/u/…`)
+
+These endpoints require an **admin** session (same cookie auth as the rest of the app). They back the **Short links** admin page; the public only uses the **`/u/{slug}`** redirect route, not these APIs.
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/admin/short-links` | List all short links |
+| POST | `/api/admin/short-links` | Create (`slug`, `targetUrl`); may return suggested slugs on conflict |
+| PATCH | `/api/admin/short-links/{linkId}` | Update target (and optionally slug) |
+| DELETE | `/api/admin/short-links/{linkId}` | Remove link (stops `/u/…` from working immediately) |
 
 ---
 
