@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
-import Item from "@/lib/models/Item";
+import Item, { MARKETPLACE_IMAGE_DISPLAY_MODES } from "@/lib/models/Item";
 import { toMarketplaceSellerPayload } from "@/lib/marketplace-seller";
 import {
   marketplaceImageApiFields,
@@ -73,6 +73,7 @@ export async function GET(
         condition: item.condition,
         imageUrls,
         imageUrl,
+        imageDisplayMode: item.imageDisplayMode ?? "collage",
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
       },
@@ -181,6 +182,19 @@ export async function PATCH(
       }
     }
 
+    if (body.imageDisplayMode !== undefined) {
+      const mode = body.imageDisplayMode;
+      if (
+        typeof mode !== "string" ||
+        !(MARKETPLACE_IMAGE_DISPLAY_MODES as readonly string[]).includes(mode)
+      ) {
+        return NextResponse.json(
+          { error: "Invalid imageDisplayMode" },
+          { status: 400 }
+        );
+      }
+    }
+
     const updatePayload: Record<string, unknown> = { ...body };
     delete updatePayload.imageUrls;
     delete updatePayload.imageUrl;
@@ -235,6 +249,7 @@ export async function PATCH(
         condition: updatedItem.condition,
         imageUrls,
         imageUrl,
+        imageDisplayMode: updatedItem.imageDisplayMode ?? "collage",
         createdAt: updatedItem.createdAt,
         updatedAt: updatedItem.updatedAt,
       },

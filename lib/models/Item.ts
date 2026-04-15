@@ -24,6 +24,9 @@ export const MARKETPLACE_CATEGORIES = [
 ] as const;
 
 export type MarketplaceCategory = typeof MARKETPLACE_CATEGORIES[number];
+export const MARKETPLACE_IMAGE_DISPLAY_MODES = ["collage", "carousel"] as const;
+export type MarketplaceImageDisplayMode =
+  (typeof MARKETPLACE_IMAGE_DISPLAY_MODES)[number];
 
 export interface IItem extends mongoose.Document {
   title: string;
@@ -40,6 +43,7 @@ export interface IItem extends mongoose.Document {
   imageUrl?: string;
   /** Up to 5 Firebase download URLs. */
   imageUrls?: string[];
+  imageDisplayMode?: MarketplaceImageDisplayMode;
   category?: MarketplaceCategory;
   meetupLocation?: string;
   createdAt: Date;
@@ -66,6 +70,11 @@ const itemSchema = new mongoose.Schema(
     soldAt: { type: Date },
     imageUrl: { type: String },
     imageUrls: [{ type: String }],
+    imageDisplayMode: {
+      type: String,
+      enum: MARKETPLACE_IMAGE_DISPLAY_MODES,
+      default: "collage",
+    },
     category: { 
       type: String, 
       enum: MARKETPLACE_CATEGORIES,

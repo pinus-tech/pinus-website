@@ -1,13 +1,20 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useParams, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { buildLoginUrl } from "@/lib/login-callback";
 import { DescriptionContent } from "@/app/components/DescriptionContent";
-import { galleryImageUrls } from "@/lib/marketplace-images";
+import { MAX_MARKETPLACE_IMAGES, galleryImageUrls } from "@/lib/marketplace-images";
 import { MARKETPLACE_CONDITION_OPTIONS } from "@/lib/constants/marketplace-conditions";
+import { uploadMarketplaceImage } from "@/lib/firebase/upload-marketplace-image";
+import { deleteMarketplaceImageByUrl } from "@/lib/firebase/delete-marketplace-image";
+import {
+  prepareMarketplaceListingImage,
+  FORM_FILE_MAX_SOURCE_BYTES,
+} from "@/lib/forms/form-file-prepare";
+import { ImageCropModal } from "@/app/components/ImageCropModal";
 import {
   Select,
   SelectContent,
@@ -42,9 +49,14 @@ interface MarketplaceItem {
   meetupLocation?: string;
   imageUrl?: string;
   imageUrls?: string[];
+  imageDisplayMode?: "collage" | "carousel";
   createdAt: string;
   updatedAt: string;
 }
+
+type EditableImageSlot =
+  | { type: "existing"; url: string }
+  | { type: "new"; file: File; preview: string; replacedUrl?: string };
 
 export default function MarketplaceItemDetailPage() {
   const [loading, setLoading] = useState(true);
@@ -58,6 +70,17 @@ export default function MarketplaceItemDetailPage() {
   const [sgdIdrError, setSgdIdrError] = useState<string | null>(null);
   const [sgdIdrLoading, setSgdIdrLoading] = useState(false);
   const [fxModalOpen, setFxModalOpen] = useState(false);
+  const [galleryMode, setGalleryMode] = useState<"collage" | "carousel">(
+    "collage"
+  );
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [editImageSlots, setEditImageSlots] = useState<EditableImageSlot[]>([]);
+  const [submittingImages, setSubmittingImages] = useState(false);
+  const replaceImageIndexRef = useRef<number | null>(null);
+  const [cropOpen, setCropOpen] = useState(false);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const cropSrcRef = useRef<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -112,17 +135,66 @@ export default function MarketplaceItemDetailPage() {
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (cropSrcRef.current) {
+        URL.revokeObjectURL(cropSrcRef.current);
+      }
+      editImageSlots.forEach((slot) => {
+        if (slot.type === "new") {
+          URL.revokeObjectURL(slot.preview);
+        }
+      });
+    };
+  }, [editImageSlots]);
+
+  useEffect(() => {
+    if (!item) return;
+    setGalleryMode(item.imageDisplayMode ?? "collage");
+  }, [item]);
+
+  useEffect(() => {
+    if (!item) return;
+    const len = galleryImageUrls(item).length;
+    if (len === 0) {
+      setCarouselIndex(0);
+      return;
+    }
+    if (carouselIndex >= len) {
+      setCarouselIndex(0);
+    }
+  }, [item, carouselIndex]);
+
   const fetchItem = async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await fetch(`/api/marketplace/${itemId}`);
 
       if (response.ok) {
         const data = await response.json();
         setItem(data.item);
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem(`pinus-marketplace-item-ise-${itemId}`);
+        }
       } else {
         const errorData = await response.json();
-        setError(errorData.error || "Failed to fetch item");
+        const message = errorData.error || "Failed to fetch item";
+        if (
+          typeof window !== "undefined" &&
+          message.toLowerCase().includes("internal server error")
+        ) {
+          const key = `pinus-marketplace-item-ise-${itemId}`;
+          if (!sessionStorage.getItem(key)) {
+            sessionStorage.setItem(key, "1");
+            window.location.reload();
+            return;
+          }
+          sessionStorage.removeItem(key);
+          router.replace("/marketplace");
+          return;
+        }
+        setError(message);
       }
     } catch (error) {
       setError("Network error occurred");
@@ -131,14 +203,99 @@ export default function MarketplaceItemDetailPage() {
     }
   };
 
+  const clearEditImagePreviews = (slots: EditableImageSlot[]) => {
+    slots.forEach((slot) => {
+      if (slot.type === "new") {
+        URL.revokeObjectURL(slot.preview);
+      }
+    });
+  };
+
+  const beginEditing = () => {
+    if (!item) return;
+    setSuccess(null);
+    setError(null);
+    setEditData({});
+    setEditImageSlots(
+      galleryImageUrls(item).map((url) => ({ type: "existing", url }))
+    );
+    setIsEditing(true);
+  };
+
+  const cancelEditing = () => {
+    clearEditImagePreviews(editImageSlots);
+    setEditImageSlots([]);
+    setIsEditing(false);
+    setEditData({});
+    replaceImageIndexRef.current = null;
+    if (cropSrcRef.current) {
+      URL.revokeObjectURL(cropSrcRef.current);
+      cropSrcRef.current = null;
+    }
+    setCropSrc(null);
+    setCropOpen(false);
+  };
+
+  const onEditImageFileSelected = (f: File | null) => {
+    if (!f) return;
+    if (
+      replaceImageIndexRef.current === null &&
+      editImageSlots.length >= MAX_MARKETPLACE_IMAGES
+    ) {
+      setError(`You can add at most ${MAX_MARKETPLACE_IMAGES} photos.`);
+      return;
+    }
+    if (!/^image\/(jpeg|png|gif|webp)$/i.test(f.type)) {
+      setError("Please choose a JPEG, PNG, GIF, or WebP image.");
+      return;
+    }
+    if (f.size > FORM_FILE_MAX_SOURCE_BYTES) {
+      setError("Image must be 3 MB or smaller.");
+      return;
+    }
+    setError(null);
+    if (cropSrcRef.current) {
+      URL.revokeObjectURL(cropSrcRef.current);
+      cropSrcRef.current = null;
+    }
+    const url = URL.createObjectURL(f);
+    cropSrcRef.current = url;
+    setCropSrc(url);
+    setCropOpen(true);
+  };
+
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!item) return;
+    if (!item || !user?.id) return;
 
     setSubmitting(true);
+    setSubmittingImages(false);
     setError(null);
 
+    const originalImageUrls = galleryImageUrls(item);
+    const uploadedUrlsThisAttempt: string[] = [];
+
     try {
+      const nextImageUrls: string[] = [];
+      if (editImageSlots.length > 0) {
+        setSubmittingImages(true);
+        for (const slot of editImageSlots) {
+          if (slot.type === "existing") {
+            nextImageUrls.push(slot.url);
+            continue;
+          }
+          const prepared = await prepareMarketplaceListingImage(slot.file);
+          const uploadedUrl = await uploadMarketplaceImage(
+            prepared.blob,
+            prepared.filename,
+            prepared.contentType,
+            user.id
+          );
+          uploadedUrlsThisAttempt.push(uploadedUrl);
+          nextImageUrls.push(uploadedUrl);
+        }
+      }
+
       const response = await fetch(`/api/marketplace/${itemId}`, {
         method: "PATCH",
         headers: {
@@ -150,23 +307,39 @@ export default function MarketplaceItemDetailPage() {
             editData.descriptionMarkdown ??
             item.descriptionMarkdown ??
             false,
+          imageUrls: nextImageUrls,
         }),
       });
 
       if (response.ok) {
         const data = await response.json();
+        const deletedCandidates = originalImageUrls.filter(
+          (u) => !nextImageUrls.includes(u)
+        );
+        await Promise.allSettled(
+          deletedCandidates.map((u) => deleteMarketplaceImageByUrl(u))
+        );
+        clearEditImagePreviews(editImageSlots);
         setItem(data.item);
         setIsEditing(false);
         setEditData({});
+        setEditImageSlots([]);
         setSuccess("Item updated successfully!");
       } else {
         const errorData = await response.json();
         setError(errorData.error || "Failed to update item");
+        await Promise.allSettled(
+          uploadedUrlsThisAttempt.map((u) => deleteMarketplaceImageByUrl(u))
+        );
       }
     } catch (error) {
       setError("Network error occurred");
+      await Promise.allSettled(
+        uploadedUrlsThisAttempt.map((u) => deleteMarketplaceImageByUrl(u))
+      );
     } finally {
       setSubmitting(false);
+      setSubmittingImages(false);
     }
   };
 
@@ -312,7 +485,7 @@ export default function MarketplaceItemDetailPage() {
               <Button
                 type="button"
                 variant="blue"
-                onClick={() => setIsEditing(!isEditing)}
+                onClick={() => (isEditing ? cancelEditing() : beginEditing())}
               >
                 {isEditing ? "Cancel Edit" : "Edit Item"}
               </Button>
@@ -473,15 +646,138 @@ export default function MarketplaceItemDetailPage() {
                   </SelectContent>
                 </Select>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Image display
+                </label>
+                <Select
+                  value={
+                    (editData.imageDisplayMode as "collage" | "carousel") ??
+                    item.imageDisplayMode ??
+                    "collage"
+                  }
+                  onValueChange={(v) =>
+                    setEditData((prev) => ({
+                      ...prev,
+                      imageDisplayMode: v as "collage" | "carousel",
+                    }))
+                  }
+                >
+                  <SelectTrigger
+                    variant="blue"
+                    outline
+                    rounding="lg"
+                    className="w-full"
+                  >
+                    <SelectValue placeholder="Image display" />
+                  </SelectTrigger>
+                  <SelectContent variant="blue" outline rounding="lg">
+                    <SelectItem value="collage">Collage grid</SelectItem>
+                    <SelectItem value="carousel">Carousel</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                <p className="mb-2 text-sm font-medium text-slate-800">
+                  Photos (up to {MAX_MARKETPLACE_IMAGES})
+                </p>
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  className="sr-only"
+                  tabIndex={-1}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0] ?? null;
+                    e.target.value = "";
+                    onEditImageFileSelected(f);
+                  }}
+                />
+                {editImageSlots.length > 0 && (
+                  <div className="mb-3 grid gap-3 sm:grid-cols-2">
+                    {editImageSlots.map((slot, index) => {
+                      const preview =
+                        slot.type === "existing" ? slot.url : slot.preview;
+                      return (
+                        <div
+                          key={`${preview}-${index}`}
+                          className="rounded-lg border border-slate-200 bg-white p-3"
+                        >
+                          <p className="mb-2 text-xs text-slate-500">
+                            Photo {index + 1}
+                          </p>
+                          <img
+                            src={preview}
+                            alt=""
+                            className="max-h-44 w-full rounded object-contain"
+                          />
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <Button
+                              type="button"
+                              variant="blue"
+                              outline
+                              size="sm"
+                              onClick={() => {
+                                replaceImageIndexRef.current = index;
+                                imageInputRef.current?.click();
+                              }}
+                            >
+                              Change
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="red"
+                              outline
+                              size="sm"
+                              onClick={() => {
+                                setEditImageSlots((prev) => {
+                                  const next = [...prev];
+                                  const [removed] = next.splice(index, 1);
+                                  if (removed?.type === "new") {
+                                    URL.revokeObjectURL(removed.preview);
+                                  }
+                                  return next;
+                                });
+                              }}
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {editImageSlots.length < MAX_MARKETPLACE_IMAGES && (
+                  <Button
+                    type="button"
+                    variant="blue"
+                    outline
+                    size="sm"
+                    onClick={() => {
+                      replaceImageIndexRef.current = null;
+                      imageInputRef.current?.click();
+                    }}
+                  >
+                    {editImageSlots.length === 0
+                      ? "Add photo"
+                      : "Add another photo"}
+                  </Button>
+                )}
+              </div>
               <div className="flex flex-wrap gap-3">
                 <Button type="submit" variant="blue" disabled={submitting}>
-                  {submitting ? "Saving..." : "Save Changes"}
+                  {submittingImages
+                    ? "Uploading photos..."
+                    : submitting
+                      ? "Saving..."
+                      : "Save Changes"}
                 </Button>
                 <Button
                   type="button"
                   variant="black"
                   outline
-                  onClick={() => setIsEditing(false)}
+                  onClick={cancelEditing}
                 >
                   Cancel
                 </Button>
@@ -492,7 +788,58 @@ export default function MarketplaceItemDetailPage() {
 
         {/* Item Details */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          {itemGallery.length > 0 && (
+          {itemGallery.length > 0 && galleryMode === "carousel" ? (
+            <div className="bg-gray-100">
+              <div className="relative">
+                <img
+                  src={itemGallery[carouselIndex]}
+                  alt=""
+                  className="h-72 w-full object-contain sm:h-96"
+                />
+                {itemGallery.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/55 px-3 py-2 text-sm font-bold text-white"
+                      onClick={() =>
+                        setCarouselIndex((idx) =>
+                          idx === 0 ? itemGallery.length - 1 : idx - 1
+                        )
+                      }
+                      aria-label="Previous image"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/55 px-3 py-2 text-sm font-bold text-white"
+                      onClick={() =>
+                        setCarouselIndex((idx) => (idx + 1) % itemGallery.length)
+                      }
+                      aria-label="Next image"
+                    >
+                      ›
+                    </button>
+                  </>
+                )}
+              </div>
+              {itemGallery.length > 1 && (
+                <div className="flex flex-wrap items-center justify-center gap-2 px-4 pb-3 pt-2">
+                  {itemGallery.map((url, idx) => (
+                    <button
+                      key={`${url}-${idx}`}
+                      type="button"
+                      className={`h-2.5 w-2.5 rounded-full ${
+                        idx === carouselIndex ? "bg-blue-600" : "bg-gray-300"
+                      }`}
+                      onClick={() => setCarouselIndex(idx)}
+                      aria-label={`Go to image ${idx + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : itemGallery.length > 0 ? (
             <div
               className={`grid gap-1 bg-gray-200 p-1 ${
                 itemGallery.length === 1
@@ -513,7 +860,7 @@ export default function MarketplaceItemDetailPage() {
                 />
               ))}
             </div>
-          )}
+          ) : null}
 
           <div className="p-6">
             {/* Header */}
@@ -775,6 +1122,56 @@ export default function MarketplaceItemDetailPage() {
           </div>
         </div>
       </div>
+
+      <ImageCropModal
+        imageSrc={cropSrc}
+        open={cropOpen}
+        title="Adjust listing photo"
+        outputFileName="listing-photo.jpg"
+        onCancel={() => {
+          replaceImageIndexRef.current = null;
+          setCropOpen(false);
+          if (cropSrcRef.current) {
+            URL.revokeObjectURL(cropSrcRef.current);
+            cropSrcRef.current = null;
+          }
+          setCropSrc(null);
+        }}
+        onComplete={(file) => {
+          const preview = URL.createObjectURL(file);
+          const idx = replaceImageIndexRef.current;
+          replaceImageIndexRef.current = null;
+          if (idx !== null) {
+            setEditImageSlots((prev) => {
+              const next = [...prev];
+              const old = next[idx];
+              if (old?.type === "new") URL.revokeObjectURL(old.preview);
+              next[idx] = {
+                type: "new",
+                file,
+                preview,
+                replacedUrl: old?.type === "existing" ? old.url : old?.replacedUrl,
+              };
+              return next;
+            });
+          } else {
+            setEditImageSlots((prev) => {
+              if (prev.length >= MAX_MARKETPLACE_IMAGES) {
+                URL.revokeObjectURL(preview);
+                return prev;
+              }
+              return [...prev, { type: "new", file, preview }];
+            });
+          }
+          setCropOpen(false);
+          if (cropSrcRef.current) {
+            URL.revokeObjectURL(cropSrcRef.current);
+            cropSrcRef.current = null;
+          }
+          setCropSrc(null);
+          setError(null);
+        }}
+      />
 
       {fxModalOpen && sgdIdrQuote && idrEquivalent !== null && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">

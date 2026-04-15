@@ -193,35 +193,24 @@ export async function POST(
 
     let visitedPageIds: string[];
     if (multiPage) {
-      if (!Array.isArray(rawVisitedPageIds) || rawVisitedPageIds.length === 0) {
-        return NextResponse.json(
-          {
-            error:
-              "visitedPageIds is required for multi-page forms (re-submit from the latest app version).",
-          },
-          { status: 400 }
-        );
-      }
-      visitedPageIds = rawVisitedPageIds.map((id: unknown) => String(id));
-      const finalStepIndex = visitedPageIds.length - 1;
-      const recomputed = collectVisitedPageIdsAlongPath(
+      const claimedVisited = Array.isArray(rawVisitedPageIds)
+        ? rawVisitedPageIds.map((id: unknown) => String(id))
+        : [];
+      const claimedLastPageId =
+        claimedVisited.length > 0 ? claimedVisited[claimedVisited.length - 1] : null;
+      const finalStepIndex =
+        claimedLastPageId !== null
+          ? pagesList.findIndex((p) => p.id === claimedLastPageId)
+          : pagesList.length - 1;
+
+      // Source of truth: recompute branch path from submitted answers.
+      // This handles legitimately skipped pages and older client path arrays.
+      visitedPageIds = collectVisitedPageIdsAlongPath(
         pagesList,
         formFields,
         responseMap,
-        finalStepIndex
+        finalStepIndex >= 0 ? finalStepIndex : pagesList.length - 1
       );
-      const same =
-        recomputed.length === visitedPageIds.length &&
-        recomputed.every((id, i) => id === visitedPageIds[i]);
-      if (!same) {
-        return NextResponse.json(
-          {
-            error:
-              "Page path does not match your answers. Go back and continue through the form, then submit again.",
-          },
-          { status: 400 }
-        );
-      }
     } else {
       visitedPageIds = [firstPageId];
     }

@@ -2,8 +2,13 @@ import { z } from "zod";
 import { MARKETPLACE_CATEGORIES } from "@/lib/models/Item";
 import { MAX_MARKETPLACE_IMAGES } from "@/lib/marketplace-images";
 import { MARKETPLACE_CONDITION_VALUES } from "@/lib/constants/marketplace-conditions";
+import { MARKETPLACE_IMAGE_DISPLAY_MODES } from "@/lib/models/Item";
 
 const conditionTuple = MARKETPLACE_CONDITION_VALUES as unknown as [
+  string,
+  ...string[],
+];
+const imageDisplayModeTuple = MARKETPLACE_IMAGE_DISPLAY_MODES as unknown as [
   string,
   ...string[],
 ];
@@ -20,6 +25,7 @@ export const createMarketplaceItemSchema = z.object({
     .array(z.string().url())
     .max(MAX_MARKETPLACE_IMAGES)
     .optional(),
+  imageDisplayMode: z.enum(imageDisplayModeTuple).optional(),
 });
 
 export type CreateMarketplaceItemInput = z.infer<
