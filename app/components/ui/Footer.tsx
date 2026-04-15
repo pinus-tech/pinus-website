@@ -32,9 +32,11 @@ const accountLinks = [
   { href: "/profile", label: "Profile" },
 ];
 
+/** Display year in site footer copyright. */
+const COPYRIGHT_YEAR = 2026;
+
 const Footer = () => {
   const pathname = usePathname();
-  const year = new Date().getFullYear();
 
   if (pathname?.startsWith("/admin")) {
     return null;
@@ -159,7 +161,7 @@ const Footer = () => {
                 />
               </Link>
             </div>
-            <p className="text-sm text-white/80">© {year} PINUS</p>
+            <p className="text-sm text-white/80">© {COPYRIGHT_YEAR} PINUS</p>
           </div>
         </div>
 

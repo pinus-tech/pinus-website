@@ -94,9 +94,15 @@ const Header = () => {
             {loading ? (
               <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-main border-t-transparent" />
             ) : user ? (
-              <div className="flex max-w-[min(280px,40vw)] items-center gap-2">
-                <span className="hidden xl:inline truncate text-sm text-gray-600">
-                  Hello, {user.name}
+              <div className="flex min-w-0 max-w-[min(520px,52vw)] items-center gap-2">
+                <span
+                  className="hidden min-w-0 xl:inline-flex items-baseline gap-1 text-sm text-gray-600"
+                  title={user.name}
+                >
+                  <span className="shrink-0">Hello,</span>
+                  <span className="min-w-[6ch] max-w-[min(18rem,32vw)] shrink truncate font-medium text-gray-800">
+                    {user.name}
+                  </span>
                 </span>
                 <Link href="/profile">
                   <Button variant="blue" outline size="sm">
@@ -104,11 +110,18 @@ const Header = () => {
                   </Button>
                 </Link>
                 {user.isAdmin && (
-                  <Link href="/admin/dashboard">
-                    <Button variant="yellow" size="sm">
-                      Admin
-                    </Button>
-                  </Link>
+                  <>
+                    <Link href="/admin/dashboard">
+                      <Button variant="yellow" size="sm">
+                        Admin
+                      </Button>
+                    </Link>
+                    <Link href="/admin/short-links" className="hidden 2xl:inline">
+                      <Button variant="black" outline size="sm">
+                        Short links
+                      </Button>
+                    </Link>
+                  </>
                 )}
                 <Button onClick={handleLogout} variant="red" size="sm">
                   Logout
@@ -237,11 +250,18 @@ const Header = () => {
                     </Button>
                   </Link>
                   {user.isAdmin && (
-                    <Link href="/admin/dashboard" onClick={toggleMenu}>
-                      <Button variant="yellow" className="w-full">
-                        Admin Dashboard
-                      </Button>
-                    </Link>
+                    <>
+                      <Link href="/admin/dashboard" onClick={toggleMenu}>
+                        <Button variant="yellow" className="w-full">
+                          Admin Dashboard
+                        </Button>
+                      </Link>
+                      <Link href="/admin/short-links" onClick={toggleMenu}>
+                        <Button variant="black" outline className="w-full">
+                          Short links (admin)
+                        </Button>
+                      </Link>
+                    </>
                   )}
                   <Button onClick={handleLogout} variant="red" className="w-full">
                     Logout
