@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { Button } from "@/app/components/ui/button";
 
 export default function AdminShellHeader() {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   const handleLogout = async () => {
     await logout();
@@ -38,6 +39,28 @@ export default function AdminShellHeader() {
           <span className="shrink-0 rounded-full bg-indigo-50 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-indigo-700 ring-1 ring-indigo-100">
             Console
           </span>
+          <nav className="ml-1 hidden items-center gap-1 sm:flex">
+            <Link
+              href="/admin/dashboard"
+              className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                pathname === "/admin/dashboard"
+                  ? "bg-slate-900 text-white"
+                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+              }`}
+            >
+              Members
+            </Link>
+            <Link
+              href="/admin/short-links"
+              className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                pathname === "/admin/short-links"
+                  ? "bg-indigo-600 text-white"
+                  : "text-slate-600 hover:bg-indigo-50 hover:text-indigo-900"
+              }`}
+            >
+              Short links
+            </Link>
+          </nav>
         </div>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
@@ -47,7 +70,10 @@ export default function AdminShellHeader() {
           >
             View site
           </Link>
-          <span className="hidden max-w-[10rem] truncate text-sm text-slate-600 md:inline">
+          <span
+            className="hidden max-w-[min(14rem,28vw)] min-w-[6ch] truncate text-sm font-medium text-slate-700 md:inline"
+            title={user?.name}
+          >
             {user?.name}
           </span>
           <Button onClick={handleLogout} variant="red" size="sm">

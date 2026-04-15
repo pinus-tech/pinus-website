@@ -19,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/app/components/ui/card";
+import Link from "next/link";
 import { Link2 } from "lucide-react";
 
 interface UserPermissions {
@@ -26,15 +27,6 @@ interface UserPermissions {
   canManageUsers: boolean;
   canViewAnalytics: boolean;
 }
-interface AdminShortLink {
-  id: string;
-  slug: string;
-  targetUrl: string;
-  createdAt: string;
-  updatedAt: string;
-  createdBy: { name: string; email: string } | null;
-}
-
 interface User {
   _id: string;
   name: string;
@@ -106,20 +98,6 @@ export default function AdminDashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  const [shortLinks, setShortLinks] = useState<AdminShortLink[]>([]);
-  const [shortLinksLoading, setShortLinksLoading] = useState(false);
-  const [newSlug, setNewSlug] = useState("");
-  const [newTargetUrl, setNewTargetUrl] = useState("");
-  const [shortLinkSaving, setShortLinkSaving] = useState(false);
-  const [shortLinkBanner, setShortLinkBanner] = useState<{
-    type: "ok" | "err";
-    text: string;
-  } | null>(null);
-  const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
-  const [editTargetDraft, setEditTargetDraft] = useState("");
-  const [deletingLinkId, setDeletingLinkId] = useState<string | null>(null);
-  const [slugSuggestions, setSlugSuggestions] = useState<string[]>([]);
-
   const { user, canManageUsers } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -137,7 +115,6 @@ export default function AdminDashboard() {
 
     if (user && user.isAdmin) {
       fetchUsers();
-      fetchShortLinks();
     }
   }, [user, router, pathname]);
 
@@ -172,120 +149,6 @@ export default function AdminDashboard() {
       setError("Network error occurred");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchShortLinks = async () => {
-    try {
-      setShortLinksLoading(true);
-      const response = await fetch("/api/admin/short-links");
-      if (response.ok) {
-        const data = await response.json();
-        setShortLinks(data.links ?? []);
-      }
-    } catch {
-      /* non-fatal */
-    } finally {
-      setShortLinksLoading(false);
-    }
-  };
-
-  const siteOrigin =
-    typeof window !== "undefined"
-      ? window.location.origin
-      : (process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "");
-
-  const createShortLink = async () => {
-    setShortLinkBanner(null);
-    setSlugSuggestions([]);
-    setShortLinkSaving(true);
-    try {
-      const response = await fetch("/api/admin/short-links", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug: newSlug, targetUrl: newTargetUrl }),
-      });
-      const data = await response.json() as {
-        error?: string;
-        suggestedSlugs?: string[];
-      };
-      if (!response.ok) {
-        setShortLinkBanner({
-          type: "err",
-          text: data.error || "Could not create link",
-        });
-        if (response.status === 409 && Array.isArray(data.suggestedSlugs)) {
-          setSlugSuggestions(data.suggestedSlugs);
-        }
-        return;
-      }
-      setShortLinkBanner({ type: "ok", text: "Short link created." });
-      setSlugSuggestions([]);
-      setNewSlug("");
-      setNewTargetUrl("");
-      await fetchShortLinks();
-    } catch {
-      setShortLinkBanner({ type: "err", text: "Network error" });
-    } finally {
-      setShortLinkSaving(false);
-    }
-  };
-
-  const saveEditedTarget = async (linkId: string) => {
-    setShortLinkBanner(null);
-    setShortLinkSaving(true);
-    try {
-      const response = await fetch(`/api/admin/short-links/${linkId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetUrl: editTargetDraft }),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        setShortLinkBanner({ type: "err", text: data.error || "Could not update" });
-        return;
-      }
-      setShortLinkBanner({ type: "ok", text: "Target URL updated." });
-      setEditingLinkId(null);
-      await fetchShortLinks();
-    } catch {
-      setShortLinkBanner({ type: "err", text: "Network error" });
-    } finally {
-      setShortLinkSaving(false);
-    }
-  };
-
-  const deleteShortLink = async (linkId: string) => {
-    if (!window.confirm("Delete this short link? It will stop working immediately.")) {
-      return;
-    }
-    setDeletingLinkId(linkId);
-    setShortLinkBanner(null);
-    try {
-      const response = await fetch(`/api/admin/short-links/${linkId}`, {
-        method: "DELETE",
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        setShortLinkBanner({ type: "err", text: data.error || "Could not delete" });
-        return;
-      }
-      setShortLinkBanner({ type: "ok", text: "Link deleted." });
-      await fetchShortLinks();
-    } catch {
-      setShortLinkBanner({ type: "err", text: "Network error" });
-    } finally {
-      setDeletingLinkId(null);
-    }
-  };
-
-  const copyShortUrl = async (slug: string) => {
-    const full = `${siteOrigin}/u/${slug}`;
-    try {
-      await navigator.clipboard.writeText(full);
-      setShortLinkBanner({ type: "ok", text: "Copied to clipboard." });
-    } catch {
-      setShortLinkBanner({ type: "err", text: "Could not copy." });
     }
   };
 
@@ -590,11 +453,8 @@ export default function AdminDashboard() {
               {user?.isSuperAdmin ? "Super admin" : "Admin"} dashboard
             </h1>
             <p className="mt-1 max-w-xl text-sm text-slate-600">
-              Members, URL short links (
-              <code className="rounded bg-slate-200/60 px-1 text-xs text-slate-800">
-                /u/…
-              </code>
-              ), and roles — one place.
+              Members and roles. Short links are on a separate admin-only page (not
+              in the public site menu).
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
@@ -764,259 +624,40 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
-        {/* URL shortener (admins only) */}
-        <Card className="relative mb-8 w-full max-w-none overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-white via-indigo-50/50 to-violet-50/60 shadow-lg shadow-indigo-200/25 ring-1 ring-indigo-200/55 backdrop-blur-sm">
-          <div
-            className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-500"
-            aria-hidden
-          />
-          <CardHeader className="px-5 pt-5 sm:px-6">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <Link
+          href="/admin/short-links"
+          className="group mb-8 block rounded-2xl ring-1 ring-indigo-200/70 transition-shadow hover:shadow-lg hover:shadow-indigo-200/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+        >
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-white via-indigo-50/60 to-violet-50/50 p-5 sm:p-6">
+            <div
+              className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-500"
+              aria-hidden
+            />
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-500/30">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-500/25">
                   <Link2 className="h-5 w-5" strokeWidth={2} aria-hidden />
                 </div>
                 <div>
-                  <CardTitle className="text-xl font-semibold tracking-tight text-slate-900">
+                  <h2 className="text-lg font-semibold text-slate-900">
                     URL shortener
-                  </CardTitle>
-                  <p className="mt-1.5 text-sm font-normal leading-relaxed text-slate-600">
-                    Public paths{" "}
-                    <code className="rounded-md bg-indigo-100/80 px-1.5 py-0.5 text-xs font-medium text-indigo-900">
-                      /u/your-slug
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Manage{" "}
+                    <code className="rounded bg-indigo-100/90 px-1 text-xs text-indigo-900">
+                      /u/…
                     </code>{" "}
-                    redirect to your target. Only admins see this panel; any admin
-                    may delete links.
+                    links on a dedicated admin page — not linked from the public
+                    site.
                   </p>
                 </div>
               </div>
+              <span className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition group-hover:bg-indigo-700 sm:shrink-0">
+                Open short links →
+              </span>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-6 px-5 pb-6 sm:px-6">
-            {shortLinkBanner && (
-              <div
-                className={`rounded-xl border px-3 py-2.5 text-sm ${
-                  shortLinkBanner.type === "ok"
-                    ? "border-emerald-200/80 bg-emerald-50/90 text-emerald-900"
-                    : "border-red-200/80 bg-red-50/90 text-red-900"
-                }`}
-              >
-                {shortLinkBanner.text}
-              </div>
-            )}
-
-            {slugSuggestions.length > 0 && (
-              <div className="rounded-xl border border-amber-200/90 bg-amber-50/90 px-4 py-3 ring-1 ring-amber-100">
-                <p className="text-sm font-medium text-amber-950">
-                  That slug is already taken. Use a free suggestion (we&apos;ll fill
-                  the slug field), or type a different slug yourself and click Create
-                  again.
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {slugSuggestions.map((s) => (
-                    <Button
-                      key={s}
-                      type="button"
-                      variant="black"
-                      outline
-                      size="sm"
-                      onClick={() => {
-                        setNewSlug(s);
-                        setSlugSuggestions([]);
-                        setShortLinkBanner(null);
-                      }}
-                    >
-                      Use <span className="font-mono">{s}</span>
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input
-                label="Slug"
-                placeholder="e.g. signup-2026"
-                value={newSlug}
-                onChange={(e) => {
-                  setNewSlug(e.target.value);
-                  setSlugSuggestions([]);
-                }}
-                className="rounded-none border-blue-main"
-              />
-              <Input
-                label="Target URL"
-                placeholder="https://…"
-                value={newTargetUrl}
-                onChange={(e) => setNewTargetUrl(e.target.value)}
-                className="rounded-none border-blue-main"
-              />
-            </div>
-            {newSlug.trim() && (
-              <div>
-                <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-slate-500">
-                  Live preview
-                </p>
-                <div className="rounded-lg border border-slate-800/80 bg-slate-950 px-4 py-3 font-mono text-sm text-emerald-400 shadow-inner">
-                  <span className="select-none text-slate-500">→ </span>
-                  <span className="break-all">
-                    {siteOrigin || "…"}/u/
-                    {newSlug
-                      .trim()
-                      .toLowerCase()
-                      .replace(/[^a-z0-9]+/g, "-")}
-                  </span>
-                </div>
-              </div>
-            )}
-            <Button
-              type="button"
-              variant="blue"
-              size="sm"
-              onClick={createShortLink}
-              disabled={
-                shortLinkSaving || !newSlug.trim() || !newTargetUrl.trim()
-              }
-            >
-              {shortLinkSaving ? "Saving…" : "Create short link"}
-            </Button>
-
-            <div className="border-t border-indigo-200/50 pt-5">
-              <h3 className="mb-1 text-sm font-semibold text-slate-900">
-                All short links ({shortLinks.length})
-              </h3>
-              <p className="mb-3 text-xs text-slate-600">
-                Every admin can remove any link with Delete — useful for cleaning up
-                old or mistaken URLs.
-              </p>
-              {shortLinksLoading ? (
-                <p className="text-sm text-slate-500">Loading links…</p>
-              ) : shortLinks.length === 0 ? (
-                <p className="text-sm text-slate-500">No short links yet.</p>
-              ) : (
-                <div className="overflow-x-auto rounded-xl border border-slate-200/90 bg-white/60 ring-1 ring-slate-200/50">
-                  <table className="min-w-full divide-y divide-slate-200 text-sm">
-                    <thead className="bg-slate-50/90">
-                      <tr>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
-                          Short URL
-                        </th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
-                          Target
-                        </th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
-                          Created by
-                        </th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
-                          Created
-                        </th>
-                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 bg-white/80">
-                      {shortLinks.map((link) => (
-                        <tr key={link.id}>
-                          <td className="px-3 py-2 align-top">
-                            <code className="rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-900 break-all ring-1 ring-indigo-100">
-                              /u/{link.slug}
-                            </code>
-                          </td>
-                          <td className="px-3 py-2 align-top max-w-[280px]">
-                            {editingLinkId === link.id ? (
-                              <Input
-                                value={editTargetDraft}
-                                onChange={(e) =>
-                                  setEditTargetDraft(e.target.value)
-                                }
-                                className="text-xs py-1"
-                              />
-                            ) : (
-                              <a
-                                href={link.targetUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline break-all line-clamp-2"
-                              >
-                                {link.targetUrl}
-                              </a>
-                            )}
-                          </td>
-                          <td className="px-3 py-2 align-top text-gray-700 whitespace-nowrap">
-                            {link.createdBy?.name ?? "—"}
-                            <div className="text-xs text-gray-500 truncate max-w-[140px]">
-                              {link.createdBy?.email}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 align-top text-gray-600 whitespace-nowrap text-xs">
-                            {new Date(link.createdAt).toLocaleString()}
-                          </td>
-                          <td className="px-3 py-2 align-top whitespace-nowrap">
-                            <div className="flex flex-wrap gap-1">
-                              <Button
-                                type="button"
-                                variant="black"
-                                outline
-                                size="sm"
-                                onClick={() => copyShortUrl(link.slug)}
-                              >
-                                Copy
-                              </Button>
-                              {editingLinkId === link.id ? (
-                                <>
-                                  <Button
-                                    type="button"
-                                    variant="blue"
-                                    size="sm"
-                                    disabled={shortLinkSaving}
-                                    onClick={() => saveEditedTarget(link.id)}
-                                  >
-                                    Save
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    variant="black"
-                                    outline
-                                    size="sm"
-                                    onClick={() => setEditingLinkId(null)}
-                                  >
-                                    Cancel
-                                  </Button>
-                                </>
-                              ) : (
-                                <Button
-                                  type="button"
-                                  variant="yellow"
-                                  size="sm"
-                                  onClick={() => {
-                                    setEditingLinkId(link.id);
-                                    setEditTargetDraft(link.targetUrl);
-                                  }}
-                                >
-                                  Edit target
-                                </Button>
-                              )}
-                              <Button
-                                type="button"
-                                variant="red"
-                                size="sm"
-                                disabled={deletingLinkId === link.id}
-                                onClick={() => deleteShortLink(link.id)}
-                              >
-                                {deletingLinkId === link.id ? "…" : "Delete"}
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </Link>
 
         {/* Search and Filter Controls */}
         <Card
