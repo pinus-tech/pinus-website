@@ -42,7 +42,7 @@ const Header = () => {
     setMenuOpen(false);
   };
 
-  if (pathname?.startsWith("/admin")) {
+  if (pathname?.startsWith("/admin") || pathname?.startsWith("/u/")) {
     return null;
   }
 
