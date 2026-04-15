@@ -1,7 +1,10 @@
 import type { FilterQuery } from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/mongodb";
-import Item, { type IItem } from "@/lib/models/Item";
+import Item, {
+  type IItem,
+  MARKETPLACE_IMAGE_DISPLAY_MODES,
+} from "@/lib/models/Item";
 import { toMarketplaceSellerPayload } from "@/lib/marketplace-seller";
 import {
   marketplaceImageApiFields,
@@ -123,6 +126,7 @@ export async function GET(req: NextRequest) {
           condition: item.condition,
           imageUrls,
           imageUrl,
+          imageDisplayMode: item.imageDisplayMode ?? "collage",
           createdAt: item.createdAt,
           updatedAt: item.updatedAt,
         };
@@ -160,6 +164,7 @@ export async function POST(req: NextRequest) {
       meetupLocation,
       descriptionMarkdown,
       condition,
+      imageDisplayMode,
     } = body;
 
     const parsedImages = parseIncomingImageUrls({
@@ -220,6 +225,22 @@ export async function POST(req: NextRequest) {
       resolvedCondition = condition as MarketplaceCondition;
     }
 
+    let resolvedImageDisplayMode: "collage" | "carousel" = "collage";
+    if (imageDisplayMode !== undefined && imageDisplayMode !== null) {
+      if (
+        typeof imageDisplayMode !== "string" ||
+        !(MARKETPLACE_IMAGE_DISPLAY_MODES as readonly string[]).includes(
+          imageDisplayMode
+        )
+      ) {
+        return NextResponse.json(
+          { error: "Invalid imageDisplayMode" },
+          { status: 400 }
+        );
+      }
+      resolvedImageDisplayMode = imageDisplayMode as "collage" | "carousel";
+    }
+
     // Create new item
     const newItem = new Item({
       title,
@@ -231,6 +252,7 @@ export async function POST(req: NextRequest) {
       category: category || 'Other',
       meetupLocation,
       condition: resolvedCondition,
+      imageDisplayMode: resolvedImageDisplayMode,
       imageUrls: parsedImages.imageUrls,
       imageUrl: parsedImages.imageUrl,
     });
@@ -257,6 +279,7 @@ export async function POST(req: NextRequest) {
         condition: newItem.condition,
         imageUrls,
         imageUrl,
+        imageDisplayMode: newItem.imageDisplayMode ?? "collage",
         createdAt: newItem.createdAt,
         updatedAt: newItem.updatedAt,
       },

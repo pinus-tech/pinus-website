@@ -30,6 +30,7 @@ interface ItemData {
   category: string;
   condition: string;
   meetupLocation: string;
+  imageDisplayMode: "collage" | "carousel";
 }
 
 type SgdIdrQuote = {
@@ -60,6 +61,7 @@ export default function CreateMarketplaceItemPage() {
     category: 'Other',
     condition: 'Other',
     meetupLocation: '',
+    imageDisplayMode: "collage",
   });
   const [error, setError] = useState<string | null>(null);
   const [sgdIdrQuote, setSgdIdrQuote] = useState<SgdIdrQuote | null>(null);
@@ -449,6 +451,34 @@ export default function CreateMarketplaceItemPage() {
                         {opt.label}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Image display
+                </label>
+                <Select
+                  value={itemData.imageDisplayMode}
+                  onValueChange={(value) =>
+                    setItemData((prev) => ({
+                      ...prev,
+                      imageDisplayMode: value as "collage" | "carousel",
+                    }))
+                  }
+                >
+                  <SelectTrigger
+                    variant="blue"
+                    outline
+                    rounding="lg"
+                    className="w-full"
+                  >
+                    <SelectValue placeholder="How to show listing photos" />
+                  </SelectTrigger>
+                  <SelectContent variant="blue" outline rounding="lg">
+                    <SelectItem value="collage">Collage grid</SelectItem>
+                    <SelectItem value="carousel">Carousel</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
