@@ -452,15 +452,8 @@ export default function AdminDashboard() {
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
               {user?.isSuperAdmin ? "Super admin" : "Admin"} dashboard
             </h1>
-            <p className="mt-1 max-w-xl text-sm text-slate-600">
-              Members and roles. Short links are on a separate admin-only page (not
-              in the public site menu).
-            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
-            <span className="rounded-full bg-white/80 px-3 py-1 font-medium ring-1 ring-slate-200/80">
-              {user?.isSuperAdmin ? "Super admin" : "Admin"}
-            </span>
             {user?.permissions &&
               Object.entries(user.permissions).filter(([, v]) => v).length >
                 0 && (
@@ -623,41 +616,6 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         </div>
-
-        <Link
-          href="/admin/short-links"
-          className="group mb-8 block rounded-2xl ring-1 ring-indigo-200/70 transition-shadow hover:shadow-lg hover:shadow-indigo-200/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-        >
-          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-white via-indigo-50/60 to-violet-50/50 p-5 sm:p-6">
-            <div
-              className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-500"
-              aria-hidden
-            />
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-500/25">
-                  <Link2 className="h-5 w-5" strokeWidth={2} aria-hidden />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-slate-900">
-                    URL shortener
-                  </h2>
-                  <p className="mt-1 text-sm text-slate-600">
-                    Manage{" "}
-                    <code className="rounded bg-indigo-100/90 px-1 text-xs text-indigo-900">
-                      /u/…
-                    </code>{" "}
-                    links on a dedicated admin page — not linked from the public
-                    site.
-                  </p>
-                </div>
-              </div>
-              <span className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition group-hover:bg-indigo-700 sm:shrink-0">
-                Open short links →
-              </span>
-            </div>
-          </div>
-        </Link>
 
         {/* Search and Filter Controls */}
         <Card
