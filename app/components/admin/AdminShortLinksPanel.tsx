@@ -1,16 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
 import { Button } from "@/app/components/ui/button";
 import { Input } from "@/app/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/app/components/ui/card";
-import { Link2 } from "lucide-react";
 
 export interface AdminShortLink {
   id: string;
@@ -165,39 +157,7 @@ export default function AdminShortLinksPanel() {
   };
 
   return (
-    <Card className="relative w-full max-w-none overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-white via-indigo-50/50 to-violet-50/60 shadow-lg shadow-indigo-200/25 ring-1 ring-indigo-200/55 backdrop-blur-sm">
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-500"
-        aria-hidden
-      />
-      <CardHeader className="px-5 pt-5 sm:px-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-500/30">
-              <Link2 className="h-5 w-5" strokeWidth={2} aria-hidden />
-            </div>
-            <div>
-              <CardTitle className="text-xl font-semibold tracking-tight text-slate-900">
-                URL shortener
-              </CardTitle>
-              <p className="mt-1.5 text-sm font-normal leading-relaxed text-slate-600">
-                This page is only available to admins. Public paths{" "}
-                <code className="rounded-md bg-indigo-100/80 px-1.5 py-0.5 text-xs font-medium text-indigo-900">
-                  /u/your-slug
-                </code>{" "}
-                still redirect for anyone with the link.{" "}
-                <Link
-                  href="/admin/dashboard"
-                  className="font-medium text-indigo-700 underline-offset-2 hover:underline"
-                >
-                  Back to dashboard
-                </Link>
-              </p>
-            </div>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-6 px-5 pb-6 sm:px-6">
+    <div className="w-full max-w-none space-y-6">
         {shortLinkBanner && (
           <div
             className={`rounded-xl border px-3 py-2.5 text-sm ${
@@ -286,7 +246,7 @@ export default function AdminShortLinksPanel() {
           {shortLinkSaving ? "Saving…" : "Create short link"}
         </Button>
 
-        <div className="border-t border-indigo-200/50 pt-5">
+        <div className="border-t border-slate-200/80 pt-6">
           <h3 className="mb-1 text-sm font-semibold text-slate-900">
             All short links ({shortLinks.length})
           </h3>
@@ -420,7 +380,6 @@ export default function AdminShortLinksPanel() {
             </div>
           )}
         </div>
-      </CardContent>
-    </Card>
+    </div>
   );
 }
