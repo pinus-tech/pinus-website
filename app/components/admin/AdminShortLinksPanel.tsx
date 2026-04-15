@@ -251,8 +251,7 @@ export default function AdminShortLinksPanel() {
             All short links ({shortLinks.length})
           </h3>
           <p className="mb-3 text-xs text-slate-600">
-            Every admin can remove any link with Delete — useful for cleaning up
-            old or mistaken URLs.
+            Any admin can remove any link and or edit the target URL.
           </p>
           {shortLinksLoading ? (
             <p className="text-sm text-slate-500">Loading links…</p>
@@ -309,7 +308,7 @@ export default function AdminShortLinksPanel() {
                         )}
                       </td>
                       <td className="whitespace-nowrap px-3 py-2 align-top text-gray-700">
-                        {link.createdBy?.name ?? "—"}
+                        {link.createdBy?.name ?? "-"}
                         <div className="max-w-[140px] truncate text-xs text-gray-500">
                           {link.createdBy?.email}
                         </div>

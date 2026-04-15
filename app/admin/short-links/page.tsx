@@ -47,8 +47,6 @@ export default function AdminShortLinksPage() {
             <code className="rounded bg-slate-200/70 px-1 text-xs text-slate-800">
               /u/…
             </code>
-            ). Anyone with a link can still use those URLs; only this management
-            screen is admin-only and it is not in the public site menu.
           </p>
           <p className="mt-2 text-xs text-slate-500">
             <Link

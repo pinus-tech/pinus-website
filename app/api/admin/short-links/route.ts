@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "This slug is already in use. Choose another one — try a suggestion below or type your own slug.",
+            "This slug is already in use. Choose another one - try a suggestion below or type your own slug.",
           suggestedSlugs,
         },
         { status: 409 }
