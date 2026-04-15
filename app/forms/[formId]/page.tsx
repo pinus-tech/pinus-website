@@ -260,11 +260,15 @@ export default function FormDetailPage() {
   const fetchForm = async () => {
     try {
       setLoading(true);
+      setError(null);
       const response = await fetch(`/api/forms/${formId}`);
       
       if (response.ok) {
         const data = await response.json();
         setForm(data.form);
+        if (typeof window !== "undefined") {
+          sessionStorage.removeItem(`pinus-form-ise-${formId}`);
+        }
         setFillStep(0);
 
         const map = new Map<string, unknown>();
@@ -294,7 +298,23 @@ export default function FormDetailPage() {
         }
       } else {
         const errorData = await response.json();
-        setError(errorData.error || "Failed to fetch form");
+        const message = errorData.error || "Failed to fetch form";
+        if (
+          typeof window !== "undefined" &&
+          (response.status === 500 ||
+            message.toLowerCase().includes("internal server error"))
+        ) {
+          const key = `pinus-form-ise-${formId}`;
+          if (!sessionStorage.getItem(key)) {
+            sessionStorage.setItem(key, "1");
+            window.location.reload();
+            return;
+          }
+          sessionStorage.removeItem(key);
+          router.replace("/forms");
+          return;
+        }
+        setError(message);
         setForm(null);
       }
     } catch (error) {
