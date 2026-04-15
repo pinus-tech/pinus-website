@@ -19,12 +19,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/app/components/ui/card";
+import { Link2 } from "lucide-react";
 
 interface UserPermissions {
   canCreateForms: boolean;
   canManageUsers: boolean;
   canViewAnalytics: boolean;
 }
+interface AdminShortLink {
+  id: string;
+  slug: string;
+  targetUrl: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: { name: string; email: string } | null;
+}
+
 interface User {
   _id: string;
   name: string;
@@ -96,7 +106,21 @@ export default function AdminDashboard() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  const { user, logout, canManageUsers } = useAuth();
+  const [shortLinks, setShortLinks] = useState<AdminShortLink[]>([]);
+  const [shortLinksLoading, setShortLinksLoading] = useState(false);
+  const [newSlug, setNewSlug] = useState("");
+  const [newTargetUrl, setNewTargetUrl] = useState("");
+  const [shortLinkSaving, setShortLinkSaving] = useState(false);
+  const [shortLinkBanner, setShortLinkBanner] = useState<{
+    type: "ok" | "err";
+    text: string;
+  } | null>(null);
+  const [editingLinkId, setEditingLinkId] = useState<string | null>(null);
+  const [editTargetDraft, setEditTargetDraft] = useState("");
+  const [deletingLinkId, setDeletingLinkId] = useState<string | null>(null);
+  const [slugSuggestions, setSlugSuggestions] = useState<string[]>([]);
+
+  const { user, canManageUsers } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -113,6 +137,7 @@ export default function AdminDashboard() {
 
     if (user && user.isAdmin) {
       fetchUsers();
+      fetchShortLinks();
     }
   }, [user, router, pathname]);
 
@@ -147,6 +172,120 @@ export default function AdminDashboard() {
       setError("Network error occurred");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchShortLinks = async () => {
+    try {
+      setShortLinksLoading(true);
+      const response = await fetch("/api/admin/short-links");
+      if (response.ok) {
+        const data = await response.json();
+        setShortLinks(data.links ?? []);
+      }
+    } catch {
+      /* non-fatal */
+    } finally {
+      setShortLinksLoading(false);
+    }
+  };
+
+  const siteOrigin =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : (process.env.NEXT_PUBLIC_SITE_URL ?? "").replace(/\/$/, "");
+
+  const createShortLink = async () => {
+    setShortLinkBanner(null);
+    setSlugSuggestions([]);
+    setShortLinkSaving(true);
+    try {
+      const response = await fetch("/api/admin/short-links", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug: newSlug, targetUrl: newTargetUrl }),
+      });
+      const data = await response.json() as {
+        error?: string;
+        suggestedSlugs?: string[];
+      };
+      if (!response.ok) {
+        setShortLinkBanner({
+          type: "err",
+          text: data.error || "Could not create link",
+        });
+        if (response.status === 409 && Array.isArray(data.suggestedSlugs)) {
+          setSlugSuggestions(data.suggestedSlugs);
+        }
+        return;
+      }
+      setShortLinkBanner({ type: "ok", text: "Short link created." });
+      setSlugSuggestions([]);
+      setNewSlug("");
+      setNewTargetUrl("");
+      await fetchShortLinks();
+    } catch {
+      setShortLinkBanner({ type: "err", text: "Network error" });
+    } finally {
+      setShortLinkSaving(false);
+    }
+  };
+
+  const saveEditedTarget = async (linkId: string) => {
+    setShortLinkBanner(null);
+    setShortLinkSaving(true);
+    try {
+      const response = await fetch(`/api/admin/short-links/${linkId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetUrl: editTargetDraft }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setShortLinkBanner({ type: "err", text: data.error || "Could not update" });
+        return;
+      }
+      setShortLinkBanner({ type: "ok", text: "Target URL updated." });
+      setEditingLinkId(null);
+      await fetchShortLinks();
+    } catch {
+      setShortLinkBanner({ type: "err", text: "Network error" });
+    } finally {
+      setShortLinkSaving(false);
+    }
+  };
+
+  const deleteShortLink = async (linkId: string) => {
+    if (!window.confirm("Delete this short link? It will stop working immediately.")) {
+      return;
+    }
+    setDeletingLinkId(linkId);
+    setShortLinkBanner(null);
+    try {
+      const response = await fetch(`/api/admin/short-links/${linkId}`, {
+        method: "DELETE",
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setShortLinkBanner({ type: "err", text: data.error || "Could not delete" });
+        return;
+      }
+      setShortLinkBanner({ type: "ok", text: "Link deleted." });
+      await fetchShortLinks();
+    } catch {
+      setShortLinkBanner({ type: "err", text: "Network error" });
+    } finally {
+      setDeletingLinkId(null);
+    }
+  };
+
+  const copyShortUrl = async (slug: string) => {
+    const full = `${siteOrigin}/u/${slug}`;
+    try {
+      await navigator.clipboard.writeText(full);
+      setShortLinkBanner({ type: "ok", text: "Copied to clipboard." });
+    } catch {
+      setShortLinkBanner({ type: "err", text: "Could not copy." });
     }
   };
 
@@ -374,11 +513,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleLogout = async () => {
-    await logout();
-    router.push("/login");
-  };
-
   const openPermissionModal = (userToEdit: User) => {
     if (!user?.isSuperAdmin) {
       setError("Only super admins can manage permissions");
@@ -422,10 +556,12 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex min-h-[60vh] items-center justify-center px-4">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-main mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <div className="mx-auto h-11 w-11 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" />
+          <p className="mt-4 text-sm font-medium text-slate-600">
+            Loading dashboard…
+          </p>
         </div>
       </div>
     );
@@ -442,66 +578,56 @@ export default function AdminDashboard() {
   const verifiedUsers = users.filter((u) => u.isEmailVerified && !u.isAdmin);
   const adminUsers = users.filter((u) => u.isAdmin);
 
+  const statCardClass =
+    "w-full max-w-none rounded-2xl border-0 bg-white/90 shadow-md shadow-slate-200/25 ring-1 ring-slate-200/70 backdrop-blur-sm";
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <div className="flex items-center">
-              <img
-                src="/logo-icon-pinus.svg"
-                alt="PINUS Logo"
-                className="h-8 w-8 animate-[spin_4500ms_linear_infinite]"
-              />
-              <h1 className="ml-3 text-2xl font-bold text-gray-900">
-                {user?.isSuperAdmin
-                  ? "Super Admin Dashboard"
-                  : "Admin Dashboard"}
-              </h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-right">
-                <span className="text-sm text-gray-600">
-                  Welcome, {user?.name}
+    <div className="pb-16">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-8 flex flex-col gap-3 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              {user?.isSuperAdmin ? "Super admin" : "Admin"} dashboard
+            </h1>
+            <p className="mt-1 max-w-xl text-sm text-slate-600">
+              Members, URL short links (
+              <code className="rounded bg-slate-200/60 px-1 text-xs text-slate-800">
+                /u/…
+              </code>
+              ), and roles — one place.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+            <span className="rounded-full bg-white/80 px-3 py-1 font-medium ring-1 ring-slate-200/80">
+              {user?.isSuperAdmin ? "Super admin" : "Admin"}
+            </span>
+            {user?.permissions &&
+              Object.entries(user.permissions).filter(([, v]) => v).length >
+                0 && (
+                <span className="rounded-full bg-slate-100/90 px-3 py-1 ring-1 ring-slate-200/60">
+                  {Object.entries(user.permissions)
+                    .filter(([, value]) => value)
+                    .map(([key]) =>
+                      key
+                        .replace("can", "")
+                        .replace(/([A-Z])/g, " $1")
+                        .trim()
+                    )
+                    .join(" · ")}
                 </span>
-                <div className="text-xs text-gray-500">
-                  {user?.isSuperAdmin ? "Super Admin" : "Admin"}
-                  {user?.permissions && (
-                    <span className="ml-1">
-                      (
-                      {Object.entries(user.permissions)
-                        .filter(([_, value]) => value)
-                        .map(([key, _]) =>
-                          key
-                            .replace("can", "")
-                            .replace(/([A-Z])/g, " $1")
-                            .trim()
-                        )
-                        .join(", ")}
-                      )
-                    </span>
-                  )}
-                </div>
-              </div>
-              <Button onClick={handleLogout} variant="red" size="sm">
-                Logout
-              </Button>
-            </div>
+              )}
           </div>
         </div>
-      </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {error && (
-          <div className="mb-6 rounded-md bg-red-50 p-4">
-            <div className="text-sm text-red-700">{error}</div>
+          <div className="mb-6 rounded-xl border border-red-200/80 bg-red-50/90 px-4 py-3 ring-1 ring-red-100">
+            <div className="text-sm text-red-800">{error}</div>
           </div>
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
+        <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5 lg:grid-cols-4">
+          <Card className={statCardClass}>
             <CardContent className="p-6">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
@@ -535,7 +661,7 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className={statCardClass}>
             <CardContent className="p-6">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
@@ -569,7 +695,7 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className={statCardClass}>
             <CardContent className="p-6">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
@@ -603,7 +729,7 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className={statCardClass}>
             <CardContent className="p-6">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
@@ -638,12 +764,270 @@ export default function AdminDashboard() {
           </Card>
         </div>
 
-        {/* Search and Filter Controls */}
-        <Card className="mb-8 max-w-7xl mx-auto ">
-          <CardHeader>
-            <CardTitle>Search & Filter Users</CardTitle>
+        {/* URL shortener (admins only) */}
+        <Card className="relative mb-8 w-full max-w-none overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-white via-indigo-50/50 to-violet-50/60 shadow-lg shadow-indigo-200/25 ring-1 ring-indigo-200/55 backdrop-blur-sm">
+          <div
+            className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-500"
+            aria-hidden
+          />
+          <CardHeader className="px-5 pt-5 sm:px-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md shadow-indigo-500/30">
+                  <Link2 className="h-5 w-5" strokeWidth={2} aria-hidden />
+                </div>
+                <div>
+                  <CardTitle className="text-xl font-semibold tracking-tight text-slate-900">
+                    URL shortener
+                  </CardTitle>
+                  <p className="mt-1.5 text-sm font-normal leading-relaxed text-slate-600">
+                    Public paths{" "}
+                    <code className="rounded-md bg-indigo-100/80 px-1.5 py-0.5 text-xs font-medium text-indigo-900">
+                      /u/your-slug
+                    </code>{" "}
+                    redirect to your target. Only admins see this panel; any admin
+                    may delete links.
+                  </p>
+                </div>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="mb-4">
+          <CardContent className="space-y-6 px-5 pb-6 sm:px-6">
+            {shortLinkBanner && (
+              <div
+                className={`rounded-xl border px-3 py-2.5 text-sm ${
+                  shortLinkBanner.type === "ok"
+                    ? "border-emerald-200/80 bg-emerald-50/90 text-emerald-900"
+                    : "border-red-200/80 bg-red-50/90 text-red-900"
+                }`}
+              >
+                {shortLinkBanner.text}
+              </div>
+            )}
+
+            {slugSuggestions.length > 0 && (
+              <div className="rounded-xl border border-amber-200/90 bg-amber-50/90 px-4 py-3 ring-1 ring-amber-100">
+                <p className="text-sm font-medium text-amber-950">
+                  That slug is already taken. Use a free suggestion (we&apos;ll fill
+                  the slug field), or type a different slug yourself and click Create
+                  again.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {slugSuggestions.map((s) => (
+                    <Button
+                      key={s}
+                      type="button"
+                      variant="black"
+                      outline
+                      size="sm"
+                      onClick={() => {
+                        setNewSlug(s);
+                        setSlugSuggestions([]);
+                        setShortLinkBanner(null);
+                      }}
+                    >
+                      Use <span className="font-mono">{s}</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Slug"
+                placeholder="e.g. signup-2026"
+                value={newSlug}
+                onChange={(e) => {
+                  setNewSlug(e.target.value);
+                  setSlugSuggestions([]);
+                }}
+                className="rounded-none border-blue-main"
+              />
+              <Input
+                label="Target URL"
+                placeholder="https://…"
+                value={newTargetUrl}
+                onChange={(e) => setNewTargetUrl(e.target.value)}
+                className="rounded-none border-blue-main"
+              />
+            </div>
+            {newSlug.trim() && (
+              <div>
+                <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Live preview
+                </p>
+                <div className="rounded-lg border border-slate-800/80 bg-slate-950 px-4 py-3 font-mono text-sm text-emerald-400 shadow-inner">
+                  <span className="select-none text-slate-500">→ </span>
+                  <span className="break-all">
+                    {siteOrigin || "…"}/u/
+                    {newSlug
+                      .trim()
+                      .toLowerCase()
+                      .replace(/[^a-z0-9]+/g, "-")}
+                  </span>
+                </div>
+              </div>
+            )}
+            <Button
+              type="button"
+              variant="blue"
+              size="sm"
+              onClick={createShortLink}
+              disabled={
+                shortLinkSaving || !newSlug.trim() || !newTargetUrl.trim()
+              }
+            >
+              {shortLinkSaving ? "Saving…" : "Create short link"}
+            </Button>
+
+            <div className="border-t border-indigo-200/50 pt-5">
+              <h3 className="mb-1 text-sm font-semibold text-slate-900">
+                All short links ({shortLinks.length})
+              </h3>
+              <p className="mb-3 text-xs text-slate-600">
+                Every admin can remove any link with Delete — useful for cleaning up
+                old or mistaken URLs.
+              </p>
+              {shortLinksLoading ? (
+                <p className="text-sm text-slate-500">Loading links…</p>
+              ) : shortLinks.length === 0 ? (
+                <p className="text-sm text-slate-500">No short links yet.</p>
+              ) : (
+                <div className="overflow-x-auto rounded-xl border border-slate-200/90 bg-white/60 ring-1 ring-slate-200/50">
+                  <table className="min-w-full divide-y divide-slate-200 text-sm">
+                    <thead className="bg-slate-50/90">
+                      <tr>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+                          Short URL
+                        </th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+                          Target
+                        </th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+                          Created by
+                        </th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+                          Created
+                        </th>
+                        <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white/80">
+                      {shortLinks.map((link) => (
+                        <tr key={link.id}>
+                          <td className="px-3 py-2 align-top">
+                            <code className="rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-900 break-all ring-1 ring-indigo-100">
+                              /u/{link.slug}
+                            </code>
+                          </td>
+                          <td className="px-3 py-2 align-top max-w-[280px]">
+                            {editingLinkId === link.id ? (
+                              <Input
+                                value={editTargetDraft}
+                                onChange={(e) =>
+                                  setEditTargetDraft(e.target.value)
+                                }
+                                className="text-xs py-1"
+                              />
+                            ) : (
+                              <a
+                                href={link.targetUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline break-all line-clamp-2"
+                              >
+                                {link.targetUrl}
+                              </a>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 align-top text-gray-700 whitespace-nowrap">
+                            {link.createdBy?.name ?? "—"}
+                            <div className="text-xs text-gray-500 truncate max-w-[140px]">
+                              {link.createdBy?.email}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 align-top text-gray-600 whitespace-nowrap text-xs">
+                            {new Date(link.createdAt).toLocaleString()}
+                          </td>
+                          <td className="px-3 py-2 align-top whitespace-nowrap">
+                            <div className="flex flex-wrap gap-1">
+                              <Button
+                                type="button"
+                                variant="black"
+                                outline
+                                size="sm"
+                                onClick={() => copyShortUrl(link.slug)}
+                              >
+                                Copy
+                              </Button>
+                              {editingLinkId === link.id ? (
+                                <>
+                                  <Button
+                                    type="button"
+                                    variant="blue"
+                                    size="sm"
+                                    disabled={shortLinkSaving}
+                                    onClick={() => saveEditedTarget(link.id)}
+                                  >
+                                    Save
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="black"
+                                    outline
+                                    size="sm"
+                                    onClick={() => setEditingLinkId(null)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </>
+                              ) : (
+                                <Button
+                                  type="button"
+                                  variant="yellow"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingLinkId(link.id);
+                                    setEditTargetDraft(link.targetUrl);
+                                  }}
+                                >
+                                  Edit target
+                                </Button>
+                              )}
+                              <Button
+                                type="button"
+                                variant="red"
+                                size="sm"
+                                disabled={deletingLinkId === link.id}
+                                onClick={() => deleteShortLink(link.id)}
+                              >
+                                {deletingLinkId === link.id ? "…" : "Delete"}
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Search and Filter Controls */}
+        <Card
+          className={`${statCardClass} mb-8`}
+        >
+          <CardHeader className="px-5 pt-5 sm:px-6">
+            <CardTitle className="text-xl font-semibold tracking-tight text-slate-900">
+              Search &amp; filter users
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="mb-4 px-5 pb-5 sm:px-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
               {/* Search */}
               <div>
@@ -789,21 +1173,21 @@ export default function AdminDashboard() {
         </Card>
 
         {/* Users: cards or table */}
-        <Card className="mb-8 max-w-7xl mx-auto">
-          <CardHeader>
+        <Card className={`${statCardClass} mb-8`}>
+          <CardHeader className="px-5 pt-5 sm:px-6">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle>
+              <CardTitle className="text-xl font-semibold tracking-tight text-slate-900">
                 All Users ({totalItems})
                 {searchTerm && ` - Search: "${searchTerm}"`}
               </CardTitle>
-              <div className="flex rounded-lg border border-gray-200 bg-white p-0.5 text-sm shrink-0">
+              <div className="flex shrink-0 rounded-lg border border-slate-200/90 bg-slate-50/80 p-0.5 text-sm ring-1 ring-slate-200/50">
                 <button
                   type="button"
                   onClick={() => setViewMode("cards")}
                   className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
                     viewMode === "cards"
-                      ? "bg-blue-600 text-white"
-                      : "text-gray-600 hover:bg-gray-50"
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : "text-slate-600 hover:bg-white/80"
                   }`}
                 >
                   Cards
@@ -813,8 +1197,8 @@ export default function AdminDashboard() {
                   onClick={() => setViewMode("table")}
                   className={`rounded-md px-3 py-1.5 font-medium transition-colors ${
                     viewMode === "table"
-                      ? "bg-blue-600 text-white"
-                      : "text-gray-600 hover:bg-gray-50"
+                      ? "bg-indigo-600 text-white shadow-sm"
+                      : "text-slate-600 hover:bg-white/80"
                   }`}
                 >
                   Table
@@ -822,7 +1206,7 @@ export default function AdminDashboard() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="mb-4">
+          <CardContent className="mb-4 px-5 pb-6 sm:px-6">
             {viewMode === "cards" ? (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {currentUsers.map((currentUser) => (
@@ -1343,8 +1727,8 @@ export default function AdminDashboard() {
 
       {/* Edit User Modal */}
       {showEditModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-screen overflow-y-auto">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[min(90vh,900px)] w-full max-w-2xl overflow-y-auto rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xl">
             <h3 className="text-lg font-medium text-gray-900 mb-4">
               Edit User: {selectedUser.name}
             </h3>
@@ -1489,8 +1873,8 @@ export default function AdminDashboard() {
 
       {/* Permission Management Modal */}
       {showPermissionModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xl">
             <h3 className="text-lg font-medium text-gray-900 mb-4">
               Manage Permissions for {selectedUser.name}
             </h3>

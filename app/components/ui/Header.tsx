@@ -42,6 +42,10 @@ const Header = () => {
     setMenuOpen(false);
   };
 
+  if (pathname?.startsWith("/admin")) {
+    return null;
+  }
+
   return (
     <>
       <header className="fixed top-0 left-0 w-full bg-white shadow-md z-50">
