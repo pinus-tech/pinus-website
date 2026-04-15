@@ -1,5 +1,8 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const exploreLinks = [
   { href: "/", label: "Home" },
@@ -30,7 +33,12 @@ const accountLinks = [
 ];
 
 const Footer = () => {
+  const pathname = usePathname();
   const year = new Date().getFullYear();
+
+  if (pathname?.startsWith("/admin")) {
+    return null;
+  }
 
   return (
     <footer className="bg-blue-main text-white">
