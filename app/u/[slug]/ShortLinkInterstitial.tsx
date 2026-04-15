@@ -2,14 +2,14 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 
-const COUNTDOWN = [5, 4, 3, 2, 1] as const;
+const COUNTDOWN_START = 5;
 
 export default function ShortLinkInterstitial({
   targetUrl,
 }: {
   targetUrl: string;
 }) {
-  const [secondsLeft, setSecondsLeft] = useState<number>(COUNTDOWN[0]);
+  const [secondsLeft, setSecondsLeft] = useState(COUNTDOWN_START);
 
   const redirect = useCallback(() => {
     window.location.href = targetUrl;
@@ -49,30 +49,15 @@ export default function ShortLinkInterstitial({
         </h1>
         <p className="mt-3 text-center text-sm leading-relaxed text-slate-600">
           You will be redirected to the target URL in{" "}
-          <span className="whitespace-nowrap font-medium text-slate-900">
-            {COUNTDOWN.join(" ")}
-          </span>
-          .
+          <span
+            className="font-semibold tabular-nums text-slate-900"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {secondsLeft}
+          </span>{" "}
+          {secondsLeft === 1 ? "second" : "seconds"}.
         </p>
-
-        <div
-          className="mt-5 flex items-center justify-center gap-2 sm:gap-3"
-          aria-live="polite"
-          aria-atomic="true"
-        >
-          {COUNTDOWN.map((n) => (
-            <span
-              key={n}
-              className={
-                n === secondsLeft
-                  ? "flex h-10 w-10 items-center justify-center rounded-full bg-blue-main text-sm font-bold text-white shadow-md sm:h-11 sm:w-11"
-                  : "flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-sm font-medium text-slate-400 sm:h-11 sm:w-11"
-              }
-            >
-              {n}
-            </span>
-          ))}
-        </div>
 
         <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
