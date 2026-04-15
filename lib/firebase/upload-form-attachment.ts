@@ -1,5 +1,6 @@
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { getFirebaseStorage } from "./client";
+import { FORMS_STORAGE_ROOT } from "./storage-paths";
 
 /**
  * Upload a prepared file blob (images/PDF) for a form response. Paths are scoped by form and user.
@@ -13,7 +14,7 @@ export async function uploadFormAttachment(
 ): Promise<string> {
   const storage = getFirebaseStorage();
   const safeName = filename.replace(/[^a-zA-Z0-9.-]/g, "_");
-  const path = `form-uploads/${formId}/${userId}/${Date.now()}_${safeName}`;
+  const path = `${FORMS_STORAGE_ROOT}/attachments/${formId}/${userId}/${Date.now()}_${safeName}`;
   const storageRef = ref(storage, path);
 
   await uploadBytes(storageRef, blob, {
