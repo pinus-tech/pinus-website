@@ -13,7 +13,27 @@ import {
 import TitleHeader from "../components/ui/title";
 import Link from "next/link";
 import Button from "../components/ui/button";
-import { COMMITTEE_MEMBERS } from "@/lib/data/committee";
+import { COMMITTEE_GROUP_PHOTOS, COMMITTEE_MEMBERS } from "@/lib/data/committee";
+
+const GROUP_ORDER = [
+  "Executive Committee",
+  "Technology",
+  "Ambassadors",
+  "Creative Marketing",
+  "PPD",
+  "Press",
+  "Welfare",
+] as const;
+
+const GROUP_LABELS: Record<string, string> = {
+  "Executive Committee": "Executive Comm",
+  Technology: "Tech",
+  Ambassadors: "Ambass",
+  "Creative Marketing": "Creative Marketing",
+  PPD: "PPD",
+  Press: "Press",
+  Welfare: "Welfare",
+};
 
 function slugifyAnchor(name: string) {
   return name
@@ -38,6 +58,17 @@ export default function Committee() {
       {} as Record<string, typeof COMMITTEE_MEMBERS>
     );
   }, []);
+
+  const orderedCommitteeGroups = useMemo(() => {
+    const priority = new Set(GROUP_ORDER);
+    const ordered = GROUP_ORDER.filter((groupName) => committeeData[groupName]).map(
+      (groupName) => [groupName, committeeData[groupName]] as const
+    );
+    const remaining = Object.entries(committeeData).filter(
+      ([groupName]) => !priority.has(groupName as (typeof GROUP_ORDER)[number])
+    );
+    return [...ordered, ...remaining];
+  }, [committeeData]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -69,10 +100,10 @@ export default function Committee() {
       </div>
       <div className="flex w-full justify-center p-4 whitespace-nowrap">
         <div className="flex flex-row overflow-x-auto gap-5 no-scrollbar">
-          {Object.keys(committeeData).map((groupName) => (
+          {orderedCommitteeGroups.map(([groupName]) => (
             <Link key={groupName} href={`#${slugifyAnchor(groupName)}`}>
               <Button className="border-2 hover:bg-white hover:text-blue-main hover:border-blue-main">
-                {groupName}
+                {GROUP_LABELS[groupName] ?? groupName}
               </Button>
             </Link>
           ))}
@@ -80,13 +111,20 @@ export default function Committee() {
       </div>
 
       <div className="w-full flex flex-col gap-y-16 p-4">
-        {Object.entries(committeeData).map(([groupName, members]) => (
+        {orderedCommitteeGroups.map(([groupName, members]) => (
           <div
             className="flex flex-col justify-center scroll-m-24 gap-4"
             key={groupName}
             id={slugifyAnchor(groupName)}
           >
-            <CommCardGroupTitle>{groupName}</CommCardGroupTitle>
+            <CommCardGroupTitle>{GROUP_LABELS[groupName] ?? groupName}</CommCardGroupTitle>
+            {COMMITTEE_GROUP_PHOTOS[groupName]?.trim() ? (
+              <img
+                src={COMMITTEE_GROUP_PHOTOS[groupName]}
+                alt={`${GROUP_LABELS[groupName] ?? groupName} group`}
+                className="w-full max-w-6xl aspect-[19/9] object-cover rounded-xl mx-auto"
+              />
+            ) : null}
             <CommCardGroup columns={columns} gap={5}>
               {members.map((member) => (
                 <CommCard key={member.id}>
