@@ -111,7 +111,7 @@ export const COMMITTEE_MEMBERS: CommitteeMember[] = [
     committeeGroup: "Ambassadors",
     name: "Josephine Elisabeth Gultom",
     role: "Member",
-    photo: "",
+    photo: "/2526com/josephine-member.jpg",
   },
   {
     id: "ambas-14",
@@ -356,7 +356,7 @@ export const COMMITTEE_MEMBERS: CommitteeMember[] = [
     committeeGroup: "Press",
     name: "Fransiska Halim Santoso",
     role: "Member",
-    photo: "",
+    photo: "/2526com/fransiska-member.jpg",
   },
   {
     id: "press-49",
@@ -457,6 +457,13 @@ export const COMMITTEE_MEMBERS: CommitteeMember[] = [
     photo: "/2526com/freddy-sendev.jpg",
   },
   {
+    id: "tech-67",
+    committeeGroup: "Technology",
+    name: "Clement Aditya Chendra",
+    role: "Senior Developer",
+    photo: "/2526com/clement-sendev.jpg",
+  },
+  {
     id: "tech-63",
     committeeGroup: "Technology",
     name: "Matthew Allan",
@@ -483,13 +490,6 @@ export const COMMITTEE_MEMBERS: CommitteeMember[] = [
     name: "Amanda Tasya Dedi",
     role: "Junior Developer",
     photo: "/2526com/amanda-jundev.jpg",
-  },
-  {
-    id: "tech-67",
-    committeeGroup: "Technology",
-    name: "Clement Aditya Chendra",
-    role: "Junior Developer",
-    photo: "/2526com/clement-jundev.jpg",
   },
   {
     id: "tech-68",
