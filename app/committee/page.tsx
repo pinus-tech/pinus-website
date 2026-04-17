@@ -122,7 +122,7 @@ export default function Committee() {
               <img
                 src={COMMITTEE_GROUP_PHOTOS[groupName]}
                 alt={`${GROUP_LABELS[groupName] ?? groupName} group`}
-                className="w-full max-w-6xl aspect-[19/9] object-cover rounded-xl mx-auto"
+                className="w-full max-w-6xl aspect-[21/9] object-cover rounded-xl mx-auto"
               />
             ) : null}
             <CommCardGroup columns={columns} gap={5}>
