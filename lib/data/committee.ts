@@ -13,10 +13,10 @@ export interface CommitteeMember {
 
 export const COMMITTEE_GROUP_PHOTOS: Record<string, string> = {
   "Executive Committee": "/2526com/preman-grp.jpg",
-  "Ambassadors": "",
+  "Ambassadors": "/2526com/ambas-grp.jpg",
   "Creative Marketing": "/2526com/cm-grp.jpg",
   "PPD": "/2526com/ppd-grp.jpg",
-  "Press": "",
+  "Press": "/2526com/press-grp.jpg",
   "Technology": "/2526com/tech-grp.jpg",
   "Welfare": "/2526com/welfare-grp.jpeg",
 };
@@ -55,7 +55,7 @@ export const COMMITTEE_MEMBERS: CommitteeMember[] = [
     committeeGroup: "Executive Committee",
     name: "Sheren Clara Tanzil",
     role: "Financial Secretary",
-    photo: "",
+    photo: "/2526com/sheren-financialsecretary.jpg",
   },
   {
     id: "ambas-6",
@@ -76,7 +76,7 @@ export const COMMITTEE_MEMBERS: CommitteeMember[] = [
     committeeGroup: "Ambassadors",
     name: "Andhika Kevin Kalalo",
     role: "Member",
-    photo: "",
+    photo: "/2526com/andhika-member.jpg",
   },
   {
     id: "ambas-9",
@@ -97,14 +97,14 @@ export const COMMITTEE_MEMBERS: CommitteeMember[] = [
     committeeGroup: "Ambassadors",
     name: "Evan Christian Patri",
     role: "Member",
-    photo: "",
+    photo: "/2526com/evan-member.jpg",
   },
   {
     id: "ambas-12",
     committeeGroup: "Ambassadors",
     name: "Florence",
     role: "Member",
-    photo: "",
+    photo: "/2526com/florence-member.jpg",
   },
   {
     id: "ambas-13",
@@ -118,42 +118,42 @@ export const COMMITTEE_MEMBERS: CommitteeMember[] = [
     committeeGroup: "Ambassadors",
     name: "M Nadhif Haryadipta",
     role: "Member",
-    photo: "",
+    photo: "/2526com/mnadhif-member.jpg",
   },
   {
     id: "ambas-15",
     committeeGroup: "Ambassadors",
     name: "Maria Rania Kusumadinata",
     role: "Member",
-    photo: "",
+    photo: "/2526com/maria-member.jpg",
   },
   {
     id: "ambas-16",
     committeeGroup: "Ambassadors",
     name: "Mario Alvaro",
     role: "Member",
-    photo: "",
+    photo: "/2526com/mario-member.jpg",
   },
   {
     id: "ambas-17",
     committeeGroup: "Ambassadors",
     name: "Michelle Charistan",
     role: "Member",
-    photo: "",
+    photo: "/2526com/michelle-member.jpg",
   },
   {
     id: "ambas-18",
     committeeGroup: "Ambassadors",
     name: "Raynard Owen",
     role: "Member",
-    photo: "",
+    photo: "/2526com/raynard-member.jpg",
   },
   {
     id: "ambas-19",
     committeeGroup: "Ambassadors",
     name: "Risefine Joliana",
     role: "Member",
-    photo: "",
+    photo: "/2526com/risefine-member.jpg",
   },
   {
     id: "ambas-20",
@@ -167,7 +167,7 @@ export const COMMITTEE_MEMBERS: CommitteeMember[] = [
     committeeGroup: "Ambassadors",
     name: "Wilson Farant Chua",
     role: "Member",
-    photo: "",
+    photo: "/2526com/wilson-member.jpg",
   },
   {
     id: "cm-22",
@@ -181,7 +181,7 @@ export const COMMITTEE_MEMBERS: CommitteeMember[] = [
     committeeGroup: "Creative Marketing",
     name: "Aufa Shadiq Ibrahim",
     role: "Director",
-    photo: "",
+    photo: "/2526com/aufa-cmdir.jpg",
   },
   {
     id: "cm-24",
@@ -216,7 +216,7 @@ export const COMMITTEE_MEMBERS: CommitteeMember[] = [
     committeeGroup: "Creative Marketing",
     name: "Jessica Handojo",
     role: "Member",
-    photo: "",
+    photo: "/2526com/jessica-member.jpg",
   },
   {
     id: "cm-29",
@@ -237,7 +237,7 @@ export const COMMITTEE_MEMBERS: CommitteeMember[] = [
     committeeGroup: "PPD",
     name: "Kenneth Christopher Hendra",
     role: "Director",
-    photo: "",
+    photo: "/2526com/kenneth-ppddir.jpg",
   },
   {
     id: "ppd-32",
@@ -265,7 +265,7 @@ export const COMMITTEE_MEMBERS: CommitteeMember[] = [
     committeeGroup: "PPD",
     name: "Gabriella Esther Lauwson",
     role: "Member",
-    photo: "",
+    photo: "/2526com/gabriella-member.jpg",
   },
   {
     id: "ppd-36",
@@ -307,7 +307,7 @@ export const COMMITTEE_MEMBERS: CommitteeMember[] = [
     committeeGroup: "PPD",
     name: "Ryan Justyn",
     role: "Member",
-    photo: "",
+    photo: "/2526com/ryan-member.jpg",
   },
   {
     id: "ppd-42",
@@ -321,7 +321,7 @@ export const COMMITTEE_MEMBERS: CommitteeMember[] = [
     committeeGroup: "Press",
     name: "Devanrio Geofendra Chandra",
     role: "Director",
-    photo: "",
+    photo: "/2526com/devanrio-pressdir.jpg",
   },
   {
     id: "press-44",
@@ -335,7 +335,7 @@ export const COMMITTEE_MEMBERS: CommitteeMember[] = [
     committeeGroup: "Press",
     name: "Bryan Castorius Halim",
     role: "Member",
-    photo: "",
+    photo: "/2526com/bryan-member.jpg",
   },
   {
     id: "press-46",
@@ -377,7 +377,7 @@ export const COMMITTEE_MEMBERS: CommitteeMember[] = [
     committeeGroup: "Press",
     name: "Karen Lie",
     role: "Member",
-    photo: "",
+    photo: "/2526com/karen-member.jpg",
   },
   {
     id: "press-52",
@@ -405,14 +405,14 @@ export const COMMITTEE_MEMBERS: CommitteeMember[] = [
     committeeGroup: "Press",
     name: "Steve Wilson Koesasih",
     role: "Member",
-    photo: "",
+    photo: "/2526com/steve-member.jpg",
   },
   {
     id: "press-56",
     committeeGroup: "Press",
     name: "Valentino Nathan",
     role: "Member",
-    photo: "",
+    photo: "/2526com/valentino-member.jpg",
   },
   {
     id: "press-57",
@@ -440,14 +440,14 @@ export const COMMITTEE_MEMBERS: CommitteeMember[] = [
     committeeGroup: "Technology",
     name: "Benedict Aurelius Tjia",
     role: "Senior Developer",
-    photo: "",
+    photo: "/2526com/benedict-sendev.jpg",
   },
   {
     id: "tech-61",
     committeeGroup: "Technology",
     name: "Fathan Mubina",
     role: "Senior Developer",
-    photo: "",
+    photo: "/2526com/fathan-sendev.jpg",
   },
   {
     id: "tech-62",
@@ -468,14 +468,14 @@ export const COMMITTEE_MEMBERS: CommitteeMember[] = [
     committeeGroup: "Technology",
     name: "Matthew Allan",
     role: "Senior Developer",
-    photo: "",
+    photo: "/2526com/matthew-sendev.jpg",
   },
   {
     id: "tech-64",
     committeeGroup: "Technology",
     name: "Muhammad Zayyan Putra",
     role: "Senior Developer",
-    photo: "",
+    photo: "/2526com/muhammad-sendev.jpg",
   },
   {
     id: "tech-65",
@@ -552,7 +552,7 @@ export const COMMITTEE_MEMBERS: CommitteeMember[] = [
     committeeGroup: "Technology",
     name: "Ketut Rayana Rahadiva Diana",
     role: "Junior Developer",
-    photo: "",
+    photo: "/2526com/ketut-jundev.jpg",
   },
   {
     id: "tech-77",
