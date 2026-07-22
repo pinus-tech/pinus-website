@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "./components/ui/Header";
 import Footer from "./components/ui/Footer";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
+import { Analytics } from "@vercel/analytics/next";
 
 const figtree = Figtree({
   variable: "--font-figtree",
@@ -30,6 +31,7 @@ export default function RootLayout({
           {children}
           <Footer />
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   );
