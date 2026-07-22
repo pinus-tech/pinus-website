@@ -5,6 +5,7 @@ import Header from "./components/ui/Header";
 import Footer from "./components/ui/Footer";
 import { AuthProvider } from "@/lib/contexts/AuthContext";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const figtree = Figtree({
   variable: "--font-figtree",
@@ -32,6 +33,7 @@ export default function RootLayout({
           <Footer />
         </AuthProvider>
         <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );
